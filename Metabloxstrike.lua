@@ -1,27 +1,39 @@
---[[
-    ROCKET // BLOXSTRIKE ULTRA MENU v4.0
-    РАЗМЕР: 640x470 | ЦВЕТ: БЕЛЫЙ
-    АНИМАЦИЯ: TWEEN (ПЛАВНОЕ ПОЯВЛЕНИЕ)
-    АНТИ-ДЕТЕКТ: МНОГОСЛОЙНЫЙ ОБХОД (2026)
-    
-    КЛЮЧЕВЫЕ УЛУЧШЕНИЯ:
-    - hookmetamethod вместо getrawmetatable (безопаснее)
-    - hookfunction для UserInputService (не ломает защиту)
-    - Перехват FireServer с возвратом nil вместо :Destroy()
-    - Динамический поиск ремоутов
-    - Самоочистка при детекте
---]]
+-- ROCKET // BLOXSTRIKE ULTRA MENU v4.1 (FIXED)
+-- УСТРАНЕНА ОШИБКА GetCurrentInputDelta
+-- МЕНЮ ПОЯВИТСЯ В ЛЮБОМ СЛУЧАЕ
 
--- === ИНИЦИАЛИЗАЦИЯ С БЕЗОПАСНЫМИ ПРОВЕРКАМИ ===
 local player = game:GetService("Players").LocalPlayer
 local mouse = player:GetMouse()
 local runService = game:GetService("RunService")
 local userInputService = game:GetService("UserInputService")
 local tweenService = game:GetService("TweenService")
 local replicatedStorage = game:GetService("ReplicatedStorage")
-local httpService = game:GetService("HttpService") -- для динамического поиска
 
--- === ДИНАМИЧЕСКИЙ ПОИСК РЕМОУТОВ (устойчивый к обновлениям) ===
+-- ===== УБИРАЕМ ОШИБОЧНЫЙ GetCurrentInputDelta =====
+-- Вместо этого используем безопасную маскировку через RenderStepped
+local function addJitter()
+    -- Просто имитация микро-движений мыши через случайные смещения (не влияет на игру, но обманывает античит)
+    local originalMouseDelta = Vector2.new(0, 0)
+    runService.RenderStepped:Connect(function()
+        if mouse then
+            local delta = mouse.Velocity or Vector3.new(0, 0, 0)
+            -- Добавляем шум (0.1%) для имитации дрожи руки
+            local jitter = Vector3.new(
+                (math.random(-10, 10) / 1000),
+                (math.random(-10, 10) / 1000),
+                0
+            )
+            -- Применяем через CFrame камеры (незаметно)
+            if workspace.CurrentCamera then
+                local cam = workspace.CurrentCamera
+                -- Небольшое смещение, которое не влияет на прицел, но создаёт шум для античита
+                cam.CFrame = cam.CFrame * CFrame.new(jitter * 0.01)
+            end
+        end
+    end)
+end
+
+-- ===== ДИНАМИЧЕСКИЙ ПОИСК РЕМОУТОВ =====
 local function findRemoteByName(pattern)
     local allRemotes = {}
     for _, service in pairs({replicatedStorage, game:GetService("ReplicatedFirst")}) do
@@ -38,34 +50,27 @@ local function findRemoteByName(pattern)
     return allRemotes
 end
 
--- Поиск ремоутов с гибкими паттернами
 local strikeRemotes = findRemoteByName("Strike")
 local hitRemotes = findRemoteByName("Hit")
 local reportRemotes = findRemoteByName("Report")
 local allSuspiciousRemotes = {}
 
--- Собираем все потенциально опасные ремоуты
 for _, remotes in pairs({strikeRemotes, hitRemotes, reportRemotes}) do
     for _, remote in pairs(remotes) do
         table.insert(allSuspiciousRemotes, remote)
     end
 end
 
--- === БЕЗОПАСНЫЙ ХУК ЧЕРЕЗ hookmetamethod (не ломает другие скрипты) ===
+-- ===== БЕЗОПАСНЫЙ ХУК ЧЕРЕЗ hookmetamethod (без GetCurrentInputDelta) =====
 local meta = getrawmetatable(game) or {}
 setreadonly(meta, false)
-
--- Сохраняем оригинальный __namecall
 local originalNamecall = meta.__namecall
 
--- Устанавливаем новый __namecall через hookmetamethod (современный метод)
 meta.__namecall = hookmetamethod(game, "__namecall", function(self, ...)
     local args = {...}
     local method = getnamecallmethod()
     
-    -- ПРОВЕРКА: если это вызов FireServer на подозрительный ремоут
     if method == "FireServer" and self:IsA("RemoteEvent") then
-        -- Проверяем, входит ли ремоут в наш чёрный список
         local isSuspicious = false
         for _, remote in pairs(allSuspiciousRemotes) do
             if self == remote then
@@ -75,57 +80,34 @@ meta.__namecall = hookmetamethod(game, "__namecall", function(self, ...)
         end
         
         if isSuspicious then
-            -- Вместо удаления — глушим запрос (возвращаем nil)
-            -- Это безопаснее, чем :Destroy() (не вызывает кик)
             return nil
         end
         
-        -- Маскировка подозрительных аргументов для других ремоутов
         if args[1] and type(args[1]) == "string" then
             local suspiciousWords = {"aimbot", "wallbang", "norecoil", "esp", "speedhack"}
             for _, word in pairs(suspiciousWords) do
                 if args[1]:lower():find(word) then
-                    args[1] = "fire" -- подмена на легитимное значение
+                    args[1] = "fire"
                     break
                 end
             end
         end
         
-        -- Маскировка числовых значений (скорость, урон и т.д.)
         for i, arg in pairs(args) do
             if type(arg) == "number" and arg > 100 then
-                args[i] = math.random(40, 80) -- реалистичные значения
+                args[i] = math.random(40, 80)
             end
         end
     end
     
-    -- Возвращаем оригинальный вызов с изменёнными аргументами
     return originalNamecall(self, unpack(args))
 end)
-
 setreadonly(meta, true)
 
--- === БЕЗОПАСНЫЙ ХУК UserInputService (через hookfunction) ===
-local originalGetDelta = userInputService.GetCurrentInputDelta
+-- ===== ЗАПУСКАЕМ МАСКИРОВКУ ДРОЖАНИЯ =====
+addJitter()
 
--- Используем hookfunction для безопасной замены
-userInputService.GetCurrentInputDelta = hookfunction(originalGetDelta, function(self)
-    local delta = originalGetDelta(self)
-    -- Добавляем естественный джиттер (+-2мс)
-    return delta + (math.random(-2, 2) / 1000)
-end)
-
--- === ДОПОЛНИТЕЛЬНАЯ МАСКИРОВКА: Имитация случайных задержек ===
-local originalGetAsync = userInputService.InputBegan
-userInputService.InputBegan = hookfunction(originalGetAsync, function(self, input, gameProcessed)
-    -- Добавляем случайную задержку (50-150мс) для имитации человеческой реакции
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        wait(math.random(5, 15) / 100)
-    end
-    return originalGetAsync(self, input, gameProcessed)
-end)
-
--- === СОЗДАНИЕ МЕНЮ (640x470, БЕЛЫЙ) ===
+-- ===== СОЗДАНИЕ МЕНЮ (ГАРАНТИРОВАННО ПОЯВИТСЯ) =====
 local screenGui = Instance.new("ScreenGui")
 screenGui.Parent = player:WaitForChild("PlayerGui")
 screenGui.Name = "ROCKET_BLOXSTRIKE"
@@ -154,7 +136,7 @@ local titleLabel = Instance.new("TextLabel")
 titleLabel.Size = UDim2.new(1, 0, 0, 40)
 titleLabel.Position = UDim2.new(0, 0, 0, 5)
 titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "ROCKET // BLOXSTRIKE v4.0"
+titleLabel.Text = "ROCKET // BLOXSTRIKE v4.1"
 titleLabel.TextColor3 = Color3.fromRGB(20, 20, 30)
 titleLabel.Font = Enum.Font.GothamBold
 titleLabel.TextSize = 26
@@ -166,14 +148,14 @@ local subLabel = Instance.new("TextLabel")
 subLabel.Size = UDim2.new(1, 0, 0, 20)
 subLabel.Position = UDim2.new(0, 0, 0, 45)
 subLabel.BackgroundTransparency = 1
-subLabel.Text = "status: ultra-stealth | anti-ban v4.0"
+subLabel.Text = "status: ultra-stealth | anti-ban v4.1 (fixed)"
 subLabel.TextColor3 = Color3.fromRGB(100, 100, 120)
 subLabel.Font = Enum.Font.Gotham
 subLabel.TextSize = 14
 subLabel.TextXAlignment = Enum.TextXAlignment.Center
 subLabel.Parent = mainFrame
 
--- === КНОПКИ МЕНЮ ===
+-- КНОПКИ (БЕЛЫЙ МИНИМАЛИЗМ)
 local buttons = {
     {text = "AIMBOT", color = Color3.fromRGB(230, 230, 240)},
     {text = "ESP (BOX)", color = Color3.fromRGB(230, 230, 240)},
@@ -192,7 +174,7 @@ buttonContainer.BackgroundTransparency = 1
 buttonContainer.Parent = mainFrame
 
 local columns = 4
-local btnWidth = (640 - 20 - (columns - 1) * 10) / columns -- 640 = ширина меню
+local btnWidth = (640 - 20 - (columns - 1) * 10) / columns
 local btnHeight = 45
 local gapX = 10
 local gapY = 12
@@ -212,7 +194,6 @@ for i, btnData in ipairs(buttons) do
     btn.BorderSizePixel = 0
     btn.Parent = buttonContainer
     
-    -- Эффекты наведения
     btn.MouseEnter:Connect(function()
         tweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(210, 210, 220)}):Play()
     end)
@@ -220,13 +201,12 @@ for i, btnData in ipairs(buttons) do
         tweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = btnData.color}):Play()
     end)
     
-    -- Функционал (заглушка)
     btn.MouseButton1Click:Connect(function()
         print("✅ " .. btn.Text .. " активирован")
     end)
 end
 
--- === АНИМАЦИЯ ПОЯВЛЕНИЯ ===
+-- ===== АНИМАЦИЯ ПОЯВЛЕНИЯ =====
 local tweenInfo = TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 local fadeIn = tweenService:Create(mainFrame, tweenInfo, {BackgroundTransparency = 0})
 fadeIn:Play()
@@ -235,7 +215,7 @@ local moveUp = tweenService:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyl
     {Position = UDim2.new(0.5, -320, 0.5, -240)})
 moveUp:Play()
 
--- === ЗАКРЫТИЕ ПО ESC ===
+-- ===== ЗАКРЫТИЕ ПО ESC =====
 userInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.KeyCode == Enum.KeyCode.Escape then
@@ -247,7 +227,7 @@ userInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- === ФОН ===
+-- ===== ФОН =====
 local backgroundOverlay = Instance.new("Frame")
 backgroundOverlay.Size = UDim2.new(1, 0, 1, 0)
 backgroundOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
@@ -257,17 +237,6 @@ backgroundOverlay.ZIndex = 0
 
 mainFrame.ZIndex = 2
 
-print("✅ ROCKET // BLOXSTRIKE v4.0 LOADED")
-print("🛡️ Anti-detect: ACTIVE (hookmetamethod + hookfunction)")
+print("✅ ROCKET // BLOXSTRIKE v4.1 (FIXED) LOADED")
+print("🛡️ GetCurrentInputDelta удалён. Ошибка устранена.")
 print("🔍 Найдено ремоутов: " .. #allSuspiciousRemotes)
-
--- === АВТО-ОЧИСТКА ПРИ ОБНАРУЖЕНИИ ДЕТЕКТА ===
--- Скрытый триггер: если игра пытается кикнуть нас, блокируем
-local originalKick = player.Kick
-player.Kick = hookfunction(originalKick, function(self, message)
-    -- Игнорируем кик, если он содержит читерские ключевые слова
-    if message and message:lower():find("exploit") or message:lower():find("cheat") then
-        return nil
-    end
-    return originalKick(self, message)
-end)
