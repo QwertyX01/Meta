@@ -7,6 +7,9 @@ local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 
+-- ======================================================
+-- ГЛОБАЛЬНЫЕ СОСТОЯНИЯ
+-- ======================================================
 _G.AimbotEnabled = false
 _G.AimbotFOV = 100
 _G.TargetBone = "Head"
@@ -14,135 +17,11 @@ _G.BoxESP = false
 _G.Snaplines = false
 _G.EspNames = false
 
-local ESP_Cache = {Boxes = {}, Lines = {}, Texts = {}, FOVCircle = nil}
+local MenuVisible = true
 
-local function SafeRemove(obj)
-    if obj then pcall(function() obj:Remove() end) end
-end
-
-ESP_Cache.FOVCircle = Drawing.new("Circle")
-ESP_Cache.FOVCircle.Visible = false
-ESP_Cache.FOVCircle.Color = Color3.fromRGB(0, 150, 255)
-ESP_Cache.FOVCircle.Thickness = 1
-ESP_Cache.FOVCircle.Transparency = 0.6
-ESP_Cache.FOVCircle.NumSides = 64
-ESP_Cache.FOVCircle.Filled = false
-
-local function InitPlayerESP(player)
-    if player == LocalPlayer then return end
-    local box = Drawing.new("Square")
-    box.Visible = false
-    box.Color = Color3.fromRGB(0, 255, 0)
-    box.Thickness = 1.5
-    box.Transparency = 0.8
-    ESP_Cache.Boxes[player] = box
-    local line = Drawing.new("Line")
-    line.Visible = false
-    line.Color = Color3.fromRGB(255, 0, 0)
-    line.Thickness = 1.5
-    line.Transparency = 0.7
-    ESP_Cache.Lines[player] = line
-    local text = Drawing.new("Text")
-    text.Visible = false
-    text.Color = Color3.fromRGB(255, 255, 255)
-    text.Size = 14
-    text.Font = 3
-    text.Center = true
-    text.Outline = true
-    text.OutlineColor = Color3.fromRGB(0, 0, 0)
-    ESP_Cache.Texts[player] = text
-end
-
-local function RemovePlayerESP(player)
-    if player == LocalPlayer then return end
-    SafeRemove(ESP_Cache.Boxes[player])
-    SafeRemove(ESP_Cache.Lines[player])
-    SafeRemove(ESP_Cache.Texts[player])
-    ESP_Cache.Boxes[player] = nil
-    ESP_Cache.Lines[player] = nil
-    ESP_Cache.Texts[player] = nil
-end
-
-for _, player in ipairs(Players:GetPlayers()) do InitPlayerESP(player) end
-Players.PlayerAdded:Connect(InitPlayerESP)
-Players.PlayerRemoving:Connect(RemovePlayerESP)
-
-RunService.RenderStepped:Connect(function()
-    local viewportSize = Camera.ViewportSize
-    local screenCenter = Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
-    if _G.AimbotEnabled and ESP_Cache.FOVCircle then
-        ESP_Cache.FOVCircle.Visible = true
-        ESP_Cache.FOVCircle.Position = screenCenter
-        ESP_Cache.FOVCircle.Radius = _G.AimbotFOV
-    elseif ESP_Cache.FOVCircle then
-        ESP_Cache.FOVCircle.Visible = false
-    end
-    if not LocalPlayer.Character then return end
-    local localRoot = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if not localRoot then return end
-    local players = Players:GetPlayers()
-    for _, player in ipairs(players) do
-        if player == LocalPlayer then continue end
-        local box = ESP_Cache.Boxes[player]
-        local line = ESP_Cache.Lines[player]
-        local text = ESP_Cache.Texts[player]
-        if not box or not line or not text then continue end
-        if not player.Character then
-            box.Visible = false
-            line.Visible = false
-            text.Visible = false
-            continue
-        end
-        local char = player.Character
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        if not hrp then
-            box.Visible = false
-            line.Visible = false
-            text.Visible = false
-            continue
-        end
-        local humanoid = char:FindFirstChildOfClass("Humanoid")
-        if not humanoid or humanoid.Health <= 0 then
-            box.Visible = false
-            line.Visible = false
-            text.Visible = false
-            continue
-        end
-        local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
-        if _G.BoxESP and onScreen then
-            local size = 3
-            local extents = char:GetExtentsSize()
-            if extents and extents.Magnitude > 0 then size = extents.X / 2 end
-            local topPos = Camera:WorldToViewportPoint(hrp.Position + Vector3.new(0, size, 0))
-            local bottomPos = Camera:WorldToViewportPoint(hrp.Position - Vector3.new(0, size, 0))
-            local height = math.abs(bottomPos.Y - topPos.Y) * 2.5
-            local width = height / 1.5
-            local centerX = pos.X
-            local topY = topPos.Y - (height - (bottomPos.Y - topPos.Y)) / 2
-            box.Visible = true
-            box.Size = Vector2.new(width, height)
-            box.Position = Vector2.new(centerX - width/2, topY)
-        else
-            box.Visible = false
-        end
-        if _G.Snaplines and onScreen then
-            line.Visible = true
-            line.From = Vector2.new(viewportSize.X / 2, viewportSize.Y)
-            line.To = Vector2.new(pos.X, pos.Y)
-        else
-            line.Visible = false
-        end
-        if _G.EspNames and onScreen then
-            local dist = (hrp.Position - localRoot.Position).Magnitude
-            text.Visible = true
-            text.Position = Vector2.new(pos.X, pos.Y - 30)
-            text.Text = string.format("%s [%.0fm]", player.Name, dist / 10)
-        else
-            text.Visible = false
-        end
-    end
-end)
-
+-- ======================================================
+-- СОЗДАНИЕ GUI
+-- ======================================================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "META_GUI"
 ScreenGui.ResetOnSpawn = false
@@ -156,6 +35,7 @@ MainFrame.BackgroundColor3 = Color3.fromRGB(17, 20, 26)
 MainFrame.BackgroundTransparency = 0.12
 MainFrame.ClipsDescendants = true
 MainFrame.Parent = ScreenGui
+MainFrame.Visible = true
 
 local MainCorner = Instance.new("UICorner")
 MainCorner.CornerRadius = UDim.new(0, 12)
@@ -167,6 +47,7 @@ MainStroke.Color = Color3.fromRGB(42, 47, 58)
 MainStroke.Transparency = 0.4
 MainStroke.Parent = MainFrame
 
+-- ========== ТОП ХЕДЕР ==========
 local Header = Instance.new("Frame")
 Header.Size = UDim2.new(1, 0, 0, 38)
 Header.BackgroundTransparency = 1
@@ -203,6 +84,7 @@ Separator.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
 Separator.BorderSizePixel = 0
 Separator.Parent = MainFrame
 
+-- ========== ВКЛАДКИ ==========
 local TabContainer = Instance.new("Frame")
 TabContainer.Size = UDim2.new(1, 0, 0, 48)
 TabContainer.Position = UDim2.new(0, 0, 0, 39)
@@ -216,7 +98,9 @@ local ContentPages = {}
 local function ResetTabs()
     for _, btn in ipairs(TabButtons) do
         local ind = btn:FindFirstChild("Indicator")
-        if ind then ind.Visible = false end
+        if ind then
+            ind.Visible = false
+        end
         btn.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
         btn.TextColor3 = Color3.fromRGB(156, 163, 175)
         TweenService:Create(btn, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
@@ -236,9 +120,11 @@ for i, name in ipairs(TabNames) do
     btn.Font = Enum.Font.GothamBold
     btn.AutoButtonColor = false
     btn.Parent = TabContainer
+    
     local btnCorner = Instance.new("UICorner")
     btnCorner.CornerRadius = UDim.new(0, 6)
     btnCorner.Parent = btn
+    
     local indicator = Instance.new("Frame")
     indicator.Size = UDim2.new(0.8, 0, 0, 2)
     indicator.Position = UDim2.new(0.1, 0, 1, -2)
@@ -246,32 +132,45 @@ for i, name in ipairs(TabNames) do
     indicator.BorderSizePixel = 0
     indicator.Visible = false
     indicator.Parent = btn
+    
     btn.MouseEnter:Connect(function()
         if not indicator.Visible then
             btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
             btn.TextColor3 = Color3.fromRGB(255, 255, 255)
         end
     end)
+    
     btn.MouseLeave:Connect(function()
         if not indicator.Visible then
             btn.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
             btn.TextColor3 = Color3.fromRGB(156, 163, 175)
         end
     end)
+    
     btn.MouseButton1Click:Connect(function()
         ResetTabs()
         indicator.Visible = true
         btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
         btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        
         TweenService:Create(btn, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
             Size = UDim2.new(0.17, 0, 0, 36)
         }):Play()
-        for _, page in pairs(ContentPages) do page.Visible = false end
+        
+        for _, page in pairs(ContentPages) do
+            page.Visible = false
+        end
+        
         local targetPage = ContentPages[name]
-        if targetPage then targetPage.Visible = true end
+        if targetPage then
+            targetPage.Visible = true
+        end
+        
         print(string.format("[META] Switched to: %s", name))
     end)
+    
     table.insert(TabButtons, btn)
+    
     local page = Instance.new("ScrollingFrame")
     page.Name = name .. "_Page"
     page.Size = UDim2.new(1, -20, 1, -96)
@@ -286,12 +185,16 @@ for i, name in ipairs(TabNames) do
     ContentPages[name] = page
 end
 
-local function CreateToggle(parent, yPos, labelText, getter, setter, description)
+-- ======================================================
+-- СОЗДАНИЕ КОНТРОЛОВ
+-- ======================================================
+local function CreateToggle(parent, labelText, description, globalVar, yPos)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, 0, 0, 48)
     frame.Position = UDim2.new(0, 0, 0, yPos)
     frame.BackgroundTransparency = 1
     frame.Parent = parent
+    
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(0.6, 0, 0, 20)
     label.Position = UDim2.new(0, 0, 0, 0)
@@ -302,6 +205,7 @@ local function CreateToggle(parent, yPos, labelText, getter, setter, description
     label.Font = Enum.Font.GothamBold
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Parent = frame
+    
     if description then
         local desc = Instance.new("TextLabel")
         desc.Size = UDim2.new(0.7, 0, 0, 16)
@@ -314,6 +218,7 @@ local function CreateToggle(parent, yPos, labelText, getter, setter, description
         desc.TextXAlignment = Enum.TextXAlignment.Left
         desc.Parent = frame
     end
+    
     local toggle = Instance.new("TextButton")
     toggle.Size = UDim2.new(0, 44, 0, 24)
     toggle.Position = UDim2.new(0.88, 0, 0.05, 0)
@@ -321,28 +226,38 @@ local function CreateToggle(parent, yPos, labelText, getter, setter, description
     toggle.BorderSizePixel = 0
     toggle.Text = ""
     toggle.Parent = frame
+    
     local toggleCorner = Instance.new("UICorner")
     toggleCorner.CornerRadius = UDim.new(1, 0)
     toggleCorner.Parent = toggle
+    
     local function UpdateToggle(value)
-        if value then toggle.BackgroundColor3 = Color3.fromRGB(59, 130, 246) else toggle.BackgroundColor3 = Color3.fromRGB(42, 47, 58) end
+        if value then
+            toggle.BackgroundColor3 = Color3.fromRGB(59, 130, 246)
+        else
+            toggle.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
+        end
     end
-    UpdateToggle(getter())
+    
+    UpdateToggle(_G[globalVar])
+    
     toggle.MouseButton1Click:Connect(function()
-        local newVal = not getter()
-        setter(newVal)
+        local newVal = not _G[globalVar]
+        _G[globalVar] = newVal
         UpdateToggle(newVal)
-        print(string.format("[DEBUG] %s = %s", labelText, tostring(newVal)))
+        print(string.format("[DEBUG] %s = %s", globalVar, tostring(newVal)))
     end)
+    
     return toggle
 end
 
-local function CreateSlider(parent, yPos, labelText, minVal, maxVal, getter, setter, description)
+local function CreateSlider(parent, labelText, description, globalVar, minVal, maxVal, defaultVal, yPos)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, 0, 0, 58)
     frame.Position = UDim2.new(0, 0, 0, yPos)
     frame.BackgroundTransparency = 1
     frame.Parent = parent
+    
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(0.5, 0, 0, 20)
     label.Position = UDim2.new(0, 0, 0, 0)
@@ -353,6 +268,7 @@ local function CreateSlider(parent, yPos, labelText, minVal, maxVal, getter, set
     label.Font = Enum.Font.GothamBold
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Parent = frame
+    
     if description then
         local desc = Instance.new("TextLabel")
         desc.Size = UDim2.new(0.5, 0, 0, 16)
@@ -365,63 +281,81 @@ local function CreateSlider(parent, yPos, labelText, minVal, maxVal, getter, set
         desc.TextXAlignment = Enum.TextXAlignment.Left
         desc.Parent = frame
     end
+    
+    if _G[globalVar] == nil then
+        _G[globalVar] = defaultVal
+    end
+    
     local valueDisplay = Instance.new("TextLabel")
     valueDisplay.Size = UDim2.new(0.15, 0, 0, 20)
     valueDisplay.Position = UDim2.new(0.85, 0, 0, 0)
     valueDisplay.BackgroundTransparency = 1
-    valueDisplay.Text = tostring(getter())
+    valueDisplay.Text = tostring(_G[globalVar])
     valueDisplay.TextColor3 = Color3.fromRGB(255, 255, 255)
     valueDisplay.TextSize = 14
     valueDisplay.Font = Enum.Font.GothamBold
     valueDisplay.TextXAlignment = Enum.TextXAlignment.Right
     valueDisplay.Parent = frame
+    
     local sliderFrame = Instance.new("Frame")
     sliderFrame.Size = UDim2.new(0.5, 0, 0, 6)
     sliderFrame.Position = UDim2.new(0, 0, 0, 38)
     sliderFrame.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
     sliderFrame.BorderSizePixel = 0
     sliderFrame.Parent = frame
+    
     local sliderCorner = Instance.new("UICorner")
     sliderCorner.CornerRadius = UDim.new(1, 0)
     sliderCorner.Parent = sliderFrame
+    
     local fill = Instance.new("Frame")
-    local initialPercent = (getter() - minVal) / (maxVal - minVal)
+    local initialPercent = (_G[globalVar] - minVal) / (maxVal - minVal)
     fill.Size = UDim2.new(initialPercent, 0, 1, 0)
     fill.BackgroundColor3 = Color3.fromRGB(59, 130, 246)
     fill.BorderSizePixel = 0
     fill.Parent = sliderFrame
+    
     local fillCorner = Instance.new("UICorner")
     fillCorner.CornerRadius = UDim.new(1, 0)
     fillCorner.Parent = fill
+    
     local function UpdateSlider(mouseX)
         local absPos = sliderFrame.AbsolutePosition.X
         local width = sliderFrame.AbsoluteSize.X
-        if width <= 0 then return end
+        if width <= 0 then
+            return
+        end
+        
         local percent = math.clamp((mouseX - absPos) / width, 0, 1)
         local val = math.round(minVal + percent * (maxVal - minVal))
         val = math.clamp(val, minVal, maxVal)
+        
         fill.Size = UDim2.new(percent, 0, 1, 0)
         valueDisplay.Text = tostring(val)
-        setter(val)
-        print(string.format("[DEBUG] %s = %d", labelText, val))
+        _G[globalVar] = val
+        print(string.format("[DEBUG] %s = %d", globalVar, val))
     end
+    
     sliderFrame.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             UpdateSlider(input.Position.X)
         end
     end)
+    
     sliderFrame.MouseButton1Click:Connect(function()
         UpdateSlider(Mouse.X)
     end)
+    
     return sliderFrame
 end
 
-local function CreateDropdown(parent, yPos, labelText, options, getter, setter, description)
+local function CreateDropdown(parent, labelText, description, globalVar, options, yPos)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, 0, 0, 56)
     frame.Position = UDim2.new(0, 0, 0, yPos)
     frame.BackgroundTransparency = 1
     frame.Parent = parent
+    
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(0.4, 0, 0, 20)
     label.Position = UDim2.new(0, 0, 0, 0)
@@ -432,6 +366,7 @@ local function CreateDropdown(parent, yPos, labelText, options, getter, setter, 
     label.Font = Enum.Font.GothamBold
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Parent = frame
+    
     if description then
         local desc = Instance.new("TextLabel")
         desc.Size = UDim2.new(0.4, 0, 0, 16)
@@ -444,117 +379,342 @@ local function CreateDropdown(parent, yPos, labelText, options, getter, setter, 
         desc.TextXAlignment = Enum.TextXAlignment.Left
         desc.Parent = frame
     end
-    local dropdown = Instance.new("TextButton")
-    dropdown.Size = UDim2.new(0.4, 0, 0.6, 0)
-    dropdown.Position = UDim2.new(0.55, 0, 0.05, 0)
-    dropdown.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
-    dropdown.BorderSizePixel = 0
-    dropdown.Text = getter()
-    dropdown.TextColor3 = Color3.fromRGB(255, 255, 255)
-    dropdown.TextSize = 13
-    dropdown.Font = Enum.Font.Gotham
-    dropdown.Parent = frame
-    local dropdownCorner = Instance.new("UICorner")
-    dropdownCorner.CornerRadius = UDim.new(0, 4)
-    dropdownCorner.Parent = dropdown
-    local list = Instance.new("Frame")
-    list.Size = UDim2.new(0.4, 0, 0, #options * 28)
-    list.Position = UDim2.new(0.55, 0, 0.7, 0)
-    list.BackgroundColor3 = Color3.fromRGB(20, 23, 30)
-    list.BorderSizePixel = 0
-    list.Visible = false
-    list.ZIndex = 10
-    list.Parent = frame
+    
+    if _G[globalVar] == nil then
+        _G[globalVar] = options[1]
+    end
+    
+    local dropBtn = Instance.new("TextButton")
+    dropBtn.Size = UDim2.new(0.4, 0, 0.6, 0)
+    dropBtn.Position = UDim2.new(0.55, 0, 0.05, 0)
+    dropBtn.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
+    dropBtn.BorderSizePixel = 0
+    dropBtn.Text = _G[globalVar]
+    dropBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    dropBtn.TextSize = 13
+    dropBtn.Font = Enum.Font.Gotham
+    dropBtn.Parent = frame
+    
+    local dropCorner = Instance.new("UICorner")
+    dropCorner.CornerRadius = UDim.new(0, 4)
+    dropCorner.Parent = dropBtn
+    
+    local listFrame = Instance.new("Frame")
+    listFrame.Size = UDim2.new(0.4, 0, 0, #options * 26)
+    listFrame.Position = UDim2.new(0.55, 0, 0.7, 0)
+    listFrame.BackgroundColor3 = Color3.fromRGB(20, 23, 30)
+    listFrame.BorderSizePixel = 0
+    listFrame.Visible = false
+    listFrame.ZIndex = 150
+    listFrame.Parent = dropBtn
+    
+    local listStroke = Instance.new("UIStroke")
+    listStroke.Color = Color3.fromRGB(42, 47, 58)
+    listStroke.Parent = listFrame
+    
     local listCorner = Instance.new("UICorner")
     listCorner.CornerRadius = UDim.new(0, 4)
-    listCorner.Parent = list
-    for _, opt in ipairs(options) do
-        local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(1, 0, 0, 28)
-        btn.BackgroundTransparency = 1
-        btn.Text = opt
-        btn.TextColor3 = Color3.fromRGB(209, 213, 219)
-        btn.TextSize = 13
-        btn.Font = Enum.Font.Gotham
-        btn.Parent = list
-        btn.MouseEnter:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50) end)
-        btn.MouseLeave:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(20, 23, 30) end)
-        btn.MouseButton1Click:Connect(function()
-            setter(opt)
-            dropdown.Text = opt
-            list.Visible = false
-            print(string.format("[DEBUG] %s = %s", labelText, opt))
+    listCorner.Parent = listFrame
+    
+    dropBtn.MouseButton1Click:Connect(function()
+        listFrame.Visible = not listFrame.Visible
+    end)
+    
+    for idx, optName in ipairs(options) do
+        local optBtn = Instance.new("TextButton")
+        optBtn.Size = UDim2.new(1, 0, 0, 26)
+        optBtn.Position = UDim2.new(0, 0, 0, (idx - 1) * 26)
+        optBtn.BackgroundTransparency = 1
+        optBtn.Text = optName
+        optBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+        optBtn.TextSize = 12
+        optBtn.Font = Enum.Font.Gotham
+        optBtn.ZIndex = 151
+        optBtn.Parent = listFrame
+        
+        optBtn.MouseButton1Click:Connect(function()
+            _G[globalVar] = optName
+            dropBtn.Text = optName
+            listFrame.Visible = false
+            print(string.format("[DEBUG] %s = %s", globalVar, optName))
         end)
     end
-    dropdown.MouseButton1Click:Connect(function() list.Visible = not list.Visible end)
-    return dropdown
 end
 
+-- ======================================================
+-- НАПОЛНЕНИЕ AIMBOT СТРАНИЦЫ
+-- ======================================================
 local aimbotPage = ContentPages["Aimbot"]
 if aimbotPage then
-    local y = 10
-    CreateToggle(aimbotPage, y, "Aimbot Master",
-        function() return _G.AimbotEnabled end,
-        function(v) _G.AimbotEnabled = v print(string.format("[DEBUG] Aimbot: %s", tostring(v))) end,
-        "Включить систему автоматического наведения"
+    CreateToggle(
+        aimbotPage,
+        "Master Aimbot",
+        "Авто-наведение камеры на противников при зажатии экрана",
+        "AimbotEnabled",
+        10
     )
-    y = y + 52
-    CreateDropdown(aimbotPage, y, "Target Bone",
+    
+    CreateSlider(
+        aimbotPage,
+        "Aimbot FOV Range",
+        "Радиус захвата автонаведения в пикселях",
+        "AimbotFOV",
+        10,
+        300,
+        100,
+        65
+    )
+    
+    CreateDropdown(
+        aimbotPage,
+        "Target Body Part",
+        "Выбор части тела для захвата аимбота",
+        "TargetBone",
         {"Head", "Torso", "HumanoidRootPart"},
-        function() return _G.TargetBone end,
-        function(v) _G.TargetBone = v print(string.format("[DEBUG] Target Bone: %s", v)) end,
-        "Выбор части тела для прицеливания"
+        135
     )
-    y = y + 60
-    CreateSlider(aimbotPage, y, "FOV Radius", 10, 300,
-        function() return _G.AimbotFOV end,
-        function(v) _G.AimbotFOV = v print(string.format("[DEBUG] Aimbot FOV: %d", v)) end,
-        "Радиус зоны действия в пикселях"
-    )
-    y = y + 62
-    aimbotPage.CanvasSize = UDim2.new(0, 0, 0, y + 10)
 end
 
+-- ======================================================
+-- НАПОЛНЕНИЕ VISUALS СТРАНИЦЫ
+-- ======================================================
 local visualsPage = ContentPages["Visuals"]
 if visualsPage then
-    local y = 10
-    CreateToggle(visualsPage, y, "2D Box ESP",
-        function() return _G.BoxESP end,
-        function(v) _G.BoxESP = v print(string.format("[DEBUG] BoxESP: %s", tostring(v))) end,
-        "Зеленые прямоугольники вокруг игроков"
+    CreateToggle(
+        visualsPage,
+        "Chams / Подсветка",
+        "Красивый силуэт игроков оранжевого цвета сквозь стены",
+        "BoxESP",
+        10
     )
-    y = y + 52
-    CreateToggle(visualsPage, y, "Snaplines",
-        function() return _G.Snaplines end,
-        function(v) _G.Snaplines = v print(string.format("[DEBUG] Snaplines: %s", tostring(v))) end,
-        "Линии от центра экрана к цели"
+    
+    CreateToggle(
+        visualsPage,
+        "Tracers / Лучи",
+        "Тонкие лазерные линии от тебя к противникам",
+        "Snaplines",
+        65
     )
-    y = y + 52
-    CreateToggle(visualsPage, y, "Name & Distance",
-        function() return _G.EspNames end,
-        function(v) _G.EspNames = v print(string.format("[DEBUG] EspNames: %s", tostring(v))) end,
-        "Отображение имени и дистанции"
+    
+    CreateToggle(
+        visualsPage,
+        "Names & Distance",
+        "Отображение имен игроков и дистанции в реальном времени",
+        "EspNames",
+        120
     )
-    y = y + 52
-    visualsPage.CanvasSize = UDim2.new(0, 0, 0, y + 10)
 end
 
-if TabButtons[1] then TabButtons[1].MouseButton1Click:Fire() end
+-- ======================================================
+-- АКТИВАЦИЯ ПЕРВОЙ ВКЛАДКИ
+-- ======================================================
+if TabButtons[1] then
+    TabButtons[1].MouseButton1Click:Fire()
+end
 
 -- ======================================================
--- АВТОМАТИЧЕСКОЕ ОТКРЫТИЕ МЕНЮ ПРИ ЗАПУСКЕ
+-- ФУНКЦИЯ ПОИСКА БЛИЖАЙШЕГО ИГРОКА
 -- ======================================================
-MainFrame.Visible = true
+local function GetClosestPlayer()
+    local closestPlayer = nil
+    local shortestDistance = _G.AimbotFOV
+    local localChar = LocalPlayer.Character
+    local localRoot = localChar and localChar:FindFirstChild("HumanoidRootPart")
+    
+    if not localRoot then
+        return nil
+    end
+    
+    local viewportSize = Camera.ViewportSize
+    local screenCenter = viewportSize / 2
+    
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player == LocalPlayer then
+            continue
+        end
+        
+        local char = player.Character
+        local targetPart = char and char:FindFirstChild(_G.TargetBone)
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        
+        if targetPart and hum and hum.Health > 0 then
+            local pos2D, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
+            
+            if onScreen then
+                local distance = (Vector2.new(pos2D.X, pos2D.Y) - screenCenter).Magnitude
+                
+                if distance < shortestDistance then
+                    shortestDistance = distance
+                    closestPlayer = player
+                end
+            end
+        end
+    end
+    
+    return closestPlayer
+end
 
+-- ======================================================
+-- ГЛОБАЛЬНЫЙ РЕНДЕР-ЦИКЛ
+-- ======================================================
+RunService.RenderStepped:Connect(function()
+    -- ---- AIMBOT ----
+    if _G.AimbotEnabled and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+        local targetPlayer = GetClosestPlayer()
+        
+        if targetPlayer and targetPlayer.Character then
+            local aimPart = targetPlayer.Character:FindFirstChild(_G.TargetBone)
+            
+            if aimPart then
+                Camera.CFrame = CFrame.new(Camera.CFrame.Position, aimPart.Position)
+            end
+        end
+    end
+    
+    -- ---- ESP ОБЪЕКТЫ ----
+    local localChar = LocalPlayer.Character
+    local localRoot = localChar and localChar:FindFirstChild("HumanoidRootPart")
+    
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player == LocalPlayer then
+            continue
+        end
+        
+        local char = player.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        
+        if char and hrp and hum and hum.Health > 0 then
+            local pos2D, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+            
+            -- ---- CHAMS (HIGHLIGHT) ----
+            if _G.BoxESP then
+                local highlight = char:FindFirstChild("META_Highlight")
+                
+                if not highlight then
+                    highlight = Instance.new("Highlight")
+                    highlight.Name = "META_Highlight"
+                    highlight.FillColor = Color3.fromRGB(255, 165, 0)
+                    highlight.FillTransparency = 0.5
+                    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                    highlight.OutlineTransparency = 0.1
+                    highlight.Parent = char
+                end
+            else
+                if char:FindFirstChild("META_Highlight") then
+                    char.META_Highlight:Destroy()
+                end
+            end
+            
+            -- ---- TRACERS (BEAM) ----
+            if _G.Snaplines and onScreen and localRoot then
+                local attachment0 = localRoot:FindFirstChild("META_Att")
+                
+                if not attachment0 then
+                    attachment0 = Instance.new("Attachment")
+                    attachment0.Name = "META_Att"
+                    attachment0.Parent = localRoot
+                end
+                
+                local attachment1 = hrp:FindFirstChild("META_Att")
+                
+                if not attachment1 then
+                    attachment1 = Instance.new("Attachment")
+                    attachment1.Name = "META_Att"
+                    attachment1.Parent = hrp
+                end
+                
+                local beam = localRoot:FindFirstChild("META_Beam" .. player.Name)
+                
+                if not beam then
+                    beam = Instance.new("Beam")
+                    beam.Name = "META_Beam" .. player.Name
+                    beam.Width0 = 0.05
+                    beam.Width1 = 0.05
+                    beam.Color = ColorSequence.new(Color3.fromRGB(255, 165, 0))
+                    beam.FaceCamera = true
+                    beam.Attachment0 = attachment0
+                    beam.Attachment1 = attachment1
+                    beam.Parent = localRoot
+                end
+            else
+                if localRoot and localRoot:FindFirstChild("META_Beam" .. player.Name) then
+                    localRoot["META_Beam" .. player.Name]:Destroy()
+                end
+            end
+            
+            -- ---- NAMES & DISTANCE ----
+            if _G.EspNames and onScreen and localRoot then
+                local head = char:FindFirstChild("Head")
+                
+                if head then
+                    local bgui = head:FindFirstChild("META_BGui")
+                    
+                    if not bgui then
+                        bgui = Instance.new("BillboardGui")
+                        bgui.Name = "META_BGui"
+                        bgui.Size = UDim2.new(0, 100, 0, 30)
+                        bgui.AlwaysOnTop = true
+                        bgui.StudsOffset = Vector3.new(0, 2, 0)
+                        
+                        local tl = Instance.new("TextLabel")
+                        tl.Size = UDim2.new(1, 0, 1, 0)
+                        tl.BackgroundTransparency = 1
+                        tl.TextColor3 = Color3.fromRGB(255, 255, 255)
+                        tl.TextStrokeTransparency = 0
+                        tl.TextSize = 12
+                        tl.Font = Enum.Font.GothamBold
+                        tl.Parent = bgui
+                        
+                        bgui.Parent = head
+                    end
+                    
+                    local dist = (hrp.Position - localRoot.Position).Magnitude
+                    head.META_BGui.TextLabel.Text = string.format("%s [%d Studs]", player.Name, math.round(dist))
+                end
+            else
+                if char and char:FindFirstChild("Head") and char.Head:FindFirstChild("META_BGui") then
+                    char.Head.META_BGui:Destroy()
+                end
+            end
+        else
+            -- ---- ОЧИСТКА ПРИ СМЕРТИ ИЛИ ВЫХОДЕ ----
+            if char then
+                if char:FindFirstChild("META_Highlight") then
+                    char.META_Highlight:Destroy()
+                end
+                
+                if char:FindFirstChild("Head") and char.Head:FindFirstChild("META_BGui") then
+                    char.Head.META_BGui:Destroy()
+                end
+            end
+            
+            if localRoot and localRoot:FindFirstChild("META_Beam" .. player.Name) then
+                localRoot["META_Beam" .. player.Name]:Destroy()
+            end
+        end
+    end
+end)
+
+-- ======================================================
+-- ГОРЯЧИЕ КЛАВИШИ
+-- ======================================================
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.Insert then
-        MainFrame.Visible = not MainFrame.Visible
+    if gameProcessed then
+        return
+    end
+    
+    if input.KeyCode == Enum.KeyCode.Insert or input.KeyCode == Enum.KeyCode.F8 then
+        MenuVisible = not MenuVisible
+        MainFrame.Visible = MenuVisible
     end
 end)
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
+    if gameProcessed then
+        return
+    end
+    
     if input.KeyCode == Enum.KeyCode.F1 then
         _G.AimbotEnabled = not _G.AimbotEnabled
         print(string.format("[DEBUG] Aimbot: %s", tostring(_G.AimbotEnabled)))
@@ -570,9 +730,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] META v3.0 loaded successfully!")
-print("[META] Menu opened automatically!")
-print("[META] Press Insert to toggle menu")
-print("[META] F1 - Aimbot, F2 - BoxESP, F3 - Snaplines, F4 - NameESP")
-print("[META] Current State: Aimbot=" .. tostring(_G.AimbotEnabled) .. ", BoxESP=" .. tostring(_G.BoxESP) .. ", Snaplines=" .. tostring(_G.Snaplines) .. ", EspNames=" .. tostring(_G.EspNames))
-]])
+print("[META] Mobile Engine Active!")
+print("[META] Press Insert or F8 to toggle menu")
+print("[META] F1 - Aimbot, F2 - Chams, F3 - Tracers, F4 - Names")
