@@ -11,13 +11,26 @@ local Mouse = LocalPlayer:GetMouse()
 -- ГЛОБАЛЬНЫЕ СОСТОЯНИЯ
 -- ======================================================
 _G.AimbotEnabled = false
-_G.AimbotFOV = 100
+_G.AimbotFOV = 150
 _G.TargetBone = "Head"
 _G.BoxESP = false
 _G.Snaplines = false
 _G.EspNames = false
 
 local MenuVisible = true
+local FOVCircle = nil
+
+-- ======================================================
+-- СОЗДАНИЕ FOV КРУГА
+-- ======================================================
+FOVCircle = Drawing.new("Circle")
+FOVCircle.Visible = false
+FOVCircle.Color = Color3.fromRGB(0, 150, 255)
+FOVCircle.Thickness = 1.5
+FOVCircle.Transparency = 0.5
+FOVCircle.NumSides = 64
+FOVCircle.Filled = false
+FOVCircle.Radius = _G.AimbotFOV
 
 -- ======================================================
 -- СОЗДАНИЕ GUI
@@ -219,36 +232,60 @@ local function CreateToggle(parent, labelText, description, globalVar, yPos)
         desc.Parent = frame
     end
     
-    local toggle = Instance.new("TextButton")
-    toggle.Size = UDim2.new(0, 44, 0, 24)
-    toggle.Position = UDim2.new(0.88, 0, 0.05, 0)
-    toggle.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
-    toggle.BorderSizePixel = 0
-    toggle.Text = ""
-    toggle.Parent = frame
+    local toggleContainer = Instance.new("Frame")
+    toggleContainer.Size = UDim2.new(0, 44, 0, 24)
+    toggleContainer.Position = UDim2.new(0.88, 0, 0.05, 0)
+    toggleContainer.BackgroundTransparency = 1
+    toggleContainer.Parent = frame
+    
+    local toggleBg = Instance.new("Frame")
+    toggleBg.Size = UDim2.new(1, 0, 1, 0)
+    toggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
+    toggleBg.BorderSizePixel = 0
+    toggleBg.Parent = toggleContainer
     
     local toggleCorner = Instance.new("UICorner")
     toggleCorner.CornerRadius = UDim.new(1, 0)
-    toggleCorner.Parent = toggle
+    toggleCorner.Parent = toggleBg
+    
+    local toggleHandle = Instance.new("Frame")
+    toggleHandle.Size = UDim2.new(0, 18, 0, 18)
+    toggleHandle.Position = UDim2.new(0, 3, 0.5, -9)
+    toggleHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    toggleHandle.BorderSizePixel = 0
+    toggleHandle.Parent = toggleBg
+    
+    local handleCorner = Instance.new("UICorner")
+    handleCorner.CornerRadius = UDim.new(1, 0)
+    handleCorner.Parent = toggleHandle
+    
+    local clickBtn = Instance.new("TextButton")
+    clickBtn.Size = UDim2.new(1, 0, 1, 0)
+    clickBtn.BackgroundTransparency = 1
+    clickBtn.Text = ""
+    clickBtn.ZIndex = 10
+    clickBtn.Parent = toggleContainer
     
     local function UpdateToggle(value)
         if value then
-            toggle.BackgroundColor3 = Color3.fromRGB(59, 130, 246)
+            toggleBg.BackgroundColor3 = Color3.fromRGB(59, 130, 246)
+            toggleHandle.Position = UDim2.new(0, 23, 0.5, -9)
         else
-            toggle.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
+            toggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
+            toggleHandle.Position = UDim2.new(0, 3, 0.5, -9)
         end
     end
     
     UpdateToggle(_G[globalVar])
     
-    toggle.MouseButton1Click:Connect(function()
+    clickBtn.MouseButton1Click:Connect(function()
         local newVal = not _G[globalVar]
         _G[globalVar] = newVal
         UpdateToggle(newVal)
         print(string.format("[DEBUG] %s = %s", globalVar, tostring(newVal)))
     end)
     
-    return toggle
+    return clickBtn
 end
 
 local function CreateSlider(parent, labelText, description, globalVar, minVal, maxVal, defaultVal, yPos)
@@ -319,6 +356,17 @@ local function CreateSlider(parent, labelText, description, globalVar, minVal, m
     fillCorner.CornerRadius = UDim.new(1, 0)
     fillCorner.Parent = fill
     
+    local clickBtn = Instance.new("TextButton")
+    clickBtn.Size = UDim2.new(1, 0, 1, 0)
+    clickBtn.Position = UDim2.new(0, 0, 0, 0)
+    clickBtn.BackgroundTransparency = 1
+    clickBtn.Text = ""
+    clickBtn.ZIndex = 10
+    clickBtn.Parent = sliderFrame
+    
+    local dragging = false
+    local dragConnection = nil
+    
     local function UpdateSlider(mouseX)
         local absPos = sliderFrame.AbsolutePosition.X
         local width = sliderFrame.AbsoluteSize.X
@@ -333,20 +381,41 @@ local function CreateSlider(parent, labelText, description, globalVar, minVal, m
         fill.Size = UDim2.new(percent, 0, 1, 0)
         valueDisplay.Text = tostring(val)
         _G[globalVar] = val
+        
+        if globalVar == "AimbotFOV" and FOVCircle then
+            FOVCircle.Radius = val
+        end
+        
         print(string.format("[DEBUG] %s = %d", globalVar, val))
     end
     
-    sliderFrame.InputBegan:Connect(function(input)
+    clickBtn.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
             UpdateSlider(input.Position.X)
+            
+            if dragConnection then
+                dragConnection:Disconnect()
+            end
+            dragConnection = UserInputService.InputChanged:Connect(function(inputChanged)
+                if inputChanged.UserInputType == Enum.UserInputType.MouseMovement and dragging then
+                    UpdateSlider(inputChanged.Position.X)
+                end
+            end)
         end
     end)
     
-    sliderFrame.MouseButton1Click:Connect(function()
-        UpdateSlider(Mouse.X)
+    clickBtn.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+            if dragConnection then
+                dragConnection:Disconnect()
+                dragConnection = nil
+            end
+        end
     end)
     
-    return sliderFrame
+    return clickBtn
 end
 
 local function CreateDropdown(parent, labelText, description, globalVar, options, yPos)
@@ -416,10 +485,8 @@ local function CreateDropdown(parent, labelText, description, globalVar, options
     listCorner.CornerRadius = UDim.new(0, 4)
     listCorner.Parent = listFrame
     
-    dropBtn.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-            listFrame.Visible = not listFrame.Visible
-        end
+    dropBtn.MouseButton1Click:Connect(function()
+        listFrame.Visible = not listFrame.Visible
     end)
     
     for idx, optName in ipairs(options) do
@@ -434,13 +501,11 @@ local function CreateDropdown(parent, labelText, description, globalVar, options
         optBtn.ZIndex = 151
         optBtn.Parent = listFrame
         
-        optBtn.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-                _G[globalVar] = optName
-                dropBtn.Text = optName
-                listFrame.Visible = false
-                print(string.format("[DEBUG] %s = %s", globalVar, optName))
-            end
+        optBtn.MouseButton1Click:Connect(function()
+            _G[globalVar] = optName
+            dropBtn.Text = optName
+            listFrame.Visible = false
+            print(string.format("[DEBUG] %s = %s", globalVar, optName))
         end)
     end
 end
@@ -465,7 +530,7 @@ if aimbotPage then
         "AimbotFOV",
         10,
         300,
-        100,
+        150,
         75
     )
     
@@ -562,6 +627,18 @@ end
 -- ГЛОБАЛЬНЫЙ РЕНДЕР-ЦИКЛ
 -- ======================================================
 RunService.RenderStepped:Connect(function()
+    local viewportSize = Camera.ViewportSize
+    local screenCenter = Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
+    
+    -- ---- FOV КРУГ ----
+    if _G.AimbotEnabled and FOVCircle then
+        FOVCircle.Visible = true
+        FOVCircle.Position = screenCenter
+        FOVCircle.Radius = _G.AimbotFOV
+    elseif FOVCircle then
+        FOVCircle.Visible = false
+    end
+    
     -- ---- AIMBOT ----
     if _G.AimbotEnabled and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
         local targetPlayer = GetClosestPlayer()
