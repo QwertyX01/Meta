@@ -22,7 +22,7 @@ _G.EspNames = false
 _G.Box2D = false
 _G.FullBrightEnabled = false
 
-local MenuVisible = false
+local MenuVisible = true
 local FOVCircle = nil
 local BlissfulActive = false
 local BlissfulConnections = {}
@@ -230,15 +230,26 @@ local function UpdateChams()
 end
 
 -- ======================================================
--- 2D BOX ESP (BILLBOARD GUI)
+-- 2D BOX ESP 
+-- =====================================================
+-- ======================================================
+-- 2D BOX ESP - ИСПРАВЛЕННАЯ ВЕРСИЯ (БЕЗ ПРИЗРАКОВ)
 -- ======================================================
 local Box2DData = {}
+local Box2DConnections = {}
 
 local function CreateBox2D(player)
     if player == LocalPlayer then return end
-    if Box2DData[player] then return end
-    
+
     local function onCharacterAdded(character)
+        -- ✅ ПРИ РЕСПАВНЕ УДАЛЯЕМ СТАРЫЙ GUI
+        if Box2DData[player] then
+            pcall(function() 
+                Box2DData[player]:Destroy() 
+            end)
+            Box2DData[player] = nil
+        end
+        
         local hrp = character:WaitForChild("HumanoidRootPart", 5)
         local humanoid = character:WaitForChild("Humanoid", 5)
         if not hrp or not humanoid then return end
@@ -273,63 +284,85 @@ local function CreateBox2D(player)
         nameLabel.Font = Enum.Font.SourceSansBold
         nameLabel.Parent = box
         
-        Box2DData[player] = {
-            gui = gui,
-            box = box,
-            stroke = stroke,
-            nameLabel = nameLabel,
-            hrp = hrp,
-            humanoid = humanoid
-        }
+        Box2DData[player] = gui
+    end
+
+    -- ✅ ЕСЛИ УЖЕ ЕСТЬ GUI ПРИ ПОДКЛЮЧЕНИИ - УДАЛЯЕМ
+    if Box2DData[player] then
+        pcall(function() Box2DData[player]:Destroy() end)
+        Box2DData[player] = nil
     end
 
     if player.Character then
         onCharacterAdded(player.Character)
     end
 
-    player.CharacterAdded:Connect(onCharacterAdded)
+    if Box2DConnections[player] then
+        Box2DConnections[player]:Disconnect()
+    end
+    Box2DConnections[player] = player.CharacterAdded:Connect(onCharacterAdded)
 end
 
 local function RemoveBox2D(player)
+    if Box2DConnections[player] then
+        Box2DConnections[player]:Disconnect()
+        Box2DConnections[player] = nil
+    end
+    
     if Box2DData[player] then
-        if Box2DData[player].gui then
-            Box2DData[player].gui:Destroy()
-        end
+        pcall(function() Box2DData[player]:Destroy() end)
         Box2DData[player] = nil
     end
 end
 
 local function RemoveAllBox2D()
-    for player, data in pairs(Box2DData) do
-        if data and data.gui then
-            data.gui:Destroy()
-        end
+    for player, gui in pairs(Box2DData) do
+        pcall(function() gui:Destroy() end)
     end
     Box2DData = {}
+    
+    for player, conn in pairs(Box2DConnections) do
+        pcall(function() conn:Disconnect() end)
+    end
+    Box2DConnections = {}
 end
 
 local function UpdateBox2D()
     if _G.Box2D then
         for _, player in pairs(Players:GetPlayers()) do
             if player ~= LocalPlayer then
-                if not Box2DData[player] then
+                -- ✅ ПРОВЕРЯЕМ, ЕСТЬ ЛИ У ИГРОКА GUI, И ОН ЛИ ПРИВЯЗАН К ТЕКУЩЕМУ ПЕРСОНАЖУ
+                local currentGui = Box2DData[player]
+                local shouldRecreate = false
+                
+                if currentGui then
+                    -- Проверяем, существует ли ещё Adornee
+                    local success, adornee = pcall(function()
+                        return currentGui.Adornee
+                    end)
+                    if not success or not adornee or not adornee.Parent then
+                        -- Adornee уничтожен — удаляем старый GUI
+                        pcall(function() currentGui:Destroy() end)
+                        Box2DData[player] = nil
+                        shouldRecreate = true
+                    end
+                else
+                    shouldRecreate = true
+                end
+                
+                if shouldRecreate then
                     CreateBox2D(player)
                 else
-                    if Box2DData[player] and Box2DData[player].gui then
-                        Box2DData[player].gui.Enabled = true
-                    end
+                    pcall(function() Box2DData[player].Enabled = true end)
                 end
             end
         end
     else
-        for player, data in pairs(Box2DData) do
-            if data and data.gui then
-                data.gui.Enabled = false
-            end
-        end
+        RemoveAllBox2D()
     end
 end
 
+-- Инициализация
 for _, player in ipairs(Players:GetPlayers()) do
     if player ~= LocalPlayer then
         CreateBox2D(player)
@@ -346,7 +379,6 @@ Players.PlayerRemoving:Connect(function(player)
     RemoveBox2D(player)
 end)
 
--- ======================================================
 -- ЗВУК КЛИКА
 -- ======================================================
 local ClickSound = Instance.new("Sound")
