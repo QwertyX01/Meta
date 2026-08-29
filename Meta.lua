@@ -1,4 +1,3 @@
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -1549,10 +1548,15 @@ if visualsPage then
 end
 
 -- ======================================================
--- AI СТРАНИЦА
+-- AI СТРАНИЦА (С ЧАТОМ)
 -- ======================================================
 local aiPage = ContentPages["AI"]
 if aiPage then
+    -- Очищаем страницу
+    for _, child in pairs(aiPage:GetChildren()) do
+        child:Destroy()
+    end
+    
     local y = 10
     
     -- Заголовок
@@ -1581,31 +1585,23 @@ if aiPage then
     subLabel.Parent = aiPage
     y = y + 30
     
-    -- Широкий низкий квадрат
-    local inputFrame = Instance.new("Frame")
-    inputFrame.Size = UDim2.new(0.85, 0, 0, 50)
-    inputFrame.Position = UDim2.new(0.075, 0, 0, y)
-    inputFrame.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
-    inputFrame.BorderSizePixel = 0
-    inputFrame.Parent = aiPage
+    -- Контейнер для ввода
+    local inputContainer = Instance.new("Frame")
+    inputContainer.Size = UDim2.new(0.9, 0, 0, 50)
+    inputContainer.Position = UDim2.new(0.05, 0, 0, y)
+    inputContainer.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
+    inputContainer.BorderSizePixel = 1
+    inputContainer.BorderColor3 = Color3.fromRGB(42, 47, 58)
+    inputContainer.Parent = aiPage
     
     local inputCorner = Instance.new("UICorner")
     inputCorner.CornerRadius = UDim.new(0, 10)
-    inputCorner.Parent = inputFrame
+    inputCorner.Parent = inputContainer
     
-    local searchIcon = Instance.new("TextLabel")
-    searchIcon.Size = UDim2.new(0, 30, 1, 0)
-    searchIcon.Position = UDim2.new(0, 10, 0, 0)
-    searchIcon.BackgroundTransparency = 1
-    searchIcon.Text = "🔍"
-    searchIcon.TextColor3 = Color3.fromRGB(156, 163, 175)
-    searchIcon.TextSize = 18
-    searchIcon.Font = Enum.Font.Gotham
-    searchIcon.Parent = inputFrame
-    
+    -- Поле ввода
     local inputBox = Instance.new("TextBox")
-    inputBox.Size = UDim2.new(1, -50, 1, 0)
-    inputBox.Position = UDim2.new(0, 50, 0, 0)
+    inputBox.Size = UDim2.new(1, -20, 1, 0)
+    inputBox.Position = UDim2.new(0, 10, 0, 0)
     inputBox.BackgroundTransparency = 1
     inputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
     inputBox.PlaceholderText = "Напиши вопрос..."
@@ -1613,13 +1609,16 @@ if aiPage then
     inputBox.ClearTextOnFocus = false
     inputBox.Font = Enum.Font.Gotham
     inputBox.TextSize = 16
-    inputBox.Parent = inputFrame
+    inputBox.Selectable = true
+    inputBox.Active = true
+    inputBox.Parent = inputContainer
+    
     y = y + 60
     
     -- Кнопка отправки
     local sendBtn = Instance.new("TextButton")
-    sendBtn.Size = UDim2.new(0.2, 0, 0, 40)
-    sendBtn.Position = UDim2.new(0.4, 0, 0, y)
+    sendBtn.Size = UDim2.new(0.25, 0, 0, 40)
+    sendBtn.Position = UDim2.new(0.375, 0, 0, y)
     sendBtn.BackgroundColor3 = Color3.fromRGB(59, 130, 246)
     sendBtn.Text = "💬 Спросить"
     sendBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -1632,31 +1631,65 @@ if aiPage then
     sendCorner.Parent = sendBtn
     y = y + 50
     
-    -- Область ответа
-    local answerFrame = Instance.new("Frame")
-    answerFrame.Size = UDim2.new(0.9, 0, 0, 160)
-    answerFrame.Position = UDim2.new(0.05, 0, 0, y)
-    answerFrame.BackgroundColor3 = Color3.fromRGB(20, 23, 30)
-    answerFrame.BackgroundTransparency = 0.3
-    answerFrame.ClipsDescendants = true
-    answerFrame.Parent = aiPage
+    -- Контейнер для сообщений (скроллинг)
+    local messagesContainer = Instance.new("ScrollingFrame")
+    messagesContainer.Size = UDim2.new(0.9, 0, 0.5, 0)
+    messagesContainer.Position = UDim2.new(0.05, 0, 0, y)
+    messagesContainer.BackgroundColor3 = Color3.fromRGB(20, 23, 30)
+    messagesContainer.BackgroundTransparency = 0.3
+    messagesContainer.BorderSizePixel = 0
+    messagesContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
+    messagesContainer.ScrollBarThickness = 4
+    messagesContainer.ClipsDescendants = true
+    messagesContainer.Parent = aiPage
     
-    local answerCorner = Instance.new("UICorner")
-    answerCorner.CornerRadius = UDim.new(0, 10)
-    answerCorner.Parent = answerFrame
+    local msgCorner = Instance.new("UICorner")
+    msgCorner.CornerRadius = UDim.new(0, 10)
+    msgCorner.Parent = messagesContainer
     
-    local answerLabel = Instance.new("TextLabel")
-    answerLabel.Size = UDim2.new(1, -20, 1, -20)
-    answerLabel.Position = UDim2.new(0, 10, 0, 10)
-    answerLabel.BackgroundTransparency = 1
-    answerLabel.Text = "💬 Задай вопрос о функциях чита..."
-    answerLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-    answerLabel.TextSize = 14
-    answerLabel.Font = Enum.Font.Gotham
-    answerLabel.TextXAlignment = Enum.TextXAlignment.Left
-    answerLabel.TextYAlignment = Enum.TextYAlignment.Top
-    answerLabel.TextWrapped = true
-    answerLabel.Parent = answerFrame
+    -- Список сообщений
+    local messages = {}
+    
+    local function AddMessage(text, isUser)
+        local msgFrame = Instance.new("Frame")
+        msgFrame.Size = UDim2.new(1, -10, 0, 0)
+        msgFrame.Position = UDim2.new(0, 5, 0, #messages * 35 + 5)
+        msgFrame.BackgroundTransparency = 1
+        msgFrame.Parent = messagesContainer
+        
+        local msgLabel = Instance.new("TextLabel")
+        msgLabel.Size = UDim2.new(1, 0, 0, 30)
+        msgLabel.BackgroundTransparency = 1
+        msgLabel.Text = (isUser and "👤 " or "🤖 ") .. text
+        msgLabel.TextColor3 = isUser and Color3.fromRGB(200, 200, 255) or Color3.fromRGB(200, 255, 200)
+        msgLabel.TextSize = 14
+        msgLabel.Font = Enum.Font.Gotham
+        msgLabel.TextXAlignment = Enum.TextXAlignment.Left
+        msgLabel.TextWrapped = true
+        msgLabel.TextYAlignment = Enum.TextYAlignment.Top
+        msgLabel.Size = UDim2.new(1, 0, 0, 30)
+        msgLabel.Parent = msgFrame
+        
+        -- Вычисляем высоту текста
+        local textBounds = msgLabel.TextBounds
+        msgLabel.Size = UDim2.new(1, 0, 0, textBounds.Y + 10)
+        msgFrame.Size = UDim2.new(1, -10, 0, textBounds.Y + 15)
+        
+        table.insert(messages, msgFrame)
+        
+        -- Обновляем CanvasSize
+        local totalHeight = 0
+        for _, m in pairs(messages) do
+            totalHeight = totalHeight + m.Size.Y.Offset + 5
+        end
+        messagesContainer.CanvasSize = UDim2.new(0, 0, 0, totalHeight + 10)
+        
+        -- Скроллим вниз
+        messagesContainer.CanvasPosition = Vector2.new(0, totalHeight)
+    end
+    
+    -- Приветственное сообщение
+    AddMessage("Задай вопрос о функциях чита...", false)
     
     -- ======================================================
     -- AI ЛОГИКА
@@ -1687,52 +1720,52 @@ if aiPage then
         -- Aimbot
         if string.find(q, "aimbot") or string.find(q, "аимбот") or string.find(q, "наведени") or 
            string.find(q, "прицел") or string.find(q, "авто") then
-            return "🎯 Aimbot — автонаведение на противников при зажатии ПКМ.\nВключается: 'Master Aimbot' или F1.\nНастройки: FOV Range, Target Body Part."
+            return "Aimbot — автонаведение на противников при зажатии ПКМ.\nВключается: 'Master Aimbot' или F1.\nНастройки: FOV Range, Target Body Part."
         end
         
         -- Chams
         if string.find(q, "chams") or string.find(q, "подсветк") or string.find(q, "силуэт") or 
            string.find(q, "обводк") or string.find(q, "цвет") or string.find(q, "контур") or
            string.find(q, "часы") or string.find(q, "сияни") then
-            return "👁️ Chams — подсветка игроков сквозь стены.\nВраги — красные, союзники — зелёные.\nВключается: 'Chams' или F2."
+            return "Chams — подсветка игроков сквозь стены.\nВраги — красные, союзники — зелёные.\nВключается: 'Chams' или F2."
         end
         
         -- 3D Box
         if string.find(q, "3d box") or string.find(q, "3д бокс") or string.find(q, "куб") or 
            string.find(q, "коробк") or string.find(q, "квадрат") then
-            return "📦 3D Box — белый куб вокруг игрока.\nВключается: '3D Box' или F3.\nИсправлено мерцание в v3.12!"
+            return "3D Box — белый куб вокруг игрока.\nВключается: '3D Box' или F3.\nИсправлено мерцание в v3.12!"
         end
         
         -- Tracers
         if string.find(q, "tracers") or string.find(q, "лучи") or string.find(q, "трассеры") or 
            string.find(q, "лини") or string.find(q, "веер") then
-            return "🔴 Tracers — линии от тебя к противникам.\nВключается: 'Tracers' или F4.\nПлавное исчезновение при выключении."
+            return "Tracers — линии от тебя к противникам.\nВключается: 'Tracers' или F4.\nПлавное исчезновение при выключении."
         end
         
         -- Names
         if string.find(q, "names") or string.find(q, "имен") or string.find(q, "дистанци") or 
            string.find(q, "ник") or string.find(q, "игрок") or string.find(q, "надпись") then
-            return "📛 Names & Distance — имена и дистанция над игроками.\nВключается: чекбокс или F5.\nИсправлен баг с респавном."
+            return "Names & Distance — имена и дистанция над игроками.\nВключается: чекбокс или F5.\nИсправлен баг с респавном."
         end
         
         -- FullBright
         if string.find(q, "fullbright") or string.find(q, "яркост") or string.find(q, "освещени") or 
            string.find(q, "ночь") or string.find(q, "темно") or string.find(q, "свет") then
-            return "☀️ Full Bright — делает карту светлее.\nВключается: чекбокс или F6."
+            return "Full Bright — делает карту светлее.\nВключается: чекбокс или F6."
         end
         
         -- Горячие клавиши
         if string.find(q, "горяч") or string.find(q, "клавиш") or string.find(q, "кнопк") or 
            string.find(q, "f1") or string.find(q, "f2") or string.find(q, "f3") or 
            string.find(q, "f4") or string.find(q, "f5") or string.find(q, "f6") then
-            return "⌨️ Горячие клавиши:\n• Insert/F8 — меню\n• F1 — Aimbot\n• F2 — Chams\n• F3 — 3D Box\n• F4 — Tracers\n• F5 — Names\n• F6 — FullBright"
+            return "Горячие клавиши:\n• Insert/F8 — меню\n• F1 — Aimbot\n• F2 — Chams\n• F3 — 3D Box\n• F4 — Tracers\n• F5 — Names\n• F6 — FullBright"
         end
         
         -- Статус
         if string.find(q, "статус") or string.find(q, "состояни") or string.find(q, "включен") or 
            string.find(q, "активи") or string.find(q, "работа") then
             return string.format(
-                "📊 Текущий статус:\n• Aimbot: %s\n• Chams: %s\n• 3D Box: %s\n• Tracers: %s\n• Names: %s\n• FullBright: %s",
+                "Текущий статус:\n• Aimbot: %s\n• Chams: %s\n• 3D Box: %s\n• Tracers: %s\n• Names: %s\n• FullBright: %s",
                 _G.AimbotEnabled and "✅ ВКЛ" or "❌ ВЫКЛ",
                 _G.BoxESP and "✅ ВКЛ" or "❌ ВЫКЛ",
                 _G.Box3D and "✅ ВКЛ" or "❌ ВЫКЛ",
@@ -1745,39 +1778,47 @@ if aiPage then
         -- Версия
         if string.find(q, "обновл") or string.find(q, "верси") or string.find(q, "скачать") or 
            string.find(q, "github") or string.find(q, "v3") then
-            return "📥 Текущая версия: v3.13\nСкачать: loadstring(game:HttpGet('https://raw.githubusercontent.com/QwertyX01/Meta/main/Metabloxstrike.lua', true))()"
+            return "Текущая версия: v3.13\nСкачать: loadstring(game:HttpGet('https://raw.githubusercontent.com/QwertyX01/Meta/main/Meta.lua', true))()"
         end
         
         -- Помощь
         if string.find(q, "помощ") or string.find(q, "помоги") or string.find(q, "функци") or 
            string.find(q, "что умее") or string.find(q, "список") then
-            return "🤖 Я умею отвечать на вопросы о:\n• Aimbot\n• Chams (подсветка)\n• 3D Box\n• Tracers (лучи)\n• Names (имена)\n• FullBright (яркость)\n• Горячие клавиши\n• Статус"
+            return "Я умею отвечать на вопросы о:\n• Aimbot\n• Chams (подсветка)\n• 3D Box\n• Tracers (лучи)\n• Names (имена)\n• FullBright (яркость)\n• Горячие клавиши\n• Статус"
         end
         
         return "❓ Не понял вопрос. Напиши 'помощь' для списка команд."
     end
     
+    -- Обработка отправки
     sendBtn.MouseButton1Click:Connect(function()
         local question = inputBox.Text
         if question == "" or question == "Напиши вопрос..." then
-            answerLabel.Text = "⚠️ Напиши вопрос!"
+            AddMessage("⚠️ Напиши вопрос!", false)
             return
         end
+        
+        AddMessage(question, true)
+        inputBox.Text = ""
         
         local response = GetAIResponse(question)
         if response == "" then
-            answerLabel.Text = ""
-            inputBox.Text = ""
             return
         end
         
-        answerLabel.Text = "🤖 " .. response
+        AddMessage(response, false)
     end)
     
+    -- Enter для отправки
     inputBox.FocusLost:Connect(function(enterPressed)
         if enterPressed then
             sendBtn.MouseButton1Click:Fire()
         end
+    end)
+    
+    -- Клик для открытия клавиатуры
+    inputBox.MouseButton1Click:Connect(function()
+        inputBox:CaptureFocus()
     end)
 end
 
@@ -1918,7 +1959,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 print("[META] v3.13 Loaded Successfully!")
-print("[META] Added: AI tab with assistant!")
+print("[META] Added: AI tab with chat assistant!")
 print("[META] Chams: AdolfFX style (red enemies, green allies)")
 print("[META] 3D Box: no flickering!")
 print("[META] Names & Distance: fixed respawn bug!")
