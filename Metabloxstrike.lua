@@ -22,7 +22,7 @@ _G.EspNames = false
 _G.Box2D = false
 _G.FullBrightEnabled = false
 
-local MenuVisible = true
+local MenuVisible = false
 local FOVCircle = nil
 local BlissfulActive = false
 local BlissfulConnections = {}
