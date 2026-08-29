@@ -1,4 +1,3 @@
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -19,7 +18,7 @@ _G.TargetBone = "Head"
 _G.BoxESP = false
 _G.Snaplines = false
 _G.EspNames = false
-_G.Box2D = false
+_G.Box3D = false
 _G.FullBrightEnabled = false
 
 local MenuVisible = true
@@ -230,155 +229,202 @@ local function UpdateChams()
 end
 
 -- ======================================================
--- 2D BOX ESP 
--- =====================================================
+-- 3D BOX ESP (БЕЗ МЕРЦАНИЯ)
 -- ======================================================
--- 2D BOX ESP - ИСПРАВЛЕННАЯ ВЕРСИЯ (БЕЗ ПРИЗРАКОВ)
--- ======================================================
-local Box2DData = {}
-local Box2DConnections = {}
+local Box3DActive = false
+local Box3DLines = {}
+local Box3DQuads = {}
 
-local function CreateBox2D(player)
-    if player == LocalPlayer then return end
-
-    local function onCharacterAdded(character)
-        -- ✅ ПРИ РЕСПАВНЕ УДАЛЯЕМ СТАРЫЙ GUI
-        if Box2DData[player] then
-            pcall(function() 
-                Box2DData[player]:Destroy() 
-            end)
-            Box2DData[player] = nil
-        end
-        
-        local hrp = character:WaitForChild("HumanoidRootPart", 5)
-        local humanoid = character:WaitForChild("Humanoid", 5)
-        if not hrp or not humanoid then return end
-
-        local gui = Instance.new("BillboardGui")
-        gui.Name = "Box2D"
-        gui.Adornee = hrp
-        gui.Size = UDim2.fromScale(4, 6)
-        gui.StudsOffset = Vector3.new(0, 0, 0)
-        gui.AlwaysOnTop = true
-        gui.Parent = character
-        gui.Enabled = _G.Box2D
-
-        local box = Instance.new("Frame")
-        box.Size = UDim2.fromScale(1, 1)
-        box.BackgroundTransparency = 1
-        box.Parent = gui
-
-        local stroke = Instance.new("UIStroke")
-        stroke.Thickness = 2
-        stroke.Color = Color3.fromRGB(255, 255, 255)
-        stroke.Parent = box
-
-        local nameLabel = Instance.new("TextLabel")
-        nameLabel.Size = UDim2.new(1, 0, 0.15, 0)
-        nameLabel.Position = UDim2.new(0, 0, -0.18, 0)
-        nameLabel.BackgroundTransparency = 1
-        nameLabel.Text = player.Name
-        nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-        nameLabel.TextStrokeTransparency = 0
-        nameLabel.TextScaled = true
-        nameLabel.Font = Enum.Font.SourceSansBold
-        nameLabel.Parent = box
-        
-        Box2DData[player] = gui
+local function ClearBox3D()
+    for _, line in pairs(Box3DLines) do
+        pcall(function() line:Remove() end)
     end
-
-    -- ✅ ЕСЛИ УЖЕ ЕСТЬ GUI ПРИ ПОДКЛЮЧЕНИИ - УДАЛЯЕМ
-    if Box2DData[player] then
-        pcall(function() Box2DData[player]:Destroy() end)
-        Box2DData[player] = nil
+    Box3DLines = {}
+    
+    for _, quad in pairs(Box3DQuads) do
+        pcall(function() quad:Remove() end)
     end
-
-    if player.Character then
-        onCharacterAdded(player.Character)
-    end
-
-    if Box2DConnections[player] then
-        Box2DConnections[player]:Disconnect()
-    end
-    Box2DConnections[player] = player.CharacterAdded:Connect(onCharacterAdded)
+    Box3DQuads = {}
 end
 
-local function RemoveBox2D(player)
-    if Box2DConnections[player] then
-        Box2DConnections[player]:Disconnect()
-        Box2DConnections[player] = nil
+local function GetCorners(Part)
+    local CF, Size, Corners = Part.CFrame, Part.Size / 2, {}
+    for X = -1, 1, 2 do 
+        for Y = -1, 1, 2 do 
+            for Z = -1, 1, 2 do
+                Corners[#Corners+1] = (CF * CFrame.new(Size * Vector3.new(X, Y, Z))).Position      
+            end 
+        end 
+    end
+    return Corners
+end
+
+local function UpdateLine(Line, From, To)
+    local FromScreen, FromVisible = Camera:WorldToViewportPoint(From)
+    local ToScreen, ToVisible = Camera:WorldToViewportPoint(To)
+
+    if not FromVisible and not ToVisible then
+        Line.Visible = false
+        return
+    end
+
+    Line.Visible = true
+    Line.From = Vector2.new(FromScreen.X, FromScreen.Y)
+    Line.To = Vector2.new(ToScreen.X, ToScreen.Y)
+end
+
+local function UpdateQuad(Quad, PosA, PosB, PosC, PosD)
+    local PosAScreen, PosAVisible = Camera:WorldToViewportPoint(PosA)
+    local PosBScreen, PosBVisible = Camera:WorldToViewportPoint(PosB)
+    local PosCScreen, PosCVisible = Camera:WorldToViewportPoint(PosC)
+    local PosDScreen, PosDVisible = Camera:WorldToViewportPoint(PosD)
+
+    if not PosAVisible and not PosBVisible and not PosCVisible and not PosDVisible then
+        Quad.Visible = false
+        return
+    end
+
+    Quad.Visible = true
+    Quad.PointA = Vector2.new(PosAScreen.X, PosAScreen.Y)
+    Quad.PointB = Vector2.new(PosBScreen.X, PosBScreen.Y)
+    Quad.PointC = Vector2.new(PosCScreen.X, PosCScreen.Y)
+    Quad.PointD = Vector2.new(PosDScreen.X, PosDScreen.Y)
+end
+
+local function CreateLine()
+    local Line = Drawing.new("Line")
+    Line.Thickness = 1
+    Line.Color = Color3.fromRGB(255, 255, 255)
+    Line.Transparency = 1
+    Line.ZIndex = 1
+    Line.Visible = false
+    return Line
+end
+
+local function CreateQuad()
+    local Quad = Drawing.new("Quad")
+    Quad.Thickness = 0.5
+    Quad.Color = Color3.fromRGB(255, 255, 255)
+    Quad.Transparency = 0.25
+    Quad.ZIndex = 1
+    Quad.Filled = true
+    Quad.Visible = false
+    return Quad
+end
+
+local function InitBox3D()
+    if #Box3DLines == 0 then
+        for i = 1, 12 do
+            table.insert(Box3DLines, CreateLine())
+        end
     end
     
-    if Box2DData[player] then
-        pcall(function() Box2DData[player]:Destroy() end)
-        Box2DData[player] = nil
-    end
-end
-
-local function RemoveAllBox2D()
-    for player, gui in pairs(Box2DData) do
-        pcall(function() gui:Destroy() end)
-    end
-    Box2DData = {}
-    
-    for player, conn in pairs(Box2DConnections) do
-        pcall(function() conn:Disconnect() end)
-    end
-    Box2DConnections = {}
-end
-
-local function UpdateBox2D()
-    if _G.Box2D then
-        for _, player in pairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer then
-                -- ✅ ПРОВЕРЯЕМ, ЕСТЬ ЛИ У ИГРОКА GUI, И ОН ЛИ ПРИВЯЗАН К ТЕКУЩЕМУ ПЕРСОНАЖУ
-                local currentGui = Box2DData[player]
-                local shouldRecreate = false
-                
-                if currentGui then
-                    -- Проверяем, существует ли ещё Adornee
-                    local success, adornee = pcall(function()
-                        return currentGui.Adornee
-                    end)
-                    if not success or not adornee or not adornee.Parent then
-                        -- Adornee уничтожен — удаляем старый GUI
-                        pcall(function() currentGui:Destroy() end)
-                        Box2DData[player] = nil
-                        shouldRecreate = true
-                    end
-                else
-                    shouldRecreate = true
-                end
-                
-                if shouldRecreate then
-                    CreateBox2D(player)
-                else
-                    pcall(function() Box2DData[player].Enabled = true end)
-                end
-            end
+    if #Box3DQuads == 0 then
+        for i = 1, 6 do
+            table.insert(Box3DQuads, CreateQuad())
         end
+    end
+end
+
+local function DrawBoxESP()
+    if not Box3DActive then
+        for _, line in pairs(Box3DLines) do
+            line.Visible = false
+        end
+        for _, quad in pairs(Box3DQuads) do
+            quad.Visible = false
+        end
+        return
+    end
+
+    InitBox3D()
+
+    local lineIndex = 1
+    local quadIndex = 1
+    
+    for _, player in pairs(Players:GetPlayers()) do
+        if player == LocalPlayer then continue end
+        if not player.Character then continue end
+        
+        local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+        local hum = player.Character:FindFirstChildOfClass("Humanoid")
+        if not hrp or not hum or hum.Health <= 0 then continue end
+
+        local CubeVertices = GetCorners({CFrame = hrp.CFrame * CFrame.new(0, -0.5, 0), Size = Vector3.new(3, 5, 3)})
+
+        while lineIndex + 12 > #Box3DLines do
+            table.insert(Box3DLines, CreateLine())
+        end
+        while quadIndex + 6 > #Box3DQuads do
+            table.insert(Box3DQuads, CreateQuad())
+        end
+
+        local L = Box3DLines
+        local Q = Box3DQuads
+
+        -- Bottom face
+        UpdateLine(L[lineIndex], CubeVertices[1], CubeVertices[2]); lineIndex = lineIndex + 1
+        UpdateLine(L[lineIndex], CubeVertices[2], CubeVertices[6]); lineIndex = lineIndex + 1
+        UpdateLine(L[lineIndex], CubeVertices[6], CubeVertices[5]); lineIndex = lineIndex + 1
+        UpdateLine(L[lineIndex], CubeVertices[5], CubeVertices[1]); lineIndex = lineIndex + 1
+        UpdateQuad(Q[quadIndex], CubeVertices[1], CubeVertices[2], CubeVertices[6], CubeVertices[5]); quadIndex = quadIndex + 1
+
+        -- Side faces
+        UpdateLine(L[lineIndex], CubeVertices[1], CubeVertices[3]); lineIndex = lineIndex + 1
+        UpdateLine(L[lineIndex], CubeVertices[2], CubeVertices[4]); lineIndex = lineIndex + 1
+        UpdateLine(L[lineIndex], CubeVertices[6], CubeVertices[8]); lineIndex = lineIndex + 1
+        UpdateLine(L[lineIndex], CubeVertices[5], CubeVertices[7]); lineIndex = lineIndex + 1
+        UpdateQuad(Q[quadIndex], CubeVertices[2], CubeVertices[4], CubeVertices[8], CubeVertices[6]); quadIndex = quadIndex + 1
+        UpdateQuad(Q[quadIndex], CubeVertices[1], CubeVertices[2], CubeVertices[4], CubeVertices[3]); quadIndex = quadIndex + 1
+        UpdateQuad(Q[quadIndex], CubeVertices[1], CubeVertices[5], CubeVertices[7], CubeVertices[3]); quadIndex = quadIndex + 1
+        UpdateQuad(Q[quadIndex], CubeVertices[5], CubeVertices[7], CubeVertices[8], CubeVertices[6]); quadIndex = quadIndex + 1
+
+        -- Top face
+        UpdateLine(L[lineIndex], CubeVertices[3], CubeVertices[4]); lineIndex = lineIndex + 1
+        UpdateLine(L[lineIndex], CubeVertices[4], CubeVertices[8]); lineIndex = lineIndex + 1
+        UpdateLine(L[lineIndex], CubeVertices[8], CubeVertices[7]); lineIndex = lineIndex + 1
+        UpdateLine(L[lineIndex], CubeVertices[7], CubeVertices[3]); lineIndex = lineIndex + 1
+        UpdateQuad(Q[quadIndex], CubeVertices[3], CubeVertices[4], CubeVertices[8], CubeVertices[7]); quadIndex = quadIndex + 1
+    end
+
+    for i = lineIndex, #Box3DLines do
+        Box3DLines[i].Visible = false
+    end
+    for i = quadIndex, #Box3DQuads do
+        Box3DQuads[i].Visible = false
+    end
+end
+
+local function StartBox3D()
+    if Box3DActive then return end
+    Box3DActive = true
+    InitBox3D()
+    print("[3D BOX] Activated")
+end
+
+local function StopBox3D()
+    if not Box3DActive then return end
+    Box3DActive = false
+    for _, line in pairs(Box3DLines) do
+        line.Visible = false
+    end
+    for _, quad in pairs(Box3DQuads) do
+        quad.Visible = false
+    end
+    print("[3D BOX] Deactivated")
+end
+
+RunService.RenderStepped:Connect(DrawBoxESP)
+
+_G.ToggleBox3D = function(state)
+    if state then
+        StartBox3D()
     else
-        RemoveAllBox2D()
+        StopBox3D()
     end
 end
 
--- Инициализация
-for _, player in ipairs(Players:GetPlayers()) do
-    if player ~= LocalPlayer then
-        CreateBox2D(player)
-    end
-end
-
-Players.PlayerAdded:Connect(function(player)
-    if player ~= LocalPlayer then
-        CreateBox2D(player)
-    end
-end)
-
-Players.PlayerRemoving:Connect(function(player)
-    RemoveBox2D(player)
-end)
-
+-- ======================================================
 -- ЗВУК КЛИКА
 -- ======================================================
 local ClickSound = Instance.new("Sound")
@@ -958,7 +1004,7 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(0.5, 0, 1, 0)
 Title.Position = UDim2.new(0, 15, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "META v3.11"
+Title.Text = "META v3.12"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 20
 Title.Font = Enum.Font.GothamBold
@@ -970,7 +1016,7 @@ local Version = Instance.new("TextLabel")
 Version.Size = UDim2.new(0.5, 0, 1, 0)
 Version.Position = UDim2.new(0.5, 0, 0, 0)
 Version.BackgroundTransparency = 1
-Version.Text = "v3.11"
+Version.Text = "v3.12"
 Version.TextColor3 = Color3.fromRGB(156, 163, 175)
 Version.TextSize = 14
 Version.Font = Enum.Font.Gotham
@@ -1196,8 +1242,8 @@ local function CreateToggle(parent, labelText, description, globalVar, yPos)
             else
                 removeAllBillboards()
             end
-        elseif globalVar == "Box2D" then
-            UpdateBox2D()
+        elseif globalVar == "Box3D" then
+            _G.ToggleBox3D(newVal)
         elseif globalVar == "FullBright" then
             ToggleFullBright()
         end
@@ -1482,9 +1528,9 @@ if visualsPage then
     
     CreateToggle(
         visualsPage,
-        "2D Box / 2Д Бокс",
+        "3D Box / 3Д Бокс",
         "Бокс который обводит игрока белым цветом, скоро будут добавлены другие.",
-        "Box2D",
+        "Box3D",
         80
     )
     
@@ -1621,9 +1667,9 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         print(string.format("[DEBUG] BoxESP: %s", tostring(_G.BoxESP)))
     elseif input.KeyCode == Enum.KeyCode.F3 then
         PlayClickSound()
-        _G.Box2D = not _G.Box2D
-        UpdateBox2D()
-        print(string.format("[DEBUG] Box2D: %s", tostring(_G.Box2D)))
+        _G.Box3D = not _G.Box3D
+        _G.ToggleBox3D(_G.Box3D)
+        print(string.format("[DEBUG] Box3D: %s", tostring(_G.Box3D)))
     elseif input.KeyCode == Enum.KeyCode.F4 then
         PlayClickSound()
         _G.Snaplines = not _G.Snaplines
@@ -1649,10 +1695,9 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] v3.11 Loaded Successfully!")
-print("[META] Added: Full Bright (toggle with F6)")
+print("[META] v3.12 Loaded Successfully!")
+print("[META] 2D Box replaced with 3D Box (no flickering)!")
 print("[META] Chams: AdolfFX style (red enemies, green allies)")
-print("[META] 2D Box: white box around players")
 print("[META] Names & Distance: fixed respawn bug!")
-print("[META] F1 - Aimbot | F2 - Chams | F3 - 2D Box | F4 - Tracers | F5 - Names | F6 - FullBright")
+print("[META] F1 - Aimbot | F2 - Chams | F3 - 3D Box | F4 - Tracers | F5 - Names | F6 - FullBright")
 print("[META] Press Insert or F8 to toggle menu")
