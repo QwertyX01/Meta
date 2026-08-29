@@ -416,8 +416,10 @@ local function CreateDropdown(parent, labelText, description, globalVar, options
     listCorner.CornerRadius = UDim.new(0, 4)
     listCorner.Parent = listFrame
     
-    dropBtn.MouseButton1Click:Connect(function()
-        listFrame.Visible = not listFrame.Visible
+    dropBtn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            listFrame.Visible = not listFrame.Visible
+        end
     end)
     
     for idx, optName in ipairs(options) do
@@ -432,11 +434,13 @@ local function CreateDropdown(parent, labelText, description, globalVar, options
         optBtn.ZIndex = 151
         optBtn.Parent = listFrame
         
-        optBtn.MouseButton1Click:Connect(function()
-            _G[globalVar] = optName
-            dropBtn.Text = optName
-            listFrame.Visible = false
-            print(string.format("[DEBUG] %s = %s", globalVar, optName))
+        optBtn.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+                _G[globalVar] = optName
+                dropBtn.Text = optName
+                listFrame.Visible = false
+                print(string.format("[DEBUG] %s = %s", globalVar, optName))
+            end
         end)
     end
 end
@@ -451,7 +455,7 @@ if aimbotPage then
         "Master Aimbot",
         "Авто-наведение камеры на противников при зажатии экрана",
         "AimbotEnabled",
-        10
+        15
     )
     
     CreateSlider(
@@ -462,7 +466,7 @@ if aimbotPage then
         10,
         300,
         100,
-        65
+        75
     )
     
     CreateDropdown(
@@ -471,7 +475,7 @@ if aimbotPage then
         "Выбор части тела для захвата аимбота",
         "TargetBone",
         {"Head", "Torso", "HumanoidRootPart"},
-        135
+        145
     )
 end
 
@@ -485,7 +489,7 @@ if visualsPage then
         "Chams / Подсветка",
         "Красивый силуэт игроков оранжевого цвета сквозь стены",
         "BoxESP",
-        10
+        15
     )
     
     CreateToggle(
@@ -493,7 +497,7 @@ if visualsPage then
         "Tracers / Лучи",
         "Тонкие лазерные линии от тебя к противникам",
         "Snaplines",
-        65
+        75
     )
     
     CreateToggle(
@@ -501,7 +505,7 @@ if visualsPage then
         "Names & Distance",
         "Отображение имен игроков и дистанции в реальном времени",
         "EspNames",
-        120
+        135
     )
 end
 
@@ -730,6 +734,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] Mobile Engine Active!")
+print("[META] Mobile Engine Fixed Active!")
 print("[META] Press Insert or F8 to toggle menu")
 print("[META] F1 - Aimbot, F2 - Chams, F3 - Tracers, F4 - Names")
