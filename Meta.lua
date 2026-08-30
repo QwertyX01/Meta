@@ -1,5 +1,956 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
+local SoundService = game:GetService("SoundService")
+local Lighting = game:GetService("Lighting")
+local GuiService = game:GetService("GuiService")
+
 -- ======================================================
--- СОЗДАНИЕ GUI
+-- ГЛОБАЛЬНЫЕ СОСТОЯНИЯ
+-- ======================================================
+_G.AimbotEnabled = false
+_G.AimbotFOV = 150
+_G.BoxESP = false
+_G.Snaplines = false
+_G.EspNames = false
+_G.Box3D = false
+_G.FullBrightEnabled = false
+_G.FOVEnabled = false
+
+local MenuVisible = true
+local FOVCircle = nil
+local FOVFrame = nil
+local BlissfulActive = false
+local BlissfulConnections = {}
+local BlendValue = 1
+local BlendTarget = 1
+
+-- ======================================================
+-- FOV КРУГ (UI FRAME) - ИСПРАВЛЕН
+-- ======================================================
+local function CreateFOVCircle()
+    if CoreGui:FindFirstChild("META_FOV_SYSTEM") then
+        CoreGui.META_FOV_SYSTEM:Destroy()
+    end
+    
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "META_FOV_SYSTEM"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.Parent = CoreGui
+    
+    local fovCircle = Instance.new("Frame")
+    fovCircle.Name = "FOVCircle"
+    fovCircle.AnchorPoint = Vector2.new(0.5, 0.5)
+    fovCircle.BackgroundColor3 = Color3.fromRGB(59, 130, 246)
+    fovCircle.BackgroundTransparency = 0.85
+    fovCircle.BorderSizePixel = 0
+    fovCircle.Visible = false
+    fovCircle.ZIndex = 1
+    fovCircle.Parent = ScreenGui
+    
+    local circleCorner = Instance.new("UICorner")
+    circleCorner.CornerRadius = UDim.new(1, 0)
+    circleCorner.Parent = fovCircle
+    
+    local circleStroke = Instance.new("UIStroke")
+    circleStroke.Thickness = 1.5
+    circleStroke.Color = Color3.fromRGB(59, 130, 246)
+    circleStroke.Transparency = 0.3
+    circleStroke.Parent = fovCircle
+    
+    FOVFrame = fovCircle
+    return fovCircle
+end
+
+CreateFOVCircle()
+
+-- ======================================================
+-- FULLBRIGHT (СУПЕР ЯРКИЙ)
+-- ======================================================
+local Light = game:GetService("Lighting")
+
+_G.FullBrightEnabled = false
+
+_G.NormalLightingSettings = {
+    Brightness = Light.Brightness,
+    ClockTime = Light.ClockTime,
+    FogEnd = Light.FogEnd,
+    GlobalShadows = Light.GlobalShadows,
+    Ambient = Light.Ambient,
+    ColorShift_Bottom = Light.ColorShift_Bottom,
+    ColorShift_Top = Light.ColorShift_Top
+}
+
+local function SetFullBright()
+    Light.Ambient = Color3.new(1, 1, 1)
+    Light.ColorShift_Bottom = Color3.new(1, 1, 1)
+    Light.ColorShift_Top = Color3.new(1, 1, 1)
+    Light.Brightness = 1
+    Light.ClockTime = 12
+    Light.FogEnd = 786543
+    Light.GlobalShadows = false
+end
+
+local function ResetLighting()
+    Light.Ambient = _G.NormalLightingSettings.Ambient
+    Light.ColorShift_Bottom = _G.NormalLightingSettings.ColorShift_Bottom
+    Light.ColorShift_Top = _G.NormalLightingSettings.ColorShift_Top
+    Light.Brightness = _G.NormalLightingSettings.Brightness
+    Light.ClockTime = _G.NormalLightingSettings.ClockTime
+    Light.FogEnd = _G.NormalLightingSettings.FogEnd
+    Light.GlobalShadows = _G.NormalLightingSettings.GlobalShadows
+end
+
+local function ToggleFullBright()
+    _G.FullBrightEnabled = not _G.FullBrightEnabled
+    
+    if _G.FullBrightEnabled then
+        SetFullBright()
+        print("[FULLBRIGHT] ON")
+    else
+        ResetLighting()
+        print("[FULLBRIGHT] OFF")
+    end
+end
+
+Light.LightingChanged:Connect(function()
+    if _G.FullBrightEnabled then
+        SetFullBright()
+    end
+end)
+
+Light:GetPropertyChangedSignal("Ambient"):Connect(function()
+    if _G.FullBrightEnabled and Light.Ambient ~= Color3.new(1, 1, 1) then
+        Light.Ambient = Color3.new(1, 1, 1)
+    end
+end)
+
+-- ======================================================
+-- CHAMS
+-- ======================================================
+local Tag = "AdolfFX"
+local ChamsActive = false
+local ChamsList = {}
+
+local function ApplyChams(character, player)
+    if not character or character:FindFirstChild(Tag) then return end
+    
+    local highlight = Instance.new("Highlight")
+    highlight.Name = Tag
+    highlight.FillColor = Color3.fromRGB(255, 0, 0)
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.FillTransparency = 0.5
+    highlight.OutlineTransparency = 0.1
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.Adornee = character
+    highlight.Parent = character
+    highlight.Enabled = _G.BoxESP
+    
+    ChamsList[character] = highlight
+end
+
+local function RemoveChams(character)
+    if character and character:FindFirstChild(Tag) then
+        character[Tag]:Destroy()
+        ChamsList[character] = nil
+    end
+end
+
+local function HookPlayer(player)
+    if player == LocalPlayer then return end
+    
+    player.CharacterAdded:Connect(function(character)
+        task.wait(0.1)
+        if _G.BoxESP then
+            ApplyChams(character, player)
+        end
+    end)
+    
+    if player.Character and _G.BoxESP then
+        ApplyChams(player.Character, player)
+    end
+end
+
+for _, player in pairs(Players:GetPlayers()) do
+    HookPlayer(player)
+end
+
+Players.PlayerAdded:Connect(HookPlayer)
+
+function UpdateChams()
+    if _G.BoxESP then
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character then
+                local existing = player.Character:FindFirstChild(Tag)
+                if existing then
+                    existing.Enabled = true
+                else
+                    ApplyChams(player.Character, player)
+                end
+            end
+        end
+    else
+        for _, player in pairs(Players:GetPlayers()) do
+            if player.Character and player.Character:FindFirstChild(Tag) then
+                player.Character[Tag].Enabled = false
+            end
+        end
+    end
+end
+
+print("[CHAMS] Loaded with menu control!")
+
+-- ======================================================
+-- 3D BOX ESP (БЕЗ МЕРЦАНИЯ)
+-- ======================================================
+local Box3DActive = false
+local Box3DLines = {}
+local Box3DQuads = {}
+
+local function GetCorners(Part)
+    local CF, Size, Corners = Part.CFrame, Part.Size / 2, {}
+    for X = -1, 1, 2 do 
+        for Y = -1, 1, 2 do 
+            for Z = -1, 1, 2 do
+                Corners[#Corners+1] = (CF * CFrame.new(Size * Vector3.new(X, Y, Z))).Position      
+            end 
+        end 
+    end
+    return Corners
+end
+
+local function UpdateLine(Line, From, To)
+    local FromScreen, FromVisible = Camera:WorldToViewportPoint(From)
+    local ToScreen, ToVisible = Camera:WorldToViewportPoint(To)
+
+    if not FromVisible and not ToVisible then
+        Line.Visible = false
+        return
+    end
+
+    Line.Visible = true
+    Line.From = Vector2.new(FromScreen.X, FromScreen.Y)
+    Line.To = Vector2.new(ToScreen.X, ToScreen.Y)
+end
+
+local function UpdateQuad(Quad, PosA, PosB, PosC, PosD)
+    local PosAScreen, PosAVisible = Camera:WorldToViewportPoint(PosA)
+    local PosBScreen, PosBVisible = Camera:WorldToViewportPoint(PosB)
+    local PosCScreen, PosCVisible = Camera:WorldToViewportPoint(PosC)
+    local PosDScreen, PosDVisible = Camera:WorldToViewportPoint(PosD)
+
+    if not PosAVisible and not PosBVisible and not PosCVisible and not PosDVisible then
+        Quad.Visible = false
+        return
+    end
+
+    Quad.Visible = true
+    Quad.PointA = Vector2.new(PosAScreen.X, PosAScreen.Y)
+    Quad.PointB = Vector2.new(PosBScreen.X, PosBScreen.Y)
+    Quad.PointC = Vector2.new(PosCScreen.X, PosCScreen.Y)
+    Quad.PointD = Vector2.new(PosDScreen.X, PosDScreen.Y)
+end
+
+local function CreateLine()
+    local Line = Drawing.new("Line")
+    Line.Thickness = 1
+    Line.Color = Color3.fromRGB(255, 255, 255)
+    Line.Transparency = 1
+    Line.ZIndex = 1
+    Line.Visible = false
+    return Line
+end
+
+local function CreateQuad()
+    local Quad = Drawing.new("Quad")
+    Quad.Thickness = 0.5
+    Quad.Color = Color3.fromRGB(255, 255, 255)
+    Quad.Transparency = 0.25
+    Quad.ZIndex = 1
+    Quad.Filled = true
+    Quad.Visible = false
+    return Quad
+end
+
+local function InitBox3D()
+    if #Box3DLines == 0 then
+        for i = 1, 12 do
+            table.insert(Box3DLines, CreateLine())
+        end
+    end
+    
+    if #Box3DQuads == 0 then
+        for i = 1, 6 do
+            table.insert(Box3DQuads, CreateQuad())
+        end
+    end
+end
+
+local function DrawBoxESP()
+    if not Box3DActive then
+        for _, line in pairs(Box3DLines) do
+            line.Visible = false
+        end
+        for _, quad in pairs(Box3DQuads) do
+            quad.Visible = false
+        end
+        return
+    end
+
+    InitBox3D()
+
+    local lineIndex = 1
+    local quadIndex = 1
+    
+    for _, player in pairs(Players:GetPlayers()) do
+        if player == LocalPlayer then continue end
+        if not player.Character then continue end
+        
+        local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+        local hum = player.Character:FindFirstChildOfClass("Humanoid")
+        if not hrp or not hum or hum.Health <= 0 then continue end
+
+        local CubeVertices = GetCorners({CFrame = hrp.CFrame * CFrame.new(0, -0.5, 0), Size = Vector3.new(3, 5, 3)})
+
+        while lineIndex + 12 > #Box3DLines do
+            table.insert(Box3DLines, CreateLine())
+        end
+        while quadIndex + 6 > #Box3DQuads do
+            table.insert(Box3DQuads, CreateQuad())
+        end
+
+        local L = Box3DLines
+        local Q = Box3DQuads
+
+        -- Bottom face
+        UpdateLine(L[lineIndex], CubeVertices[1], CubeVertices[2]); lineIndex = lineIndex + 1
+        UpdateLine(L[lineIndex], CubeVertices[2], CubeVertices[6]); lineIndex = lineIndex + 1
+        UpdateLine(L[lineIndex], CubeVertices[6], CubeVertices[5]); lineIndex = lineIndex + 1
+        UpdateLine(L[lineIndex], CubeVertices[5], CubeVertices[1]); lineIndex = lineIndex + 1
+        UpdateQuad(Q[quadIndex], CubeVertices[1], CubeVertices[2], CubeVertices[6], CubeVertices[5]); quadIndex = quadIndex + 1
+
+        -- Side faces
+        UpdateLine(L[lineIndex], CubeVertices[1], CubeVertices[3]); lineIndex = lineIndex + 1
+        UpdateLine(L[lineIndex], CubeVertices[2], CubeVertices[4]); lineIndex = lineIndex + 1
+        UpdateLine(L[lineIndex], CubeVertices[6], CubeVertices[8]); lineIndex = lineIndex + 1
+        UpdateLine(L[lineIndex], CubeVertices[5], CubeVertices[7]); lineIndex = lineIndex + 1
+        UpdateQuad(Q[quadIndex], CubeVertices[2], CubeVertices[4], CubeVertices[8], CubeVertices[6]); quadIndex = quadIndex + 1
+        UpdateQuad(Q[quadIndex], CubeVertices[1], CubeVertices[2], CubeVertices[4], CubeVertices[3]); quadIndex = quadIndex + 1
+        UpdateQuad(Q[quadIndex], CubeVertices[1], CubeVertices[5], CubeVertices[7], CubeVertices[3]); quadIndex = quadIndex + 1
+        UpdateQuad(Q[quadIndex], CubeVertices[5], CubeVertices[7], CubeVertices[8], CubeVertices[6]); quadIndex = quadIndex + 1
+
+        -- Top face
+        UpdateLine(L[lineIndex], CubeVertices[3], CubeVertices[4]); lineIndex = lineIndex + 1
+        UpdateLine(L[lineIndex], CubeVertices[4], CubeVertices[8]); lineIndex = lineIndex + 1
+        UpdateLine(L[lineIndex], CubeVertices[8], CubeVertices[7]); lineIndex = lineIndex + 1
+        UpdateLine(L[lineIndex], CubeVertices[7], CubeVertices[3]); lineIndex = lineIndex + 1
+        UpdateQuad(Q[quadIndex], CubeVertices[3], CubeVertices[4], CubeVertices[8], CubeVertices[7]); quadIndex = quadIndex + 1
+    end
+
+    for i = lineIndex, #Box3DLines do
+        Box3DLines[i].Visible = false
+    end
+    for i = quadIndex, #Box3DQuads do
+        Box3DQuads[i].Visible = false
+    end
+end
+
+local function StartBox3D()
+    if Box3DActive then return end
+    Box3DActive = true
+    InitBox3D()
+    print("[3D BOX] Activated")
+end
+
+local function StopBox3D()
+    if not Box3DActive then return end
+    Box3DActive = false
+    for _, line in pairs(Box3DLines) do
+        line.Visible = false
+    end
+    for _, quad in pairs(Box3DQuads) do
+        quad.Visible = false
+    end
+    print("[3D BOX] Deactivated")
+end
+
+RunService.RenderStepped:Connect(DrawBoxESP)
+
+_G.ToggleBox3D = function(state)
+    if state then
+        StartBox3D()
+    else
+        StopBox3D()
+    end
+end
+
+-- ======================================================
+-- ЗВУК КЛИКА
+-- ======================================================
+local ClickSound = Instance.new("Sound")
+ClickSound.SoundId = "rbxassetid://88442833509532"
+ClickSound.Volume = 0.5
+ClickSound.Parent = SoundService
+
+local function PlayClickSound()
+    local sound = ClickSound:Clone()
+    sound.Parent = SoundService
+    sound:Play()
+    task.delay(sound.TimeLength + 0.1, function()
+        sound:Destroy()
+    end)
+end
+
+-- ======================================================
+-- AIMBOT (С ПРОВЕРКОЙ КОМАНД)
+-- ======================================================
+local function GetTargetInFOV()
+    local closestTarget = nil
+    local shortestDist = _G.AimbotFOV
+    local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player == LocalPlayer then continue end
+        if not player.Character then continue end
+        
+        if player.Team == LocalPlayer.Team then
+            continue
+        end
+        
+        local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+        local part = player.Character:FindFirstChild("Head")
+        
+        if humanoid and humanoid.Health > 0 and part then
+            local screenPos, onScreen = Camera:WorldToViewportPoint(part.Position)
+            if onScreen then
+                local dist = (Vector2.new(screenPos.X, screenPos.Y) - screenCenter).Magnitude
+                if dist < shortestDist then
+                    shortestDist = dist
+                    closestTarget = part
+                end
+            end
+        end
+    end
+    return closestTarget
+end
+
+-- ======================================================
+-- NAMES & DISTANCE
+-- ======================================================
+local playerBillboards = {}
+
+local function createBillboardGui(player)
+    if not player.Character or not player.Character:FindFirstChild("Head") then
+        return nil, nil
+    end
+    
+    local head = player.Character.Head
+    
+    local billboardGui = Instance.new("BillboardGui")
+    billboardGui.Name = "NameAndDistanceGui"
+    billboardGui.AlwaysOnTop = true
+    billboardGui.Size = UDim2.new(0, 200, 0, 50)
+    billboardGui.StudsOffset = Vector3.new(0, 2.5, 0)
+    billboardGui.Parent = head
+    billboardGui.Enabled = _G.EspNames
+
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Name = "NameLabel"
+    nameLabel.Text = player.Name
+    nameLabel.Font = Enum.Font.GothamBold
+    nameLabel.TextSize = 16
+    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Size = UDim2.new(1, 0, 0.5, 0)
+    nameLabel.Position = UDim2.new(0, 0, 0, 0)
+    nameLabel.TextStrokeTransparency = 0.2
+    nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    nameLabel.Parent = billboardGui
+
+    local distanceLabel = Instance.new("TextLabel")
+    distanceLabel.Name = "DistanceLabel"
+    distanceLabel.Text = "0 studs"
+    distanceLabel.Font = Enum.Font.Gotham
+    distanceLabel.TextSize = 13
+    distanceLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    distanceLabel.BackgroundTransparency = 1
+    distanceLabel.Size = UDim2.new(1, 0, 0.5, 0)
+    distanceLabel.Position = UDim2.new(0, 0, 0.5, 0)
+    distanceLabel.TextStrokeTransparency = 0.3
+    distanceLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    distanceLabel.Parent = billboardGui
+
+    return billboardGui, distanceLabel
+end
+
+local function updateDistanceLabel(player, distanceLabel)
+    if not player.Character then
+        distanceLabel.Text = "0 studs"
+        return
+    end
+    
+    local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+    local localHrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    
+    if hrp and localHrp then
+        local distance = (hrp.Position - localHrp.Position).Magnitude
+        distanceLabel.Text = math.floor(distance) .. " studs"
+    else
+        distanceLabel.Text = "0 studs"
+    end
+end
+
+local function setupPlayerBillboard(player)
+    if playerBillboards[player] then
+        if playerBillboards[player][1] then
+            playerBillboards[player][1]:Destroy()
+        end
+        playerBillboards[player] = nil
+    end
+    
+    if _G.EspNames and player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+        local bgui, distLabel = createBillboardGui(player)
+        if bgui and distLabel then
+            playerBillboards[player] = {bgui, distLabel}
+        end
+    end
+end
+
+local function updateAllBillboards()
+    if _G.EspNames then
+        for _, player in pairs(Players:GetPlayers()) do
+            if player == LocalPlayer then
+                continue
+            end
+            if player.Character and player.Character:FindFirstChild("Head") then
+                if not playerBillboards[player] then
+                    setupPlayerBillboard(player)
+                else
+                    local data = playerBillboards[player]
+                    if data and data[1] then
+                        data[1].Enabled = true
+                        local nameLabel = data[1]:FindFirstChild("NameLabel")
+                        if nameLabel then
+                            nameLabel.Text = player.Name
+                        end
+                    end
+                end
+            end
+        end
+    else
+        for player, data in pairs(playerBillboards) do
+            if data and data[1] then
+                data[1].Enabled = false
+            end
+        end
+    end
+end
+
+local function removeAllBillboards()
+    for player, data in pairs(playerBillboards) do
+        if data and data[1] then
+            data[1]:Destroy()
+        end
+    end
+    playerBillboards = {}
+end
+
+task.spawn(function()
+    while task.wait(0.5) do
+        if _G.EspNames then
+            for player, data in pairs(playerBillboards) do
+                if data and data[2] then
+                    updateDistanceLabel(player, data[2])
+                end
+            end
+        end
+    end
+end)
+
+Players.PlayerAdded:Connect(function(player)
+    if player == LocalPlayer then return end
+    player.CharacterAdded:Connect(function(character)
+        task.wait(0.5)
+        if _G.EspNames then
+            setupPlayerBillboard(player)
+        end
+    end)
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+    if playerBillboards[player] then
+        if playerBillboards[player][1] then
+            playerBillboards[player][1]:Destroy()
+        end
+        playerBillboards[player] = nil
+    end
+end)
+
+-- ======================================================
+-- BLISSFUL ESP С ПЛАВНЫМ ИСЧЕЗНОВЕНИЕМ
+-- ======================================================
+local function NewLine()
+    local line = Drawing.new("Line")
+    line.Visible = false
+    line.From = Vector2.new(0, 0)
+    line.To = Vector2.new(1, 1)
+    line.Color = Color3.fromRGB(0, 255, 50)
+    line.Thickness = 1.4
+    line.Transparency = 1
+    return line
+end
+
+local function StartBlissfulESP()
+    if BlissfulActive then return end
+    
+    print("[BLISSFUL] Starting ESP...")
+    BlissfulActive = true
+    BlendTarget = 1
+    
+    local workspace = game:GetService("Workspace")
+    local player = game:GetService("Players").LocalPlayer
+    local camera = workspace.CurrentCamera
+
+    local on = true
+    local Box_Color = Color3.fromRGB(0, 255, 50)
+    local Box_Thickness = 1.4
+    local Box_Transparency = 1
+    local Tracers = true
+    local Tracer_Color = Color3.fromRGB(0, 255, 50)
+    local Tracer_Thickness = 1.4
+    local Tracer_Transparency = 1
+    local Autothickness = false
+    local Team_Check = false
+    local red = Color3.fromRGB(227, 52, 52)
+    local green = Color3.fromRGB(88, 217, 24)
+
+    local function NewLine()
+        local line = Drawing.new("Line")
+        line.Visible = false
+        line.From = Vector2.new(0, 0)
+        line.To = Vector2.new(1, 1)
+        line.Color = Box_Color
+        line.Thickness = Box_Thickness
+        line.Transparency = Box_Transparency
+        return line
+    end
+
+    for i, v in pairs(game.Players:GetChildren()) do
+        local lines = {
+            line1 = NewLine(),
+            line2 = NewLine(),
+            line3 = NewLine(),
+            line4 = NewLine(),
+            line5 = NewLine(),
+            line6 = NewLine(),
+            line7 = NewLine(),
+            line8 = NewLine(),
+            line9 = NewLine(),
+            line10 = NewLine(),
+            line11 = NewLine(),
+            line12 = NewLine(),
+            Tracer = NewLine()
+        }
+
+        lines.Tracer.Color = Tracer_Color
+        lines.Tracer.Thickness = Tracer_Thickness
+        lines.Tracer.Transparency = Tracer_Transparency
+
+        local function ESP()
+            local connection
+            connection = game:GetService("RunService").RenderStepped:Connect(function()
+                if not BlissfulActive then
+                    BlendValue = BlendValue + (BlendTarget - BlendValue) * 0.08
+                    if BlendValue < 0.01 then
+                        for _, line in pairs(lines) do
+                            line.Visible = false
+                        end
+                        return
+                    end
+                else
+                    BlendValue = BlendValue + (BlendTarget - BlendValue) * 0.08
+                end
+                
+                if not BlissfulActive and BlendValue < 0.01 then
+                    for _, line in pairs(lines) do
+                        line.Visible = false
+                    end
+                    return
+                end
+                
+                if on and v.Character ~= nil and v.Character:FindFirstChild("Humanoid") ~= nil and v.Character:FindFirstChild("HumanoidRootPart") ~= nil and v.Name ~= player.Name and v.Character.Humanoid.Health > 0 and v.Character:FindFirstChild("Head") ~= nil then
+                    local pos, vis = camera:WorldToViewportPoint(v.Character.HumanoidRootPart.Position)
+                    if vis then
+                        local Scale = v.Character.Head.Size.Y/2
+                        local Size = Vector3.new(2, 3, 1.5) * (Scale * 2)
+
+                        local Top1 = camera:WorldToViewportPoint((v.Character.HumanoidRootPart.CFrame * CFrame.new(-Size.X, Size.Y, -Size.Z)).p)
+                        local Top2 = camera:WorldToViewportPoint((v.Character.HumanoidRootPart.CFrame * CFrame.new(-Size.X, Size.Y, Size.Z)).p)
+                        local Top3 = camera:WorldToViewportPoint((v.Character.HumanoidRootPart.CFrame * CFrame.new(Size.X, Size.Y, Size.Z)).p)
+                        local Top4 = camera:WorldToViewportPoint((v.Character.HumanoidRootPart.CFrame * CFrame.new(Size.X, Size.Y, -Size.Z)).p)
+
+                        local Bottom1 = camera:WorldToViewportPoint((v.Character.HumanoidRootPart.CFrame * CFrame.new(-Size.X, -Size.Y, -Size.Z)).p)
+                        local Bottom2 = camera:WorldToViewportPoint((v.Character.HumanoidRootPart.CFrame * CFrame.new(-Size.X, -Size.Y, Size.Z)).p)
+                        local Bottom3 = camera:WorldToViewportPoint((v.Character.HumanoidRootPart.CFrame * CFrame.new(Size.X, -Size.Y, Size.Z)).p)
+                        local Bottom4 = camera:WorldToViewportPoint((v.Character.HumanoidRootPart.CFrame * CFrame.new(Size.X, -Size.Y, -Size.Z)).p)
+
+                        lines.line1.From = Vector2.new(Top1.X, Top1.Y)
+                        lines.line1.To = Vector2.new(Top2.X, Top2.Y)
+                        lines.line2.From = Vector2.new(Top2.X, Top2.Y)
+                        lines.line2.To = Vector2.new(Top3.X, Top3.Y)
+                        lines.line3.From = Vector2.new(Top3.X, Top3.Y)
+                        lines.line3.To = Vector2.new(Top4.X, Top4.Y)
+                        lines.line4.From = Vector2.new(Top4.X, Top4.Y)
+                        lines.line4.To = Vector2.new(Top1.X, Top1.Y)
+
+                        lines.line5.From = Vector2.new(Bottom1.X, Bottom1.Y)
+                        lines.line5.To = Vector2.new(Bottom2.X, Bottom2.Y)
+                        lines.line6.From = Vector2.new(Bottom2.X, Bottom2.Y)
+                        lines.line6.To = Vector2.new(Bottom3.X, Bottom3.Y)
+                        lines.line7.From = Vector2.new(Bottom3.X, Bottom3.Y)
+                        lines.line7.To = Vector2.new(Bottom4.X, Bottom4.Y)
+                        lines.line8.From = Vector2.new(Bottom4.X, Bottom4.Y)
+                        lines.line8.To = Vector2.new(Bottom1.X, Bottom1.Y)
+
+                        lines.line9.From = Vector2.new(Bottom1.X, Bottom1.Y)
+                        lines.line9.To = Vector2.new(Top1.X, Top1.Y)
+                        lines.line10.From = Vector2.new(Bottom2.X, Bottom2.Y)
+                        lines.line10.To = Vector2.new(Top2.X, Top2.Y)
+                        lines.line11.From = Vector2.new(Bottom3.X, Bottom3.Y)
+                        lines.line11.To = Vector2.new(Top3.X, Top3.Y)
+                        lines.line12.From = Vector2.new(Bottom4.X, Bottom4.Y)
+                        lines.line12.To = Vector2.new(Top4.X, Top4.Y)
+
+                        if Tracers then
+                            local trace = camera:WorldToViewportPoint((v.Character.HumanoidRootPart.CFrame * CFrame.new(0, -Size.Y, 0)).p)
+                            lines.Tracer.From = Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y)
+                            lines.Tracer.To = Vector2.new(trace.X, trace.Y)
+                        end
+
+                        if Team_Check then
+                            if v.TeamColor == player.TeamColor then
+                                for _, x in pairs(lines) do
+                                    x.Color = green
+                                end
+                            else 
+                                for _, x in pairs(lines) do
+                                    x.Color = red
+                                end
+                            end
+                        end
+
+                        if Autothickness then
+                            local distance = (player.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).magnitude
+                            local value = math.clamp(1/distance*100, 0.1, 4)
+                            for _, x in pairs(lines) do
+                                x.Thickness = value
+                            end
+                        else 
+                            for _, x in pairs(lines) do
+                                x.Thickness = Box_Thickness
+                            end
+                        end
+
+                        for _, x in pairs(lines) do
+                            if x ~= lines.Tracer then
+                                x.Visible = true
+                                x.Transparency = BlendValue
+                            end
+                        end
+                        if Tracers then
+                            lines.Tracer.Visible = true
+                            lines.Tracer.Transparency = BlendValue
+                        end
+                    else 
+                        for _, x in pairs(lines) do
+                            x.Visible = false
+                        end
+                    end
+                else 
+                    for _, x in pairs(lines) do
+                        x.Visible = false
+                    end
+                    if game.Players:FindFirstChild(v.Name) == nil then
+                        connection:Disconnect()
+                    end
+                end
+            end)
+            table.insert(BlissfulConnections, connection)
+        end
+        coroutine.wrap(ESP)()
+    end
+
+    game.Players.PlayerAdded:Connect(function(newplr)
+        local lines = {
+            line1 = NewLine(),
+            line2 = NewLine(),
+            line3 = NewLine(),
+            line4 = NewLine(),
+            line5 = NewLine(),
+            line6 = NewLine(),
+            line7 = NewLine(),
+            line8 = NewLine(),
+            line9 = NewLine(),
+            line10 = NewLine(),
+            line11 = NewLine(),
+            line12 = NewLine(),
+            Tracer = NewLine()
+        }
+
+        lines.Tracer.Color = Tracer_Color
+        lines.Tracer.Thickness = Tracer_Thickness
+        lines.Tracer.Transparency = Tracer_Transparency
+
+        local function ESP()
+            local connection
+            connection = game:GetService("RunService").RenderStepped:Connect(function()
+                if not BlissfulActive then
+                    BlendValue = BlendValue + (BlendTarget - BlendValue) * 0.08
+                    if BlendValue < 0.01 then
+                        for _, line in pairs(lines) do
+                            line.Visible = false
+                        end
+                        return
+                    end
+                else
+                    BlendValue = BlendValue + (BlendTarget - BlendValue) * 0.08
+                end
+                
+                if not BlissfulActive and BlendValue < 0.01 then
+                    for _, line in pairs(lines) do
+                        line.Visible = false
+                    end
+                    return
+                end
+                
+                if on and newplr.Character ~= nil and newplr.Character:FindFirstChild("Humanoid") ~= nil and newplr.Character:FindFirstChild("HumanoidRootPart") ~= nil and newplr.Name ~= player.Name and newplr.Character.Humanoid.Health > 0 and newplr.Character:FindFirstChild("Head") ~= nil then
+                    local pos, vis = camera:WorldToViewportPoint(newplr.Character.HumanoidRootPart.Position)
+                    if vis then
+                        local Scale = newplr.Character.Head.Size.Y/2
+                        local Size = Vector3.new(2, 3, 1.5) * (Scale * 2)
+
+                        local Top1 = camera:WorldToViewportPoint((newplr.Character.HumanoidRootPart.CFrame * CFrame.new(-Size.X, Size.Y, -Size.Z)).p)
+                        local Top2 = camera:WorldToViewportPoint((newplr.Character.HumanoidRootPart.CFrame * CFrame.new(-Size.X, Size.Y, Size.Z)).p)
+                        local Top3 = camera:WorldToViewportPoint((newplr.Character.HumanoidRootPart.CFrame * CFrame.new(Size.X, Size.Y, Size.Z)).p)
+                        local Top4 = camera:WorldToViewportPoint((newplr.Character.HumanoidRootPart.CFrame * CFrame.new(Size.X, Size.Y, -Size.Z)).p)
+
+                        local Bottom1 = camera:WorldToViewportPoint((newplr.Character.HumanoidRootPart.CFrame * CFrame.new(-Size.X, -Size.Y, -Size.Z)).p)
+                        local Bottom2 = camera:WorldToViewportPoint((newplr.Character.HumanoidRootPart.CFrame * CFrame.new(-Size.X, -Size.Y, Size.Z)).p)
+                        local Bottom3 = camera:WorldToViewportPoint((newplr.Character.HumanoidRootPart.CFrame * CFrame.new(Size.X, -Size.Y, Size.Z)).p)
+                        local Bottom4 = camera:WorldToViewportPoint((newplr.Character.HumanoidRootPart.CFrame * CFrame.new(Size.X, -Size.Y, -Size.Z)).p)
+
+                        lines.line1.From = Vector2.new(Top1.X, Top1.Y)
+                        lines.line1.To = Vector2.new(Top2.X, Top2.Y)
+                        lines.line2.From = Vector2.new(Top2.X, Top2.Y)
+                        lines.line2.To = Vector2.new(Top3.X, Top3.Y)
+                        lines.line3.From = Vector2.new(Top3.X, Top3.Y)
+                        lines.line3.To = Vector2.new(Top4.X, Top4.Y)
+                        lines.line4.From = Vector2.new(Top4.X, Top4.Y)
+                        lines.line4.To = Vector2.new(Top1.X, Top1.Y)
+
+                        lines.line5.From = Vector2.new(Bottom1.X, Bottom1.Y)
+                        lines.line5.To = Vector2.new(Bottom2.X, Bottom2.Y)
+                        lines.line6.From = Vector2.new(Bottom2.X, Bottom2.Y)
+                        lines.line6.To = Vector2.new(Bottom3.X, Bottom3.Y)
+                        lines.line7.From = Vector2.new(Bottom3.X, Bottom3.Y)
+                        lines.line7.To = Vector2.new(Bottom4.X, Bottom4.Y)
+                        lines.line8.From = Vector2.new(Bottom4.X, Bottom4.Y)
+                        lines.line8.To = Vector2.new(Bottom1.X, Bottom1.Y)
+
+                        lines.line9.From = Vector2.new(Bottom1.X, Bottom1.Y)
+                        lines.line9.To = Vector2.new(Top1.X, Top1.Y)
+                        lines.line10.From = Vector2.new(Bottom2.X, Bottom2.Y)
+                        lines.line10.To = Vector2.new(Top2.X, Top2.Y)
+                        lines.line11.From = Vector2.new(Bottom3.X, Bottom3.Y)
+                        lines.line11.To = Vector2.new(Top3.X, Top3.Y)
+                        lines.line12.From = Vector2.new(Bottom4.X, Bottom4.Y)
+                        lines.line12.To = Vector2.new(Top4.X, Top4.Y)
+
+                        if Tracers then
+                            local trace = camera:WorldToViewportPoint((newplr.Character.HumanoidRootPart.CFrame * CFrame.new(0, -Size.Y, 0)).p)
+                            lines.Tracer.From = Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y)
+                            lines.Tracer.To = Vector2.new(trace.X, trace.Y)
+                        end
+
+                        if Team_Check then
+                            if newplr.TeamColor == player.TeamColor then
+                                for _, x in pairs(lines) do
+                                    x.Color = green
+                                end
+                            else 
+                                for _, x in pairs(lines) do
+                                    x.Color = red
+                                end
+                            end
+                        end
+
+                        if Autothickness then
+                            local distance = (player.Character.HumanoidRootPart.Position - newplr.Character.HumanoidRootPart.Position).magnitude
+                            local value = math.clamp(1/distance*100, 0.1, 4)
+                            for _, x in pairs(lines) do
+                                x.Thickness = value
+                            end
+                        else 
+                            for _, x in pairs(lines) do
+                                x.Thickness = Box_Thickness
+                            end
+                        end
+
+                        for _, x in pairs(lines) do
+                            if x ~= lines.Tracer then
+                                x.Visible = true
+                                x.Transparency = BlendValue
+                            end
+                        end
+                        if Tracers then
+                            lines.Tracer.Visible = true
+                            lines.Tracer.Transparency = BlendValue
+                        end
+                    else 
+                        for _, x in pairs(lines) do
+                            x.Visible = false
+                        end
+                    end
+                else 
+                    for _, x in pairs(lines) do
+                        x.Visible = false
+                    end
+                    if game.Players:FindFirstChild(newplr.Name) == nil then
+                        connection:Disconnect()
+                    end
+                end
+            end)
+            table.insert(BlissfulConnections, connection)
+        end
+        coroutine.wrap(ESP)()
+    end)
+    
+    print("[BLISSFUL] ESP Started Successfully!")
+end
+
+local function StopBlissfulESP()
+    if not BlissfulActive then return end
+    
+    print("[BLISSFUL] Stopping ESP with smooth fade...")
+    BlissfulActive = false
+    BlendTarget = 0
+    
+    task.delay(0.8, function()
+        for _, conn in ipairs(BlissfulConnections) do
+            pcall(function() conn:Disconnect() end)
+        end
+        BlissfulConnections = {}
+        print("[BLISSFUL] ESP Stopped and cleaned!")
+    end)
+end
+
+-- ======================================================
+-- СОЗДАНИЕ GUI С DRAGGABLE
 -- ======================================================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "META_GUI"
@@ -82,6 +1033,7 @@ local function ResetTabs()
         local ind = btn:FindFirstChild("Indicator")
         if ind then
             ind.Visible = false
+            ind.BackgroundTransparency = 1
         end
         btn.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
         btn.TextColor3 = Color3.fromRGB(156, 163, 175)
@@ -113,6 +1065,7 @@ for i, name in ipairs(TabNames) do
     indicator.BackgroundColor3 = Color3.fromRGB(59, 130, 246)
     indicator.BorderSizePixel = 0
     indicator.Visible = false
+    indicator.BackgroundTransparency = 0
     indicator.Parent = btn
     
     btn.MouseEnter:Connect(function()
@@ -134,6 +1087,7 @@ for i, name in ipairs(TabNames) do
         
         ResetTabs()
         indicator.Visible = true
+        indicator.BackgroundTransparency = 0
         btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
         btn.TextColor3 = Color3.fromRGB(255, 255, 255)
         
@@ -278,11 +1232,7 @@ local function CreateToggle(parent, labelText, description, globalVar, yPos)
                 removeAllBillboards()
             end
         elseif globalVar == "Box3D" then
-            if newVal then
-                StartBox3D()
-            else
-                StopBox3D()
-            end
+            _G.ToggleBox3D(newVal)
         elseif globalVar == "FullBright" then
             ToggleFullBright()
         elseif globalVar == "FOVEnabled" then
@@ -299,6 +1249,9 @@ local function CreateToggle(parent, labelText, description, globalVar, yPos)
     return clickBtn
 end
 
+-- ======================================================
+-- ИСПРАВЛЕННЫЙ CreateSlider (РАБОТАЕТ НА МОБИЛЬНЫХ)
+-- ======================================================
 local function CreateSlider(parent, labelText, description, globalVar, minVal, maxVal, defaultVal, yPos)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, 0, 0, 58)
@@ -378,10 +1331,9 @@ local function CreateSlider(parent, labelText, description, globalVar, minVal, m
     handleCorner.CornerRadius = UDim.new(1, 0)
     handleCorner.Parent = handle
     
-    local isSliding = false
+    local isDragging = false
     local dragConnection = nil
     local endConnection = nil
-    local scrollFrame = parent
     
     local function UpdateSlider(input)
         local absPos = sliderFrame.AbsolutePosition.X
@@ -406,27 +1358,21 @@ local function CreateSlider(parent, labelText, description, globalVar, minVal, m
     end
     
     local function StartDrag(input)
-        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-            isSliding = true
-            if scrollFrame then
-                scrollFrame.ScrollingEnabled = false
-            end
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isDragging = true
             UpdateSlider(input)
             
             if dragConnection then dragConnection:Disconnect() end
             dragConnection = UserInputService.InputChanged:Connect(function(inputChanged)
-                if isSliding and (inputChanged.UserInputType == Enum.UserInputType.Touch or inputChanged.UserInputType == Enum.UserInputType.MouseMovement) then
+                if (inputChanged.UserInputType == Enum.UserInputType.MouseMovement or inputChanged.UserInputType == Enum.UserInputType.Touch) and isDragging then
                     UpdateSlider(inputChanged)
                 end
             end)
             
             if endConnection then endConnection:Disconnect() end
             endConnection = UserInputService.InputEnded:Connect(function(inputEnded)
-                if inputEnded.UserInputType == Enum.UserInputType.Touch or inputEnded.UserInputType == Enum.UserInputType.MouseButton1 then
-                    isSliding = false
-                    if scrollFrame then
-                        scrollFrame.ScrollingEnabled = true
-                    end
+                if inputEnded.UserInputType == Enum.UserInputType.MouseButton1 or inputEnded.UserInputType == Enum.UserInputType.Touch then
+                    isDragging = false
                     if dragConnection then
                         dragConnection:Disconnect()
                         dragConnection = nil
@@ -442,11 +1388,8 @@ local function CreateSlider(parent, labelText, description, globalVar, minVal, m
     
     sliderFrame.InputBegan:Connect(StartDrag)
     sliderFrame.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-            isSliding = false
-            if scrollFrame then
-                scrollFrame.ScrollingEnabled = true
-            end
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isDragging = false
             if dragConnection then
                 dragConnection:Disconnect()
                 dragConnection = nil
@@ -562,8 +1505,8 @@ local aimbotPage = ContentPages["Aimbot"]
 if aimbotPage then
     CreateToggle(
         aimbotPage,
-        "Master Aimbot",
-        "Активирует систему наведения на противников",
+        "Aimbot / Аимбот",
+        "Бот который автоматически наводится на голову",
         "AimbotEnabled",
         15
     )
@@ -582,7 +1525,7 @@ if aimbotPage then
     CreateToggle(
         aimbotPage,
         "FOV / Круг",
-        "Круг появляется при включении Aimbot",
+        "Круг появляется при включении, размер менять по функции Fov range",
         "FOVEnabled",
         145
     )
@@ -604,7 +1547,7 @@ if visualsPage then
     CreateToggle(
         visualsPage,
         "3D Box / 3Д Бокс",
-        "Бокс который обводит игрока белым цветом",
+        "Бокс который обводит игрока белым цветом, скоро будут добавлены другие.",
         "Box3D",
         80
     )
@@ -642,10 +1585,11 @@ if TabButtons[1] then
 end
 
 -- ======================================================
--- РЕНДЕР (FOV КРУГ)
+-- ИСПРАВЛЕННЫЙ РЕНДЕР (FOV КРУГ)
 -- ======================================================
 RunService.RenderStepped:Connect(function()
-    if _G.AimbotEnabled and FOVFrame then
+    -- Обновляем FOV круг (позиция и размер)
+    if _G.FOVEnabled and FOVFrame then
         local viewportSize = Camera.ViewportSize
         local rawCenter = Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
         local correctCenter = rawCenter + GuiService:GetGuiInset()
@@ -658,6 +1602,7 @@ RunService.RenderStepped:Connect(function()
         FOVFrame.Visible = false
     end
     
+    -- Aimbot (только противники)
     if _G.AimbotEnabled then
         local target = GetTargetInFOV()
         if target then
@@ -698,19 +1643,43 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     elseif input.KeyCode == Enum.KeyCode.F3 then
         PlayClickSound()
         _G.Box3D = not _G.Box3D
-        if _G.Box3D then StartBox3D() else StopBox3D() end
+        _G.ToggleBox3D(_G.Box3D)
         print(string.format("[DEBUG] Box3D: %s", tostring(_G.Box3D)))
     elseif input.KeyCode == Enum.KeyCode.F4 then
         PlayClickSound()
         _G.Snaplines = not _G.Snaplines
-        if _G.Snaplines then StartBlissfulESP() else StopBlissfulESP() end
+        if _G.Snaplines then
+            StartBlissfulESP()
+        else
+            StopBlissfulESP()
+        end
         print(string.format("[DEBUG] Snaplines: %s", tostring(_G.Snaplines)))
     elseif input.KeyCode == Enum.KeyCode.F5 then
         PlayClickSound()
         _G.EspNames = not _G.EspNames
-        if _G.EspNames then updateAllBillboards() else removeAllBillboards() end
+        if _G.EspNames then
+            updateAllBillboards()
+        else
+            removeAllBillboards()
+        end
         print(string.format("[DEBUG] EspNames: %s", tostring(_G.EspNames)))
     elseif input.KeyCode == Enum.KeyCode.F6 then
         PlayClickSound()
         ToggleFullBright()
-        print(string.format("[DEBUG] FullBright: %s", tostring(_G.F
+        print(string.format("[DEBUG] FullBright: %s", tostring(_G.FullBrightEnabled)))
+    elseif input.KeyCode == Enum.KeyCode.F7 then
+        PlayClickSound()
+        _G.FOVEnabled = not _G.FOVEnabled
+        if FOVFrame then
+            FOVFrame.Visible = _G.FOVEnabled
+        end
+        print(string.format("[DEBUG] FOV: %s", tostring(_G.FOVEnabled)))
+    end
+end)
+
+print("[META] v3.16 Loaded Successfully!")
+print("[META] FIXED: Slider works on mobile (Touch support)")
+print("[META] FIXED: FOV Circle size (diameter = FOV * 2)")
+print("[META] FIXED: FOV Circle position (GuiService:GetGuiInset())")
+print("[META] FIXED: Tab indicator clearing (ResetTabs)")
+print("[META] F1 - Aimbot | F2 - Ch
