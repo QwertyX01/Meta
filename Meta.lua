@@ -24,6 +24,7 @@ _G.FOVEnabled = false
 
 local MenuVisible = true
 local FOVCircle = nil
+local FOVFrame = nil
 local BlissfulActive = false
 local BlissfulConnections = {}
 local BlendValue = 1
@@ -32,8 +33,6 @@ local BlendTarget = 1
 -- ======================================================
 -- FOV КРУГ (UI FRAME)
 -- ======================================================
-local FOVFrame = nil
-
 local function CreateFOVCircle()
     if CoreGui:FindFirstChild("META_FOV_SYSTEM") then
         CoreGui.META_FOV_SYSTEM:Destroy()
@@ -1237,6 +1236,7 @@ local function CreateToggle(parent, labelText, description, globalVar, yPos)
             if FOVFrame then
                 FOVFrame.Visible = newVal
             end
+            _G.FOVEnabled = newVal
         end
         
         UpdateToggle(newVal)
@@ -1314,23 +1314,13 @@ local function CreateSlider(parent, labelText, description, globalVar, minVal, m
     fillCorner.CornerRadius = UDim.new(1, 0)
     fillCorner.Parent = fill
     
-    local clickBtn = Instance.new("TextButton")
-    clickBtn.Size = UDim2.new(1, 0, 1, 0)
-    clickBtn.Position = UDim2.new(0, 0, 0, 0)
-    clickBtn.BackgroundTransparency = 1
-    clickBtn.Text = ""
-    clickBtn.ZIndex = 10
-    clickBtn.Parent = sliderFrame
-    
     local dragging = false
     local dragConnection = nil
     
     local function UpdateSlider(mouseX)
         local absPos = sliderFrame.AbsolutePosition.X
         local width = sliderFrame.AbsoluteSize.X
-        if width <= 0 then
-            return
-        end
+        if width <= 0 then return end
         
         local percent = math.clamp((mouseX - absPos) / width, 0, 1)
         local val = math.round(minVal + percent * (maxVal - minVal))
@@ -1340,7 +1330,6 @@ local function CreateSlider(parent, labelText, description, globalVar, minVal, m
         valueDisplay.Text = tostring(val)
         _G[globalVar] = val
         
-        -- ✅ ОБНОВЛЯЕМ РАЗМЕР FOV КРУГА СРАЗУ ПРИ ИЗМЕНЕНИИ
         if globalVar == "AimbotFOV" and FOVFrame then
             local diameter = _G.AimbotFOV * 2
             FOVFrame.Size = UDim2.new(0, diameter, 0, diameter)
@@ -1349,23 +1338,14 @@ local function CreateSlider(parent, labelText, description, globalVar, minVal, m
         print(string.format("[DEBUG] %s = %d", globalVar, val))
     end
     
-    clickBtn.InputBegan:Connect(function(input)
+    sliderFrame.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = true
             UpdateSlider(input.Position.X)
-            
-            if dragConnection then
-                dragConnection:Disconnect()
-            end
-            dragConnection = UserInputService.InputChanged:Connect(function(inputChanged)
-                if inputChanged.UserInputType == Enum.UserInputType.MouseMovement and dragging then
-                    UpdateSlider(inputChanged.Position.X)
-                end
-            end)
         end
     end)
     
-    clickBtn.InputEnded:Connect(function(input)
+    sliderFrame.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = false
             if dragConnection then
@@ -1375,7 +1355,13 @@ local function CreateSlider(parent, labelText, description, globalVar, minVal, m
         end
     end)
     
-    return clickBtn
+    UserInputService.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement and dragging then
+            UpdateSlider(input.Position.X)
+        end
+    end)
+    
+    return sliderFrame
 end
 
 local function CreateDropdown(parent, labelText, description, globalVar, options, yPos)
@@ -1477,7 +1463,6 @@ end
 -- ======================================================
 local aimbotPage = ContentPages["Aimbot"]
 if aimbotPage then
-    -- Aimbot
     CreateToggle(
         aimbotPage,
         "Aimbot / Аимбот",
@@ -1486,7 +1471,6 @@ if aimbotPage then
         15
     )
     
-    -- FOV Range (ползунок)
     CreateSlider(
         aimbotPage,
         "FOV Range",
@@ -1498,7 +1482,6 @@ if aimbotPage then
         75
     )
     
-    -- FOV Toggle
     CreateToggle(
         aimbotPage,
         "FOV / Круг",
@@ -1562,7 +1545,7 @@ if TabButtons[1] then
 end
 
 -- ======================================================
--- AIMBOT РЕНДЕР
+-- ГЛОБАЛЬНЫЙ РЕНДЕР-ЦИКЛ
 -- ======================================================
 RunService.RenderStepped:Connect(function()
     -- Обновляем FOV круг (позиция и размер)
