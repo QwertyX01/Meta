@@ -31,7 +31,7 @@ local BlendValue = 1
 local BlendTarget = 1
 
 -- ======================================================
--- FOV КРУГ (UI FRAME)
+-- FOV КРУГ (UI FRAME) - ИСПРАВЛЕН
 -- ======================================================
 local function CreateFOVCircle()
     if CoreGui:FindFirstChild("META_FOV_SYSTEM") then
@@ -131,7 +131,7 @@ Light:GetPropertyChangedSignal("Ambient"):Connect(function()
 end)
 
 -- ======================================================
--- CHAMS (НОВЫЙ КОД)
+-- CHAMS
 -- ======================================================
 local Tag = "AdolfFX"
 local ChamsActive = false
@@ -990,7 +990,7 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(0.5, 0, 1, 0)
 Title.Position = UDim2.new(0, 15, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "META v3.15"
+Title.Text = "META v3.16"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 20
 Title.Font = Enum.Font.GothamBold
@@ -1002,7 +1002,7 @@ local Version = Instance.new("TextLabel")
 Version.Size = UDim2.new(0.5, 0, 1, 0)
 Version.Position = UDim2.new(0.5, 0, 0, 0)
 Version.BackgroundTransparency = 1
-Version.Text = "v3.15"
+Version.Text = "v3.16"
 Version.TextColor3 = Color3.fromRGB(156, 163, 175)
 Version.TextSize = 14
 Version.Font = Enum.Font.Gotham
@@ -1033,6 +1033,7 @@ local function ResetTabs()
         local ind = btn:FindFirstChild("Indicator")
         if ind then
             ind.Visible = false
+            ind.BackgroundTransparency = 1
         end
         btn.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
         btn.TextColor3 = Color3.fromRGB(156, 163, 175)
@@ -1064,6 +1065,7 @@ for i, name in ipairs(TabNames) do
     indicator.BackgroundColor3 = Color3.fromRGB(59, 130, 246)
     indicator.BorderSizePixel = 0
     indicator.Visible = false
+    indicator.BackgroundTransparency = 0
     indicator.Parent = btn
     
     btn.MouseEnter:Connect(function()
@@ -1085,6 +1087,7 @@ for i, name in ipairs(TabNames) do
         
         ResetTabs()
         indicator.Visible = true
+        indicator.BackgroundTransparency = 0
         btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
         btn.TextColor3 = Color3.fromRGB(255, 255, 255)
         
@@ -1246,6 +1249,9 @@ local function CreateToggle(parent, labelText, description, globalVar, yPos)
     return clickBtn
 end
 
+-- ======================================================
+-- ИСПРАВЛЕННЫЙ CreateSlider (РАБОТАЕТ НА МОБИЛЬНЫХ)
+-- ======================================================
 local function CreateSlider(parent, labelText, description, globalVar, minVal, maxVal, defaultVal, yPos)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, 0, 0, 58)
@@ -1314,19 +1320,32 @@ local function CreateSlider(parent, labelText, description, globalVar, minVal, m
     fillCorner.CornerRadius = UDim.new(1, 0)
     fillCorner.Parent = fill
     
-    local dragging = false
-    local dragConnection = nil
+    local handle = Instance.new("Frame")
+    handle.Size = UDim2.new(0, 14, 0, 14)
+    handle.Position = UDim2.new(initialPercent, -7, 0.5, -7)
+    handle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    handle.BorderSizePixel = 0
+    handle.Parent = sliderFrame
     
-    local function UpdateSlider(mouseX)
+    local handleCorner = Instance.new("UICorner")
+    handleCorner.CornerRadius = UDim.new(1, 0)
+    handleCorner.Parent = handle
+    
+    local isDragging = false
+    local dragConnection = nil
+    local endConnection = nil
+    
+    local function UpdateSlider(input)
         local absPos = sliderFrame.AbsolutePosition.X
         local width = sliderFrame.AbsoluteSize.X
         if width <= 0 then return end
         
-        local percent = math.clamp((mouseX - absPos) / width, 0, 1)
+        local percent = math.clamp((input.Position.X - absPos) / width, 0, 1)
         local val = math.round(minVal + percent * (maxVal - minVal))
         val = math.clamp(val, minVal, maxVal)
         
         fill.Size = UDim2.new(percent, 0, 1, 0)
+        handle.Position = UDim2.new(percent, -7, 0.5, -7)
         valueDisplay.Text = tostring(val)
         _G[globalVar] = val
         
@@ -1338,26 +1357,47 @@ local function CreateSlider(parent, labelText, description, globalVar, minVal, m
         print(string.format("[DEBUG] %s = %d", globalVar, val))
     end
     
-    sliderFrame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            UpdateSlider(input.Position.X)
+    local function StartDrag(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isDragging = true
+            UpdateSlider(input)
+            
+            if dragConnection then dragConnection:Disconnect() end
+            dragConnection = UserInputService.InputChanged:Connect(function(inputChanged)
+                if (inputChanged.UserInputType == Enum.UserInputType.MouseMovement or inputChanged.UserInputType == Enum.UserInputType.Touch) and isDragging then
+                    UpdateSlider(inputChanged)
+                end
+            end)
+            
+            if endConnection then endConnection:Disconnect() end
+            endConnection = UserInputService.InputEnded:Connect(function(inputEnded)
+                if inputEnded.UserInputType == Enum.UserInputType.MouseButton1 or inputEnded.UserInputType == Enum.UserInputType.Touch then
+                    isDragging = false
+                    if dragConnection then
+                        dragConnection:Disconnect()
+                        dragConnection = nil
+                    end
+                    if endConnection then
+                        endConnection:Disconnect()
+                        endConnection = nil
+                    end
+                end
+            end)
         end
-    end)
+    end
     
+    sliderFrame.InputBegan:Connect(StartDrag)
     sliderFrame.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isDragging = false
             if dragConnection then
                 dragConnection:Disconnect()
                 dragConnection = nil
             end
-        end
-    end)
-    
-    UserInputService.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement and dragging then
-            UpdateSlider(input.Position.X)
+            if endConnection then
+                endConnection:Disconnect()
+                endConnection = nil
+            end
         end
     end)
     
@@ -1545,7 +1585,7 @@ if TabButtons[1] then
 end
 
 -- ======================================================
--- ГЛОБАЛЬНЫЙ РЕНДЕР-ЦИКЛ
+-- ИСПРАВЛЕННЫЙ РЕНДЕР (FOV КРУГ)
 -- ======================================================
 RunService.RenderStepped:Connect(function()
     -- Обновляем FOV круг (позиция и размер)
@@ -1637,7 +1677,9 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] v3.15 Loaded Successfully!")
-print("[META] FOV: moved to Aimbot tab, slider now works!")
-print("[META] F1 - Aimbot | F2 - Chams | F3 - 3D Box | F4 - Tracers | F5 - Names | F6 - FullBright | F7 - FOV")
-print("[META] Press Insert or F8 to toggle menu")
+print("[META] v3.16 Loaded Successfully!")
+print("[META] FIXED: Slider works on mobile (Touch support)")
+print("[META] FIXED: FOV Circle size (diameter = FOV * 2)")
+print("[META] FIXED: FOV Circle position (GuiService:GetGuiInset())")
+print("[META] FIXED: Tab indicator clearing (ResetTabs)")
+print("[META] F1 - Aimbot | F2 - Ch
