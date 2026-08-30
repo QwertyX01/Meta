@@ -8,13 +8,13 @@ local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 local SoundService = game:GetService("SoundService")
 local Lighting = game:GetService("Lighting")
+local GuiService = game:GetService("GuiService")
 
 -- ======================================================
 -- ГЛОБАЛЬНЫЕ СОСТОЯНИЯ
 -- ======================================================
 _G.AimbotEnabled = false
 _G.AimbotFOV = 150
-_G.TargetBone = "Head"
 _G.BoxESP = false
 _G.Snaplines = false
 _G.EspNames = false
@@ -28,6 +28,47 @@ local BlissfulActive = false
 local BlissfulConnections = {}
 local BlendValue = 1
 local BlendTarget = 1
+
+-- ======================================================
+-- FOV КРУГ (UI FRAME)
+-- ======================================================
+local FOVFrame = nil
+
+local function CreateFOVCircle()
+    if CoreGui:FindFirstChild("META_FOV_SYSTEM") then
+        CoreGui.META_FOV_SYSTEM:Destroy()
+    end
+    
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "META_FOV_SYSTEM"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.Parent = CoreGui
+    
+    local fovCircle = Instance.new("Frame")
+    fovCircle.Name = "FOVCircle"
+    fovCircle.AnchorPoint = Vector2.new(0.5, 0.5)
+    fovCircle.BackgroundColor3 = Color3.fromRGB(59, 130, 246)
+    fovCircle.BackgroundTransparency = 0.85
+    fovCircle.BorderSizePixel = 0
+    fovCircle.Visible = false
+    fovCircle.ZIndex = 1
+    fovCircle.Parent = ScreenGui
+    
+    local circleCorner = Instance.new("UICorner")
+    circleCorner.CornerRadius = UDim.new(1, 0)
+    circleCorner.Parent = fovCircle
+    
+    local circleStroke = Instance.new("UIStroke")
+    circleStroke.Thickness = 1.5
+    circleStroke.Color = Color3.fromRGB(59, 130, 246)
+    circleStroke.Transparency = 0.3
+    circleStroke.Parent = fovCircle
+    
+    FOVFrame = fovCircle
+    return fovCircle
+end
+
+CreateFOVCircle()
 
 -- ======================================================
 -- FULLBRIGHT (СУПЕР ЯРКИЙ)
@@ -367,19 +408,7 @@ local function PlayClickSound()
 end
 
 -- ======================================================
--- СОЗДАНИЕ FOV КРУГА (DRAWING)
--- ======================================================
-FOVCircle = Drawing.new("Circle")
-FOVCircle.Visible = false
-FOVCircle.Color = Color3.fromRGB(0, 150, 255)
-FOVCircle.Thickness = 1.5
-FOVCircle.Transparency = 0.5
-FOVCircle.NumSides = 64
-FOVCircle.Filled = false
-FOVCircle.Radius = _G.AimbotFOV
-
--- ======================================================
--- AIMBOT (ИЗ КОДА MEDRIT, ДОБАВЛЕНА ПРОВЕРКА КОМАНД)
+-- AIMBOT (С ПРОВЕРКОЙ КОМАНД)
 -- ======================================================
 local function GetTargetInFOV()
     local closestTarget = nil
@@ -390,13 +419,12 @@ local function GetTargetInFOV()
         if player == LocalPlayer then continue end
         if not player.Character then continue end
         
-        -- ✅ ПРОВЕРКА НА КОМАНДУ (НЕ НАВОДИТЬСЯ НА СОЮЗНИКОВ)
         if player.Team == LocalPlayer.Team then
             continue
         end
         
         local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-        local part = player.Character:FindFirstChild(_G.TargetBone or "Head")
+        local part = player.Character:FindFirstChild("Head")
         
         if humanoid and humanoid.Health > 0 and part then
             local screenPos, onScreen = Camera:WorldToViewportPoint(part.Position)
@@ -963,7 +991,7 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(0.5, 0, 1, 0)
 Title.Position = UDim2.new(0, 15, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "META v3.14"
+Title.Text = "META v3.15"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 20
 Title.Font = Enum.Font.GothamBold
@@ -975,7 +1003,7 @@ local Version = Instance.new("TextLabel")
 Version.Size = UDim2.new(0.5, 0, 1, 0)
 Version.Position = UDim2.new(0.5, 0, 0, 0)
 Version.BackgroundTransparency = 1
-Version.Text = "v3.14"
+Version.Text = "v3.15"
 Version.TextColor3 = Color3.fromRGB(156, 163, 175)
 Version.TextSize = 14
 Version.Font = Enum.Font.Gotham
@@ -1205,6 +1233,10 @@ local function CreateToggle(parent, labelText, description, globalVar, yPos)
             _G.ToggleBox3D(newVal)
         elseif globalVar == "FullBright" then
             ToggleFullBright()
+        elseif globalVar == "FOVEnabled" then
+            if FOVFrame then
+                FOVFrame.Visible = newVal
+            end
         end
         
         UpdateToggle(newVal)
@@ -1308,8 +1340,10 @@ local function CreateSlider(parent, labelText, description, globalVar, minVal, m
         valueDisplay.Text = tostring(val)
         _G[globalVar] = val
         
-        if globalVar == "AimbotFOV" and FOVCircle then
-            FOVCircle.Radius = val
+        -- ✅ ОБНОВЛЯЕМ РАЗМЕР FOV КРУГА СРАЗУ ПРИ ИЗМЕНЕНИИ
+        if globalVar == "AimbotFOV" and FOVFrame then
+            local diameter = _G.AimbotFOV * 2
+            FOVFrame.Size = UDim2.new(0, diameter, 0, diameter)
         end
         
         print(string.format("[DEBUG] %s = %d", globalVar, val))
@@ -1443,7 +1477,7 @@ end
 -- ======================================================
 local aimbotPage = ContentPages["Aimbot"]
 if aimbotPage then
-    -- Aimbot (бывший Master Aimbot)
+    -- Aimbot
     CreateToggle(
         aimbotPage,
         "Aimbot / Аимбот",
@@ -1464,13 +1498,12 @@ if aimbotPage then
         75
     )
     
-    -- Target Body Part
-    CreateDropdown(
+    -- FOV Toggle
+    CreateToggle(
         aimbotPage,
-        "Target Body Part",
-        "Выбор части тела для захвата аимбота",
-        "TargetBone",
-        {"Head", "Torso", "HumanoidRootPart"},
+        "FOV / Круг",
+        "Круг появляется при включении, размер менять по функции Fov range",
+        "FOVEnabled",
         145
     )
 end
@@ -1490,18 +1523,10 @@ if visualsPage then
     
     CreateToggle(
         visualsPage,
-        "FOV / Круг",
-        "Включить Fov (Круг) в вкладке Visuals",
-        "FOVEnabled",
-        80
-    )
-    
-    CreateToggle(
-        visualsPage,
         "3D Box / 3Д Бокс",
         "Бокс который обводит игрока белым цветом, скоро будут добавлены другие.",
         "Box3D",
-        145
+        80
     )
     
     CreateToggle(
@@ -1509,7 +1534,7 @@ if visualsPage then
         "Tracers / Лучи (Blissful)",
         "Полный Blissful ESP: 3D Box + Tracers (плавное исчезновение)",
         "Snaplines",
-        210
+        145
     )
     
     CreateToggle(
@@ -1517,7 +1542,7 @@ if visualsPage then
         "Names & Distance",
         "Отображение имен игроков и дистанции в реальном времени",
         "EspNames",
-        275
+        210
     )
     
     CreateToggle(
@@ -1525,7 +1550,7 @@ if visualsPage then
         "Full Bright / Полная яркость",
         "Включая функцию карта становится намного светлее.",
         "FullBright",
-        340
+        275
     )
 end
 
@@ -1537,17 +1562,21 @@ if TabButtons[1] then
 end
 
 -- ======================================================
--- AIMBOT РЕНДЕР (ИЗ КОДА MEDRIT, НО ТОЛЬКО ПРОТИВНИКИ)
+-- AIMBOT РЕНДЕР
 -- ======================================================
 RunService.RenderStepped:Connect(function()
-    -- Обновляем FOV круг
-    if _G.FOVEnabled and FOVCircle then
-        FOVCircle.Visible = true
+    -- Обновляем FOV круг (позиция и размер)
+    if _G.FOVEnabled and FOVFrame then
         local viewportSize = Camera.ViewportSize
-        FOVCircle.Position = Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
-        FOVCircle.Radius = _G.AimbotFOV
-    elseif FOVCircle then
-        FOVCircle.Visible = false
+        local rawCenter = Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
+        local correctCenter = rawCenter + GuiService:GetGuiInset()
+        local diameter = _G.AimbotFOV * 2
+        
+        FOVFrame.Visible = true
+        FOVFrame.Size = UDim2.new(0, diameter, 0, diameter)
+        FOVFrame.Position = UDim2.new(0, correctCenter.X, 0, correctCenter.Y)
+    elseif FOVFrame then
+        FOVFrame.Visible = false
     end
     
     -- Aimbot (только противники)
@@ -1618,12 +1647,14 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     elseif input.KeyCode == Enum.KeyCode.F7 then
         PlayClickSound()
         _G.FOVEnabled = not _G.FOVEnabled
+        if FOVFrame then
+            FOVFrame.Visible = _G.FOVEnabled
+        end
         print(string.format("[DEBUG] FOV: %s", tostring(_G.FOVEnabled)))
     end
 end)
 
-print("[META] v3.14 Loaded Successfully!")
-print("[META] Aimbot: upgraded (only enemies, Medrit style)")
-print("[META] FOV Circle: now in Visuals tab (F7)")
+print("[META] v3.15 Loaded Successfully!")
+print("[META] FOV: moved to Aimbot tab, slider now works!")
 print("[META] F1 - Aimbot | F2 - Chams | F3 - 3D Box | F4 - Tracers | F5 - Names | F6 - FullBright | F7 - FOV")
 print("[META] Press Insert or F8 to toggle menu")
