@@ -1548,18 +1548,16 @@ if visualsPage then
 end
 
 -- ======================================================
--- AI СТРАНИЦА (С ЧАТОМ И РАБОТАЮЩЕЙ КЛАВИАТУРОЙ)
+-- AI СТРАНИЦА (С РАБОТАЮЩЕЙ КЛАВИАТУРОЙ)
 -- ======================================================
 local aiPage = ContentPages["AI"]
 if aiPage then
-    -- Очищаем страницу
     for _, child in pairs(aiPage:GetChildren()) do
         child:Destroy()
     end
     
     local y = 10
     
-    -- Заголовок
     local titleLabel = Instance.new("TextLabel")
     titleLabel.Size = UDim2.new(1, 0, 0, 35)
     titleLabel.Position = UDim2.new(0, 0, 0, y)
@@ -1572,7 +1570,6 @@ if aiPage then
     titleLabel.Parent = aiPage
     y = y + 45
     
-    -- Подзаголовок
     local subLabel = Instance.new("TextLabel")
     subLabel.Size = UDim2.new(1, 0, 0, 20)
     subLabel.Position = UDim2.new(0, 0, 0, y)
@@ -1598,7 +1595,7 @@ if aiPage then
     inputCorner.CornerRadius = UDim.new(0, 10)
     inputCorner.Parent = inputContainer
     
-    -- Поле ввода (с поддержкой клавиатуры)
+    -- Поле ввода (TextBox)
     local inputBox = Instance.new("TextBox")
     inputBox.Size = UDim2.new(1, -20, 1, 0)
     inputBox.Position = UDim2.new(0, 10, 0, 0)
@@ -1614,15 +1611,20 @@ if aiPage then
     inputBox.MultiLine = false
     inputBox.Parent = inputContainer
     
-    -- Принудительный захват фокуса при клике
-    local function focusInput()
+    -- ФИКС: Функция открытия клавиатуры
+    local function OpenKeyboard()
         inputBox:CaptureFocus()
+        task.wait(0.1)
+        if not inputBox:IsFocused() then
+            inputBox:Select()
+        end
     end
     
-    inputBox.MouseButton1Click:Connect(focusInput)
-    inputContainer.MouseButton1Click:Connect(function()
-        inputBox:CaptureFocus()
-    end)
+    -- Все способы открытия клавиатуры
+    inputBox.MouseButton1Click:Connect(OpenKeyboard)
+    inputBox.TouchTap:Connect(OpenKeyboard)
+    inputContainer.MouseButton1Click:Connect(OpenKeyboard)
+    inputContainer.TouchTap:Connect(OpenKeyboard)
     
     y = y + 60
     
@@ -1641,7 +1643,6 @@ if aiPage then
     sendCorner.CornerRadius = UDim.new(0, 8)
     sendCorner.Parent = sendBtn
     
-    -- Hover эффект
     sendBtn.MouseEnter:Connect(function()
         sendBtn.BackgroundColor3 = Color3.fromRGB(79, 150, 255)
     end)
@@ -1690,25 +1691,20 @@ if aiPage then
         msgLabel.Size = UDim2.new(1, 0, 0, 30)
         msgLabel.Parent = msgFrame
         
-        -- Вычисляем высоту текста
         local textBounds = msgLabel.TextBounds
         msgLabel.Size = UDim2.new(1, 0, 0, textBounds.Y + 10)
         msgFrame.Size = UDim2.new(1, -10, 0, textBounds.Y + 15)
         
         table.insert(messages, msgFrame)
         
-        -- Обновляем CanvasSize
         local totalHeight = 0
         for _, m in pairs(messages) do
             totalHeight = totalHeight + m.Size.Y.Offset + 5
         end
         messagesContainer.CanvasSize = UDim2.new(0, 0, 0, totalHeight + 10)
-        
-        -- Скроллим вниз
         messagesContainer.CanvasPosition = Vector2.new(0, totalHeight)
     end
     
-    -- Приветственное сообщение
     AddMessage("Задай вопрос о функциях чита...", false)
     
     -- ======================================================
@@ -1737,51 +1733,43 @@ if aiPage then
             return ""
         end
         
-        -- Aimbot
         if string.find(q, "aimbot") or string.find(q, "аимбот") or string.find(q, "наведени") or 
            string.find(q, "прицел") or string.find(q, "авто") then
             return "Aimbot — автонаведение на противников при зажатии ПКМ.\nВключается: 'Master Aimbot' или F1.\nНастройки: FOV Range, Target Body Part."
         end
         
-        -- Chams
         if string.find(q, "chams") or string.find(q, "подсветк") or string.find(q, "силуэт") or 
            string.find(q, "обводк") or string.find(q, "цвет") or string.find(q, "контур") or
            string.find(q, "часы") or string.find(q, "сияни") then
             return "Chams — подсветка игроков сквозь стены.\nВраги — красные, союзники — зелёные.\nВключается: 'Chams' или F2."
         end
         
-        -- 3D Box
         if string.find(q, "3d box") or string.find(q, "3д бокс") or string.find(q, "куб") or 
            string.find(q, "коробк") or string.find(q, "квадрат") then
             return "3D Box — белый куб вокруг игрока.\nВключается: '3D Box' или F3.\nИсправлено мерцание в v3.12!"
         end
         
-        -- Tracers
         if string.find(q, "tracers") or string.find(q, "лучи") or string.find(q, "трассеры") or 
            string.find(q, "лини") or string.find(q, "веер") then
             return "Tracers — линии от тебя к противникам.\nВключается: 'Tracers' или F4.\nПлавное исчезновение при выключении."
         end
         
-        -- Names
         if string.find(q, "names") or string.find(q, "имен") or string.find(q, "дистанци") or 
            string.find(q, "ник") or string.find(q, "игрок") or string.find(q, "надпись") then
             return "Names & Distance — имена и дистанция над игроками.\nВключается: чекбокс или F5.\nИсправлен баг с респавном."
         end
         
-        -- FullBright
         if string.find(q, "fullbright") or string.find(q, "яркост") or string.find(q, "освещени") or 
            string.find(q, "ночь") or string.find(q, "темно") or string.find(q, "свет") then
             return "Full Bright — делает карту светлее.\nВключается: чекбокс или F6."
         end
         
-        -- Горячие клавиши
         if string.find(q, "горяч") or string.find(q, "клавиш") or string.find(q, "кнопк") or 
            string.find(q, "f1") or string.find(q, "f2") or string.find(q, "f3") or 
            string.find(q, "f4") or string.find(q, "f5") or string.find(q, "f6") then
             return "Горячие клавиши:\n• Insert/F8 — меню\n• F1 — Aimbot\n• F2 — Chams\n• F3 — 3D Box\n• F4 — Tracers\n• F5 — Names\n• F6 — FullBright"
         end
         
-        -- Статус
         if string.find(q, "статус") or string.find(q, "состояни") or string.find(q, "включен") or 
            string.find(q, "активи") or string.find(q, "работа") then
             return string.format(
@@ -1795,13 +1783,11 @@ if aiPage then
             )
         end
         
-        -- Версия
         if string.find(q, "обновл") or string.find(q, "верси") or string.find(q, "скачать") or 
            string.find(q, "github") or string.find(q, "v3") then
             return "Текущая версия: v3.13\nСкачать: loadstring(game:HttpGet('https://raw.githubusercontent.com/QwertyX01/Meta/main/Meta.lua', true))()"
         end
         
-        -- Помощь
         if string.find(q, "помощ") or string.find(q, "помоги") or string.find(q, "функци") or 
            string.find(q, "что умее") or string.find(q, "список") then
             return "Я умею отвечать на вопросы о:\n• Aimbot\n• Chams (подсветка)\n• 3D Box\n• Tracers (лучи)\n• Names (имена)\n• FullBright (яркость)\n• Горячие клавиши\n• Статус"
@@ -1810,7 +1796,6 @@ if aiPage then
         return "❓ Не понял вопрос. Напиши 'помощь' для списка команд."
     end
     
-    -- Обработка отправки
     sendBtn.MouseButton1Click:Connect(function()
         local question = inputBox.Text
         if question == "" or question == "Напиши вопрос..." then
@@ -1829,7 +1814,6 @@ if aiPage then
         AddMessage(response, false)
     end)
     
-    -- Enter для отправки
     inputBox.FocusLost:Connect(function(enterPressed)
         if enterPressed then
             sendBtn.MouseButton1Click:Fire()
