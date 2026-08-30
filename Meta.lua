@@ -142,10 +142,7 @@ local function ToggleFullBright()
 end
 
 -- ======================================================
--- CHAMS (ADOLFFX СТИЛЬ)
--- ======================================================
--- ======================================================
--- CHAMS (С ПРАВИЛЬНЫМ ОПРЕДЕЛЕНИЕМ КОМАНД)
+-- CHAMS (С ПРАВИЛЬНЫМ ОПРЕДЕЛЕНИЕМ КОМАНД - FIX)
 -- ======================================================
 local Tag = "AdolfFX"
 local ChamsData = {}
@@ -153,27 +150,15 @@ local ChamsData = {}
 local function IsEnemy(Plr)
     local LP = Players.LocalPlayer
     
-    -- 1. Проверка через Team
-    if Plr.Team and LP.Team then
-        if Plr.Team ~= LP.Team then
-            return true
-        end
-    end
-    
-    -- 2. Проверка через TeamColor (если Team не работает)
-    if Plr.TeamColor and LP.TeamColor then
-        if Plr.TeamColor ~= LP.TeamColor then
-            return true
-        end
-    end
-    
-    -- 3. Проверка через Neutral (если игрок без команды)
-    if Plr.Team == Enum.Team.Neutral or LP.Team == Enum.Team.Neutral then
+    if Plr.Team and LP.Team and Plr.Team ~= LP.Team then
         return true
     end
     
-    -- 4. Если у игрока нет команды — считаем врагом
-    if Plr.Team == nil then
+    if Plr.TeamColor and LP.TeamColor and Plr.TeamColor ~= LP.TeamColor then
+        return true
+    end
+    
+    if Plr.Team == nil or Plr.Team == Enum.Team.Neutral then
         return true
     end
     
@@ -187,7 +172,7 @@ local function Paint(Chr, Plr)
     local enemy = IsEnemy(Plr)
     
     H.Name = Tag
-    H.FillColor = enemy and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(0, 255, 0) -- Красный/Зелёный
+    H.FillColor = enemy and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(0, 255, 0)
     H.OutlineColor = Color3.fromRGB(255, 255, 255)
     H.FillTransparency = 0.5
     H.OutlineTransparency = 0.1
@@ -197,6 +182,29 @@ local function Paint(Chr, Plr)
     H.Enabled = _G.BoxESP
     
     ChamsData[Chr] = H
+end
+
+function UpdateChams()
+    if _G.BoxESP then
+        for _, v in pairs(Players:GetPlayers()) do
+            if v ~= LocalPlayer and v.Character then
+                local h = v.Character:FindFirstChild(Tag)
+                if h then
+                    h.Enabled = true
+                    local enemy = IsEnemy(v)
+                    h.FillColor = enemy and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(0, 255, 0)
+                else
+                    Paint(v.Character, v)
+                end
+            end
+        end
+    else
+        for _, v in pairs(Players:GetPlayers()) do
+            if v.Character and v.Character:FindFirstChild(Tag) then
+                v.Character[Tag].Enabled = false
+            end
+        end
+    end
 end
 
 local function Hook(Plr)
@@ -214,37 +222,12 @@ local function Hook(Plr)
     end
 end
 
--- Инициализация
 for _, v in pairs(Players:GetPlayers()) do
     Hook(v)
 end
 
 Players.PlayerAdded:Connect(Hook)
 
--- Обновление при переключении
-local function UpdateChams()
-    if _G.BoxESP then
-        for _, v in pairs(Players:GetPlayers()) do
-            if v ~= LocalPlayer and v.Character then
-                local h = v.Character:FindFirstChild(Tag)
-                if h then
-                    h.Enabled = true
-                    -- Обновляем цвет при каждом включении
-                    local enemy = IsEnemy(v)
-                    h.FillColor = enemy and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(0, 255, 0)
-                else
-                    Paint(v.Character, v)
-                end
-            end
-        end
-    else
-        for _, v in pairs(Players:GetPlayers()) do
-            if v.Character and v.Character:FindFirstChild(Tag) then
-                v.Character[Tag].Enabled = false
-            end
-        end
-    end
-end
 -- ======================================================
 -- 3D BOX ESP (БЕЗ МЕРЦАНИЯ)
 -- ======================================================
@@ -1525,7 +1508,7 @@ local visualsPage = ContentPages["Visuals"]
 if visualsPage then
     CreateToggle(
         visualsPage,
-        "Chams / Подсветка (AdolfFX)",
+        "Chams / Подсветка",
         "Красные/зеленые силуэты игроков в зависимости от команды",
         "BoxESP",
         15
@@ -1562,280 +1545,6 @@ if visualsPage then
         "FullBright",
         265
     )
-end
-
--- ======================================================
--- AI СТРАНИЦА (С РАБОТАЮЩЕЙ КЛАВИАТУРОЙ)
--- ======================================================
-local aiPage = ContentPages["AI"]
-if aiPage then
-    for _, child in pairs(aiPage:GetChildren()) do
-        child:Destroy()
-    end
-    
-    local y = 10
-    
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(1, 0, 0, 35)
-    titleLabel.Position = UDim2.new(0, 0, 0, y)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.Text = "🤖 META AI"
-    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    titleLabel.TextSize = 22
-    titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.TextXAlignment = Enum.TextXAlignment.Center
-    titleLabel.Parent = aiPage
-    y = y + 45
-    
-    local subLabel = Instance.new("TextLabel")
-    subLabel.Size = UDim2.new(1, 0, 0, 20)
-    subLabel.Position = UDim2.new(0, 0, 0, y)
-    subLabel.BackgroundTransparency = 1
-    subLabel.Text = "Спроси меня о функциях чита"
-    subLabel.TextColor3 = Color3.fromRGB(156, 163, 175)
-    subLabel.TextSize = 13
-    subLabel.Font = Enum.Font.Gotham
-    subLabel.TextXAlignment = Enum.TextXAlignment.Center
-    subLabel.Parent = aiPage
-    y = y + 30
-    
-    -- Контейнер для ввода
-    local inputContainer = Instance.new("Frame")
-    inputContainer.Size = UDim2.new(0.9, 0, 0, 50)
-    inputContainer.Position = UDim2.new(0.05, 0, 0, y)
-    inputContainer.BackgroundColor3 = Color3.fromRGB(30, 35, 45)
-    inputContainer.BorderSizePixel = 1
-    inputContainer.BorderColor3 = Color3.fromRGB(42, 47, 58)
-    inputContainer.Parent = aiPage
-    
-    local inputCorner = Instance.new("UICorner")
-    inputCorner.CornerRadius = UDim.new(0, 10)
-    inputCorner.Parent = inputContainer
-    
-    -- Поле ввода (TextBox)
-    local inputBox = Instance.new("TextBox")
-    inputBox.Size = UDim2.new(1, -20, 1, 0)
-    inputBox.Position = UDim2.new(0, 10, 0, 0)
-    inputBox.BackgroundTransparency = 1
-    inputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-    inputBox.PlaceholderText = "Напиши вопрос..."
-    inputBox.PlaceholderColor3 = Color3.fromRGB(156, 163, 175)
-    inputBox.ClearTextOnFocus = false
-    inputBox.Font = Enum.Font.Gotham
-    inputBox.TextSize = 16
-    inputBox.Selectable = true
-    inputBox.Active = true
-    inputBox.MultiLine = false
-    inputBox.Parent = inputContainer
-    
-    -- ФИКС: Функция открытия клавиатуры
-    local function OpenKeyboard()
-        inputBox:CaptureFocus()
-        task.wait(0.1)
-        if not inputBox:IsFocused() then
-            inputBox:Select()
-        end
-    end
-    
-    -- Все способы открытия клавиатуры
-    inputBox.MouseButton1Click:Connect(OpenKeyboard)
-    inputBox.TouchTap:Connect(OpenKeyboard)
-    inputContainer.MouseButton1Click:Connect(OpenKeyboard)
-    inputContainer.TouchTap:Connect(OpenKeyboard)
-    
-    y = y + 60
-    
-    -- Кнопка отправки
-    local sendBtn = Instance.new("TextButton")
-    sendBtn.Size = UDim2.new(0.25, 0, 0, 40)
-    sendBtn.Position = UDim2.new(0.375, 0, 0, y)
-    sendBtn.BackgroundColor3 = Color3.fromRGB(59, 130, 246)
-    sendBtn.Text = "💬 Спросить"
-    sendBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    sendBtn.Font = Enum.Font.GothamBold
-    sendBtn.TextSize = 14
-    sendBtn.Parent = aiPage
-    
-    local sendCorner = Instance.new("UICorner")
-    sendCorner.CornerRadius = UDim.new(0, 8)
-    sendCorner.Parent = sendBtn
-    
-    sendBtn.MouseEnter:Connect(function()
-        sendBtn.BackgroundColor3 = Color3.fromRGB(79, 150, 255)
-    end)
-    sendBtn.MouseLeave:Connect(function()
-        sendBtn.BackgroundColor3 = Color3.fromRGB(59, 130, 246)
-    end)
-    
-    y = y + 50
-    
-    -- Контейнер для сообщений
-    local messagesContainer = Instance.new("ScrollingFrame")
-    messagesContainer.Size = UDim2.new(0.9, 0, 0.45, 0)
-    messagesContainer.Position = UDim2.new(0.05, 0, 0, y)
-    messagesContainer.BackgroundColor3 = Color3.fromRGB(20, 23, 30)
-    messagesContainer.BackgroundTransparency = 0.3
-    messagesContainer.BorderSizePixel = 0
-    messagesContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
-    messagesContainer.ScrollBarThickness = 4
-    messagesContainer.ClipsDescendants = true
-    messagesContainer.Parent = aiPage
-    
-    local msgCorner = Instance.new("UICorner")
-    msgCorner.CornerRadius = UDim.new(0, 10)
-    msgCorner.Parent = messagesContainer
-    
-    -- Список сообщений
-    local messages = {}
-    
-    local function AddMessage(text, isUser)
-        local msgFrame = Instance.new("Frame")
-        msgFrame.Size = UDim2.new(1, -10, 0, 0)
-        msgFrame.Position = UDim2.new(0, 5, 0, #messages * 35 + 5)
-        msgFrame.BackgroundTransparency = 1
-        msgFrame.Parent = messagesContainer
-        
-        local msgLabel = Instance.new("TextLabel")
-        msgLabel.Size = UDim2.new(1, 0, 0, 30)
-        msgLabel.BackgroundTransparency = 1
-        msgLabel.Text = (isUser and "👤 " or "🤖 ") .. text
-        msgLabel.TextColor3 = isUser and Color3.fromRGB(200, 200, 255) or Color3.fromRGB(200, 255, 200)
-        msgLabel.TextSize = 14
-        msgLabel.Font = Enum.Font.Gotham
-        msgLabel.TextXAlignment = Enum.TextXAlignment.Left
-        msgLabel.TextWrapped = true
-        msgLabel.TextYAlignment = Enum.TextYAlignment.Top
-        msgLabel.Size = UDim2.new(1, 0, 0, 30)
-        msgLabel.Parent = msgFrame
-        
-        local textBounds = msgLabel.TextBounds
-        msgLabel.Size = UDim2.new(1, 0, 0, textBounds.Y + 10)
-        msgFrame.Size = UDim2.new(1, -10, 0, textBounds.Y + 15)
-        
-        table.insert(messages, msgFrame)
-        
-        local totalHeight = 0
-        for _, m in pairs(messages) do
-            totalHeight = totalHeight + m.Size.Y.Offset + 5
-        end
-        messagesContainer.CanvasSize = UDim2.new(0, 0, 0, totalHeight + 10)
-        messagesContainer.CanvasPosition = Vector2.new(0, totalHeight)
-    end
-    
-    AddMessage("Задай вопрос о функциях чита...", false)
-    
-    -- ======================================================
-    -- AI ЛОГИКА
-    -- ======================================================
-    local function GetAIResponse(question)
-        local q = string.lower(question)
-        
-        local scriptKeywords = {
-            "aimbot", "аимбот", "chams", "подсветк", "box", "бокс", "tracers", "лучи",
-            "трассеры", "names", "имен", "fullbright", "яркост", "f1", "f2", "f3", "f4", "f5", "f6",
-            "клавиш", "горяч", "статус", "включен", "настройк", "меню", "функци", "помощ",
-            "обновл", "верси", "скачать", "insert", "f8", "скрипт", "чит", "meta", "куб",
-            "коробк", "квадрат", "лини", "веер", "свет", "ночь", "темно", "солнце"
-        }
-        
-        local isAboutScript = false
-        for _, keyword in ipairs(scriptKeywords) do
-            if string.find(q, keyword) then
-                isAboutScript = true
-                break
-            end
-        end
-        
-        if not isAboutScript then
-            return ""
-        end
-        
-        if string.find(q, "aimbot") or string.find(q, "аимбот") or string.find(q, "наведени") or 
-           string.find(q, "прицел") or string.find(q, "авто") then
-            return "Aimbot — автонаведение на противников при зажатии ПКМ.\nВключается: 'Master Aimbot' или F1.\nНастройки: FOV Range, Target Body Part."
-        end
-        
-        if string.find(q, "chams") or string.find(q, "подсветк") or string.find(q, "силуэт") or 
-           string.find(q, "обводк") or string.find(q, "цвет") or string.find(q, "контур") or
-           string.find(q, "часы") or string.find(q, "сияни") then
-            return "Chams — подсветка игроков сквозь стены.\nВраги — красные, союзники — зелёные.\nВключается: 'Chams' или F2."
-        end
-        
-        if string.find(q, "3d box") or string.find(q, "3д бокс") or string.find(q, "куб") or 
-           string.find(q, "коробк") or string.find(q, "квадрат") then
-            return "3D Box — белый куб вокруг игрока.\nВключается: '3D Box' или F3.\nИсправлено мерцание в v3.12!"
-        end
-        
-        if string.find(q, "tracers") or string.find(q, "лучи") or string.find(q, "трассеры") or 
-           string.find(q, "лини") or string.find(q, "веер") then
-            return "Tracers — линии от тебя к противникам.\nВключается: 'Tracers' или F4.\nПлавное исчезновение при выключении."
-        end
-        
-        if string.find(q, "names") or string.find(q, "имен") or string.find(q, "дистанци") or 
-           string.find(q, "ник") or string.find(q, "игрок") or string.find(q, "надпись") then
-            return "Names & Distance — имена и дистанция над игроками.\nВключается: чекбокс или F5.\nИсправлен баг с респавном."
-        end
-        
-        if string.find(q, "fullbright") or string.find(q, "яркост") or string.find(q, "освещени") or 
-           string.find(q, "ночь") or string.find(q, "темно") or string.find(q, "свет") then
-            return "Full Bright — делает карту светлее.\nВключается: чекбокс или F6."
-        end
-        
-        if string.find(q, "горяч") or string.find(q, "клавиш") or string.find(q, "кнопк") or 
-           string.find(q, "f1") or string.find(q, "f2") or string.find(q, "f3") or 
-           string.find(q, "f4") or string.find(q, "f5") or string.find(q, "f6") then
-            return "Горячие клавиши:\n• Insert/F8 — меню\n• F1 — Aimbot\n• F2 — Chams\n• F3 — 3D Box\n• F4 — Tracers\n• F5 — Names\n• F6 — FullBright"
-        end
-        
-        if string.find(q, "статус") or string.find(q, "состояни") or string.find(q, "включен") or 
-           string.find(q, "активи") or string.find(q, "работа") then
-            return string.format(
-                "Текущий статус:\n• Aimbot: %s\n• Chams: %s\n• 3D Box: %s\n• Tracers: %s\n• Names: %s\n• FullBright: %s",
-                _G.AimbotEnabled and "✅ ВКЛ" or "❌ ВЫКЛ",
-                _G.BoxESP and "✅ ВКЛ" or "❌ ВЫКЛ",
-                _G.Box3D and "✅ ВКЛ" or "❌ ВЫКЛ",
-                _G.Snaplines and "✅ ВКЛ" or "❌ ВЫКЛ",
-                _G.EspNames and "✅ ВКЛ" or "❌ ВЫКЛ",
-                _G.FullBrightEnabled and "✅ ВКЛ" or "❌ ВЫКЛ"
-            )
-        end
-        
-        if string.find(q, "обновл") or string.find(q, "верси") or string.find(q, "скачать") or 
-           string.find(q, "github") or string.find(q, "v3") then
-            return "Текущая версия: v3.13\nСкачать: loadstring(game:HttpGet('https://raw.githubusercontent.com/QwertyX01/Meta/main/Meta.lua', true))()"
-        end
-        
-        if string.find(q, "помощ") or string.find(q, "помоги") or string.find(q, "функци") or 
-           string.find(q, "что умее") or string.find(q, "список") then
-            return "Я умею отвечать на вопросы о:\n• Aimbot\n• Chams (подсветка)\n• 3D Box\n• Tracers (лучи)\n• Names (имена)\n• FullBright (яркость)\n• Горячие клавиши\n• Статус"
-        end
-        
-        return "❓ Не понял вопрос. Напиши 'помощь' для списка команд."
-    end
-    
-    sendBtn.MouseButton1Click:Connect(function()
-        local question = inputBox.Text
-        if question == "" or question == "Напиши вопрос..." then
-            AddMessage("⚠️ Напиши вопрос!", false)
-            return
-        end
-        
-        AddMessage(question, true)
-        inputBox.Text = ""
-        
-        local response = GetAIResponse(question)
-        if response == "" then
-            return
-        end
-        
-        AddMessage(response, false)
-    end)
-    
-    inputBox.FocusLost:Connect(function(enterPressed)
-        if enterPressed then
-            sendBtn.MouseButton1Click:Fire()
-        end
-    end)
 end
 
 -- ======================================================
@@ -1975,8 +1684,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 print("[META] v3.13 Loaded Successfully!")
-print("[META] Added: AI tab with chat assistant!")
-print("[META] Chams: AdolfFX style (red enemies, green allies)")
+print("[META] Chams: fixed team detection (red enemies, green allies)")
 print("[META] 3D Box: no flickering!")
 print("[META] Names & Distance: fixed respawn bug!")
 print("[META] F1 - Aimbot | F2 - Chams | F3 - 3D Box | F4 - Tracers | F5 - Names | F6 - FullBright")
