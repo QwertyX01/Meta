@@ -23,7 +23,6 @@ _G.FullBrightEnabled = false
 _G.FOVEnabled = false
 
 local MenuVisible = true
-local FOVCircle = nil
 local FOVFrame = nil
 local BlissfulActive = false
 local BlissfulConnections = {}
@@ -31,7 +30,7 @@ local BlendValue = 1
 local BlendTarget = 1
 
 -- ======================================================
--- FOV КРУГ (UI FRAME) - ИСПРАВЛЕН
+-- FOV КРУГ (UI FRAME)
 -- ======================================================
 local function CreateFOVCircle()
     if CoreGui:FindFirstChild("META_FOV_SYSTEM") then
@@ -70,7 +69,7 @@ end
 CreateFOVCircle()
 
 -- ======================================================
--- FULLBRIGHT (СУПЕР ЯРКИЙ)
+-- FULLBRIGHT
 -- ======================================================
 local Light = game:GetService("Lighting")
 
@@ -134,7 +133,6 @@ end)
 -- CHAMS
 -- ======================================================
 local Tag = "AdolfFX"
-local ChamsActive = false
 local ChamsList = {}
 
 local function ApplyChams(character, player)
@@ -152,13 +150,6 @@ local function ApplyChams(character, player)
     highlight.Enabled = _G.BoxESP
     
     ChamsList[character] = highlight
-end
-
-local function RemoveChams(character)
-    if character and character:FindFirstChild(Tag) then
-        character[Tag]:Destroy()
-        ChamsList[character] = nil
-    end
 end
 
 local function HookPlayer(player)
@@ -203,10 +194,10 @@ function UpdateChams()
     end
 end
 
-print("[CHAMS] Loaded with menu control!")
+print("[CHAMS] Loaded!")
 
 -- ======================================================
--- 3D BOX ESP (БЕЗ МЕРЦАНИЯ)
+-- 3D BOX ESP
 -- ======================================================
 local Box3DActive = false
 local Box3DLines = {}
@@ -381,16 +372,8 @@ end
 
 RunService.RenderStepped:Connect(DrawBoxESP)
 
-_G.ToggleBox3D = function(state)
-    if state then
-        StartBox3D()
-    else
-        StopBox3D()
-    end
-end
-
 -- ======================================================
--- ЗВУК КЛИКА
+-- ЗВУК
 -- ======================================================
 local ClickSound = Instance.new("Sound")
 ClickSound.SoundId = "rbxassetid://88442833509532"
@@ -407,7 +390,7 @@ local function PlayClickSound()
 end
 
 -- ======================================================
--- AIMBOT (С ПРОВЕРКОЙ КОМАНД)
+-- AIMBOT
 -- ======================================================
 local function GetTargetInFOV()
     local closestTarget = nil
@@ -592,7 +575,7 @@ Players.PlayerRemoving:Connect(function(player)
 end)
 
 -- ======================================================
--- BLISSFUL ESP С ПЛАВНЫМ ИСЧЕЗНОВЕНИЕМ
+-- BLISSFUL ESP
 -- ======================================================
 local function NewLine()
     local line = Drawing.new("Line")
@@ -950,7 +933,7 @@ local function StopBlissfulESP()
 end
 
 -- ======================================================
--- СОЗДАНИЕ GUI С DRAGGABLE
+-- СОЗДАНИЕ GUI
 -- ======================================================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "META_GUI"
@@ -1033,7 +1016,6 @@ local function ResetTabs()
         local ind = btn:FindFirstChild("Indicator")
         if ind then
             ind.Visible = false
-            ind.BackgroundTransparency = 1
         end
         btn.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
         btn.TextColor3 = Color3.fromRGB(156, 163, 175)
@@ -1065,7 +1047,6 @@ for i, name in ipairs(TabNames) do
     indicator.BackgroundColor3 = Color3.fromRGB(59, 130, 246)
     indicator.BorderSizePixel = 0
     indicator.Visible = false
-    indicator.BackgroundTransparency = 0
     indicator.Parent = btn
     
     btn.MouseEnter:Connect(function()
@@ -1087,7 +1068,6 @@ for i, name in ipairs(TabNames) do
         
         ResetTabs()
         indicator.Visible = true
-        indicator.BackgroundTransparency = 0
         btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
         btn.TextColor3 = Color3.fromRGB(255, 255, 255)
         
@@ -1232,7 +1212,11 @@ local function CreateToggle(parent, labelText, description, globalVar, yPos)
                 removeAllBillboards()
             end
         elseif globalVar == "Box3D" then
-            _G.ToggleBox3D(newVal)
+            if newVal then
+                StartBox3D()
+            else
+                StopBox3D()
+            end
         elseif globalVar == "FullBright" then
             ToggleFullBright()
         elseif globalVar == "FOVEnabled" then
@@ -1250,7 +1234,7 @@ local function CreateToggle(parent, labelText, description, globalVar, yPos)
 end
 
 -- ======================================================
--- ИСПРАВЛЕННЫЙ CreateSlider (РАБОТАЕТ НА МОБИЛЬНЫХ)
+-- ИСПРАВЛЕННЫЙ CreateSlider (МОБИЛЬНАЯ ПОДДЕРЖКА)
 -- ======================================================
 local function CreateSlider(parent, labelText, description, globalVar, minVal, maxVal, defaultVal, yPos)
     local frame = Instance.new("Frame")
@@ -1331,9 +1315,10 @@ local function CreateSlider(parent, labelText, description, globalVar, minVal, m
     handleCorner.CornerRadius = UDim.new(1, 0)
     handleCorner.Parent = handle
     
-    local isDragging = false
+    local isSliding = false
     local dragConnection = nil
     local endConnection = nil
+    local scrollFrame = parent
     
     local function UpdateSlider(input)
         local absPos = sliderFrame.AbsolutePosition.X
@@ -1358,21 +1343,27 @@ local function CreateSlider(parent, labelText, description, globalVar, minVal, m
     end
     
     local function StartDrag(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            isDragging = true
+        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isSliding = true
+            if scrollFrame then
+                scrollFrame.ScrollingEnabled = false
+            end
             UpdateSlider(input)
             
             if dragConnection then dragConnection:Disconnect() end
             dragConnection = UserInputService.InputChanged:Connect(function(inputChanged)
-                if (inputChanged.UserInputType == Enum.UserInputType.MouseMovement or inputChanged.UserInputType == Enum.UserInputType.Touch) and isDragging then
+                if isSliding and (inputChanged.UserInputType == Enum.UserInputType.Touch or inputChanged.UserInputType == Enum.UserInputType.MouseMovement) then
                     UpdateSlider(inputChanged)
                 end
             end)
             
             if endConnection then endConnection:Disconnect() end
             endConnection = UserInputService.InputEnded:Connect(function(inputEnded)
-                if inputEnded.UserInputType == Enum.UserInputType.MouseButton1 or inputEnded.UserInputType == Enum.UserInputType.Touch then
-                    isDragging = false
+                if inputEnded.UserInputType == Enum.UserInputType.Touch or inputEnded.UserInputType == Enum.UserInputType.MouseButton1 then
+                    isSliding = false
+                    if scrollFrame then
+                        scrollFrame.ScrollingEnabled = true
+                    end
                     if dragConnection then
                         dragConnection:Disconnect()
                         dragConnection = nil
@@ -1388,8 +1379,11 @@ local function CreateSlider(parent, labelText, description, globalVar, minVal, m
     
     sliderFrame.InputBegan:Connect(StartDrag)
     sliderFrame.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            isDragging = false
+        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isSliding = false
+            if scrollFrame then
+                scrollFrame.ScrollingEnabled = true
+            end
             if dragConnection then
                 dragConnection:Disconnect()
                 dragConnection = nil
@@ -1505,8 +1499,8 @@ local aimbotPage = ContentPages["Aimbot"]
 if aimbotPage then
     CreateToggle(
         aimbotPage,
-        "Aimbot / Аимбот",
-        "Бот который автоматически наводится на голову",
+        "Master Aimbot",
+        "Активирует систему наведения на противников",
         "AimbotEnabled",
         15
     )
@@ -1525,7 +1519,7 @@ if aimbotPage then
     CreateToggle(
         aimbotPage,
         "FOV / Круг",
-        "Круг появляется при включении, размер менять по функции Fov range",
+        "Круг появляется при включении Aimbot",
         "FOVEnabled",
         145
     )
@@ -1547,7 +1541,7 @@ if visualsPage then
     CreateToggle(
         visualsPage,
         "3D Box / 3Д Бокс",
-        "Бокс который обводит игрока белым цветом, скоро будут добавлены другие.",
+        "Бокс который обводит игрока белым цветом",
         "Box3D",
         80
     )
@@ -1588,8 +1582,8 @@ end
 -- ИСПРАВЛЕННЫЙ РЕНДЕР (FOV КРУГ)
 -- ======================================================
 RunService.RenderStepped:Connect(function()
-    -- Обновляем FOV круг (позиция и размер)
-    if _G.FOVEnabled and FOVFrame then
+    -- FOV Круг (только при включенном Aimbot)
+    if _G.AimbotEnabled and FOVFrame then
         local viewportSize = Camera.ViewportSize
         local rawCenter = Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
         local correctCenter = rawCenter + GuiService:GetGuiInset()
@@ -1643,25 +1637,17 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     elseif input.KeyCode == Enum.KeyCode.F3 then
         PlayClickSound()
         _G.Box3D = not _G.Box3D
-        _G.ToggleBox3D(_G.Box3D)
+        if _G.Box3D then StartBox3D() else StopBox3D() end
         print(string.format("[DEBUG] Box3D: %s", tostring(_G.Box3D)))
     elseif input.KeyCode == Enum.KeyCode.F4 then
         PlayClickSound()
         _G.Snaplines = not _G.Snaplines
-        if _G.Snaplines then
-            StartBlissfulESP()
-        else
-            StopBlissfulESP()
-        end
+        if _G.Snaplines then StartBlissfulESP() else StopBlissfulESP() end
         print(string.format("[DEBUG] Snaplines: %s", tostring(_G.Snaplines)))
     elseif input.KeyCode == Enum.KeyCode.F5 then
         PlayClickSound()
         _G.EspNames = not _G.EspNames
-        if _G.EspNames then
-            updateAllBillboards()
-        else
-            removeAllBillboards()
-        end
+        if _G.EspNames then updateAllBillboards() else removeAllBillboards() end
         print(string.format("[DEBUG] EspNames: %s", tostring(_G.EspNames)))
     elseif input.KeyCode == Enum.KeyCode.F6 then
         PlayClickSound()
@@ -1670,16 +1656,11 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     elseif input.KeyCode == Enum.KeyCode.F7 then
         PlayClickSound()
         _G.FOVEnabled = not _G.FOVEnabled
-        if FOVFrame then
-            FOVFrame.Visible = _G.FOVEnabled
-        end
+        if FOVFrame then FOVFrame.Visible = _G.FOVEnabled end
         print(string.format("[DEBUG] FOV: %s", tostring(_G.FOVEnabled)))
     end
 end)
 
-print("[META] v3.16 Loaded Successfully!")
-print("[META] FIXED: Slider works on mobile (Touch support)")
-print("[META] FIXED: FOV Circle size (diameter = FOV * 2)")
-print("[META] FIXED: FOV Circle position (GuiService:GetGuiInset())")
-print("[META] FIXED: Tab indicator clearing (ResetTabs)")
-print("[META] F1 - Aimbot | F2 - Ch
+print("[META] v3.16 Fixed - Menu works!")
+print("[META] F1 - Aimbot | F2 - Chams | F3 - 3D Box | F4 - Tracers | F5 - Names | F6 - FullBright | F7 - FOV")
+print("[META] Press Insert or F8 to toggle menu")
