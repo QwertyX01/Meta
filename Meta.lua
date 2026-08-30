@@ -144,90 +144,107 @@ end
 -- ======================================================
 -- CHAMS (ADOLFFX СТИЛЬ)
 -- ======================================================
-local S, P, C3 = setmetatable({}, {__index = function(_,k) return game:GetService(k) end}), game:GetService("Players"), Color3.fromRGB
-local LP, Tag, Cons = P.LocalPlayer, "AdolfFX", {}
+-- ======================================================
+-- CHAMS (С ПРАВИЛЬНЫМ ОПРЕДЕЛЕНИЕМ КОМАНД)
+-- ======================================================
+local Tag = "AdolfFX"
+local ChamsData = {}
 
-if _G.UnloadChams then _G.UnloadChams() end
-
-local Cfg = {
-    Enemy = C3(180, 40, 40),
-    Ally = C3(40, 180, 80),
-    FillTr = 0.5,
-    OutTr = 0.1,
-    TeamCheck = true
-}
+local function IsEnemy(Plr)
+    local LP = Players.LocalPlayer
+    
+    -- 1. Проверка через Team
+    if Plr.Team and LP.Team then
+        if Plr.Team ~= LP.Team then
+            return true
+        end
+    end
+    
+    -- 2. Проверка через TeamColor (если Team не работает)
+    if Plr.TeamColor and LP.TeamColor then
+        if Plr.TeamColor ~= LP.TeamColor then
+            return true
+        end
+    end
+    
+    -- 3. Проверка через Neutral (если игрок без команды)
+    if Plr.Team == Enum.Team.Neutral or LP.Team == Enum.Team.Neutral then
+        return true
+    end
+    
+    -- 4. Если у игрока нет команды — считаем врагом
+    if Plr.Team == nil then
+        return true
+    end
+    
+    return false
+end
 
 local function Paint(Chr, Plr)
     if not Chr or Chr:FindFirstChild(Tag) then return end
+    
     local H = Instance.new("Highlight")
-    local IsEnemy = (Cfg.TeamCheck and Plr.Team ~= LP.Team) or not Cfg.TeamCheck
+    local enemy = IsEnemy(Plr)
     
     H.Name = Tag
-    H.FillColor = IsEnemy and Cfg.Enemy or Cfg.Ally
-    H.OutlineColor = C3(255, 255, 255)
-    H.FillTransparency = Cfg.FillTr
-    H.OutlineTransparency = Cfg.OutTr
+    H.FillColor = enemy and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(0, 255, 0) -- Красный/Зелёный
+    H.OutlineColor = Color3.fromRGB(255, 255, 255)
+    H.FillTransparency = 0.5
+    H.OutlineTransparency = 0.1
     H.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
     H.Adornee = Chr
     H.Parent = Chr
     H.Enabled = _G.BoxESP
+    
+    ChamsData[Chr] = H
 end
 
 local function Hook(Plr)
-    if Plr == LP then return end
-    Cons[Plr] = Plr.CharacterAdded:Connect(function(c)
+    if Plr == LocalPlayer then return end
+    
+    Plr.CharacterAdded:Connect(function(c)
         task.wait(0.1)
-        if _G.BoxESP then
+        if _G.BoxESP and c then
             Paint(c, Plr)
         end
     end)
+    
     if Plr.Character and _G.BoxESP then
         Paint(Plr.Character, Plr)
     end
 end
 
-for _, v in next, P:GetPlayers() do
+-- Инициализация
+for _, v in pairs(Players:GetPlayers()) do
     Hook(v)
 end
 
-Cons.Add = P.PlayerAdded:Connect(Hook)
+Players.PlayerAdded:Connect(Hook)
 
-_G.UnloadChams = function()
-    if Cons.Add then Cons.Add:Disconnect() end
-    for _, c in next, Cons do
-        if c and c.Disconnect then
-            c:Disconnect()
-        end
-    end
-    for _, v in next, P:GetPlayers() do
-        if v.Character and v.Character:FindFirstChild(Tag) then
-            v.Character[Tag]:Destroy()
-        end
-    end
-    _G.UnloadChams = nil
-end
-
+-- Обновление при переключении
 local function UpdateChams()
     if _G.BoxESP then
-        for _, v in next, P:GetPlayers() do
-            if v ~= LP and v.Character then
+        for _, v in pairs(Players:GetPlayers()) do
+            if v ~= LocalPlayer and v.Character then
                 local h = v.Character:FindFirstChild(Tag)
                 if h then
                     h.Enabled = true
+                    -- Обновляем цвет при каждом включении
+                    local enemy = IsEnemy(v)
+                    h.FillColor = enemy and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(0, 255, 0)
                 else
                     Paint(v.Character, v)
                 end
             end
         end
     else
-        for _, v in next, P:GetPlayers() do
+        for _, v in pairs(Players:GetPlayers()) do
             if v.Character and v.Character:FindFirstChild(Tag) then
                 v.Character[Tag].Enabled = false
             end
         end
     end
 end
-
 -- ======================================================
 -- 3D BOX ESP (БЕЗ МЕРЦАНИЯ)
 -- ======================================================
