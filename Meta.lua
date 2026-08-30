@@ -20,6 +20,7 @@ _G.Snaplines = false
 _G.EspNames = false
 _G.Box3D = false
 _G.FullBrightEnabled = false
+_G.FOVEnabled = false
 
 local MenuVisible = true
 local FOVCircle = nil
@@ -29,117 +30,65 @@ local BlendValue = 1
 local BlendTarget = 1
 
 -- ======================================================
--- FULLBRIGHT (ПОЛНАЯ ЯРКОСТЬ)
+-- FULLBRIGHT (СУПЕР ЯРКИЙ)
 -- ======================================================
-if not _G.FullBrightExecuted then
-    _G.NormalLightingSettings = {
-        Brightness = Lighting.Brightness,
-        ClockTime = Lighting.ClockTime,
-        FogEnd = Lighting.FogEnd,
-        GlobalShadows = Lighting.GlobalShadows,
-        Ambient = Lighting.Ambient
-    }
+local Light = game:GetService("Lighting")
 
-    Lighting:GetPropertyChangedSignal("Brightness"):Connect(function()
-        if Lighting.Brightness ~= 1 and Lighting.Brightness ~= _G.NormalLightingSettings.Brightness then
-            _G.NormalLightingSettings.Brightness = Lighting.Brightness
-            if not _G.FullBrightEnabled then
-                repeat task.wait() until _G.FullBrightEnabled
-            end
-            Lighting.Brightness = 1
-        end
-    end)
+_G.FullBrightEnabled = false
 
-    Lighting:GetPropertyChangedSignal("ClockTime"):Connect(function()
-        if Lighting.ClockTime ~= 12 and Lighting.ClockTime ~= _G.NormalLightingSettings.ClockTime then
-            _G.NormalLightingSettings.ClockTime = Lighting.ClockTime
-            if not _G.FullBrightEnabled then
-                repeat task.wait() until _G.FullBrightEnabled
-            end
-            Lighting.ClockTime = 12
-        end
-    end)
+_G.NormalLightingSettings = {
+    Brightness = Light.Brightness,
+    ClockTime = Light.ClockTime,
+    FogEnd = Light.FogEnd,
+    GlobalShadows = Light.GlobalShadows,
+    Ambient = Light.Ambient,
+    ColorShift_Bottom = Light.ColorShift_Bottom,
+    ColorShift_Top = Light.ColorShift_Top
+}
 
-    Lighting:GetPropertyChangedSignal("FogEnd"):Connect(function()
-        if Lighting.FogEnd ~= 786543 and Lighting.FogEnd ~= _G.NormalLightingSettings.FogEnd then
-            _G.NormalLightingSettings.FogEnd = Lighting.FogEnd
-            if not _G.FullBrightEnabled then
-                repeat task.wait() until _G.FullBrightEnabled
-            end
-            Lighting.FogEnd = 786543
-        end
-    end)
-
-    Lighting:GetPropertyChangedSignal("GlobalShadows"):Connect(function()
-        if Lighting.GlobalShadows ~= false and Lighting.GlobalShadows ~= _G.NormalLightingSettings.GlobalShadows then
-            _G.NormalLightingSettings.GlobalShadows = Lighting.GlobalShadows
-            if not _G.FullBrightEnabled then
-                repeat task.wait() until _G.FullBrightEnabled
-            end
-            Lighting.GlobalShadows = false
-        end
-    end)
-
-    Lighting:GetPropertyChangedSignal("Ambient"):Connect(function()
-        if Lighting.Ambient ~= Color3.fromRGB(178, 178, 178) and Lighting.Ambient ~= _G.NormalLightingSettings.Ambient then
-            _G.NormalLightingSettings.Ambient = Lighting.Ambient
-            if not _G.FullBrightEnabled then
-                repeat task.wait() until _G.FullBrightEnabled
-            end
-            Lighting.Ambient = Color3.fromRGB(178, 178, 178)
-        end
-    end)
-
-    Lighting.Brightness = 1
-    Lighting.ClockTime = 12
-    Lighting.FogEnd = 786543
-    Lighting.GlobalShadows = false
-    Lighting.Ambient = Color3.fromRGB(178, 178, 178)
-
-    local LatestValue = true
-    task.spawn(function()
-        repeat task.wait() until _G.FullBrightEnabled
-        while task.wait() do
-            if _G.FullBrightEnabled ~= LatestValue then
-                if not _G.FullBrightEnabled then
-                    Lighting.Brightness = _G.NormalLightingSettings.Brightness
-                    Lighting.ClockTime = _G.NormalLightingSettings.ClockTime
-                    Lighting.FogEnd = _G.NormalLightingSettings.FogEnd
-                    Lighting.GlobalShadows = _G.NormalLightingSettings.GlobalShadows
-                    Lighting.Ambient = _G.NormalLightingSettings.Ambient
-                else
-                    Lighting.Brightness = 1
-                    Lighting.ClockTime = 12
-                    Lighting.FogEnd = 786543
-                    Lighting.GlobalShadows = false
-                    Lighting.Ambient = Color3.fromRGB(178, 178, 178)
-                end
-                LatestValue = not LatestValue
-            end
-        end
-    end)
+local function SetFullBright()
+    Light.Ambient = Color3.new(1, 1, 1)
+    Light.ColorShift_Bottom = Color3.new(1, 1, 1)
+    Light.ColorShift_Top = Color3.new(1, 1, 1)
+    Light.Brightness = 1
+    Light.ClockTime = 12
+    Light.FogEnd = 786543
+    Light.GlobalShadows = false
 end
 
-_G.FullBrightExecuted = true
+local function ResetLighting()
+    Light.Ambient = _G.NormalLightingSettings.Ambient
+    Light.ColorShift_Bottom = _G.NormalLightingSettings.ColorShift_Bottom
+    Light.ColorShift_Top = _G.NormalLightingSettings.ColorShift_Top
+    Light.Brightness = _G.NormalLightingSettings.Brightness
+    Light.ClockTime = _G.NormalLightingSettings.ClockTime
+    Light.FogEnd = _G.NormalLightingSettings.FogEnd
+    Light.GlobalShadows = _G.NormalLightingSettings.GlobalShadows
+end
 
 local function ToggleFullBright()
     _G.FullBrightEnabled = not _G.FullBrightEnabled
+    
     if _G.FullBrightEnabled then
-        Lighting.Brightness = 1
-        Lighting.ClockTime = 12
-        Lighting.FogEnd = 786543
-        Lighting.GlobalShadows = false
-        Lighting.Ambient = Color3.fromRGB(178, 178, 178)
+        SetFullBright()
         print("[FULLBRIGHT] ON")
     else
-        Lighting.Brightness = _G.NormalLightingSettings.Brightness
-        Lighting.ClockTime = _G.NormalLightingSettings.ClockTime
-        Lighting.FogEnd = _G.NormalLightingSettings.FogEnd
-        Lighting.GlobalShadows = _G.NormalLightingSettings.GlobalShadows
-        Lighting.Ambient = _G.NormalLightingSettings.Ambient
+        ResetLighting()
         print("[FULLBRIGHT] OFF")
     end
 end
+
+Light.LightingChanged:Connect(function()
+    if _G.FullBrightEnabled then
+        SetFullBright()
+    end
+end)
+
+Light:GetPropertyChangedSignal("Ambient"):Connect(function()
+    if _G.FullBrightEnabled and Light.Ambient ~= Color3.new(1, 1, 1) then
+        Light.Ambient = Color3.new(1, 1, 1)
+    end
+end)
 
 -- ======================================================
 -- CHAMS (НОВЫЙ КОД)
@@ -418,7 +367,7 @@ local function PlayClickSound()
 end
 
 -- ======================================================
--- СОЗДАНИЕ FOV КРУГА
+-- СОЗДАНИЕ FOV КРУГА (DRAWING)
 -- ======================================================
 FOVCircle = Drawing.new("Circle")
 FOVCircle.Visible = false
@@ -428,6 +377,40 @@ FOVCircle.Transparency = 0.5
 FOVCircle.NumSides = 64
 FOVCircle.Filled = false
 FOVCircle.Radius = _G.AimbotFOV
+
+-- ======================================================
+-- AIMBOT (ИЗ КОДА MEDRIT, ДОБАВЛЕНА ПРОВЕРКА КОМАНД)
+-- ======================================================
+local function GetTargetInFOV()
+    local closestTarget = nil
+    local shortestDist = _G.AimbotFOV
+    local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player == LocalPlayer then continue end
+        if not player.Character then continue end
+        
+        -- ✅ ПРОВЕРКА НА КОМАНДУ (НЕ НАВОДИТЬСЯ НА СОЮЗНИКОВ)
+        if player.Team == LocalPlayer.Team then
+            continue
+        end
+        
+        local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+        local part = player.Character:FindFirstChild(_G.TargetBone or "Head")
+        
+        if humanoid and humanoid.Health > 0 and part then
+            local screenPos, onScreen = Camera:WorldToViewportPoint(part.Position)
+            if onScreen then
+                local dist = (Vector2.new(screenPos.X, screenPos.Y) - screenCenter).Magnitude
+                if dist < shortestDist then
+                    shortestDist = dist
+                    closestTarget = part
+                end
+            end
+        end
+    end
+    return closestTarget
+end
 
 -- ======================================================
 -- NAMES & DISTANCE
@@ -980,7 +963,7 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(0.5, 0, 1, 0)
 Title.Position = UDim2.new(0, 15, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "META v3.13"
+Title.Text = "META v3.14"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 20
 Title.Font = Enum.Font.GothamBold
@@ -992,7 +975,7 @@ local Version = Instance.new("TextLabel")
 Version.Size = UDim2.new(0.5, 0, 1, 0)
 Version.Position = UDim2.new(0.5, 0, 0, 0)
 Version.BackgroundTransparency = 1
-Version.Text = "v3.13"
+Version.Text = "v3.14"
 Version.TextColor3 = Color3.fromRGB(156, 163, 175)
 Version.TextSize = 14
 Version.Font = Enum.Font.Gotham
@@ -1307,7 +1290,7 @@ local function CreateSlider(parent, labelText, description, globalVar, minVal, m
     clickBtn.ZIndex = 10
     clickBtn.Parent = sliderFrame
     
-    local draggingSlider = false
+    local dragging = false
     local dragConnection = nil
     
     local function UpdateSlider(mouseX)
@@ -1334,14 +1317,14 @@ local function CreateSlider(parent, labelText, description, globalVar, minVal, m
     
     clickBtn.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            draggingSlider = true
+            dragging = true
             UpdateSlider(input.Position.X)
             
             if dragConnection then
                 dragConnection:Disconnect()
             end
             dragConnection = UserInputService.InputChanged:Connect(function(inputChanged)
-                if inputChanged.UserInputType == Enum.UserInputType.MouseMovement and draggingSlider then
+                if inputChanged.UserInputType == Enum.UserInputType.MouseMovement and dragging then
                     UpdateSlider(inputChanged.Position.X)
                 end
             end)
@@ -1350,7 +1333,7 @@ local function CreateSlider(parent, labelText, description, globalVar, minVal, m
     
     clickBtn.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            draggingSlider = false
+            dragging = false
             if dragConnection then
                 dragConnection:Disconnect()
                 dragConnection = nil
@@ -1460,17 +1443,19 @@ end
 -- ======================================================
 local aimbotPage = ContentPages["Aimbot"]
 if aimbotPage then
+    -- Aimbot (бывший Master Aimbot)
     CreateToggle(
         aimbotPage,
-        "Master Aimbot",
-        "Авто-наведение камеры на противников при зажатии экрана",
+        "Aimbot / Аимбот",
+        "Бот который автоматически наводится на голову",
         "AimbotEnabled",
         15
     )
     
+    -- FOV Range (ползунок)
     CreateSlider(
         aimbotPage,
-        "Aimbot FOV Range",
+        "FOV Range",
         "Радиус захвата автонаведения в пикселях",
         "AimbotFOV",
         10,
@@ -1479,6 +1464,7 @@ if aimbotPage then
         75
     )
     
+    -- Target Body Part
     CreateDropdown(
         aimbotPage,
         "Target Body Part",
@@ -1504,10 +1490,18 @@ if visualsPage then
     
     CreateToggle(
         visualsPage,
+        "FOV / Круг",
+        "Включить Fov (Круг) в вкладке Visuals",
+        "FOVEnabled",
+        80
+    )
+    
+    CreateToggle(
+        visualsPage,
         "3D Box / 3Д Бокс",
         "Бокс который обводит игрока белым цветом, скоро будут добавлены другие.",
         "Box3D",
-        80
+        145
     )
     
     CreateToggle(
@@ -1515,7 +1509,7 @@ if visualsPage then
         "Tracers / Лучи (Blissful)",
         "Полный Blissful ESP: 3D Box + Tracers (плавное исчезновение)",
         "Snaplines",
-        145
+        210
     )
     
     CreateToggle(
@@ -1523,7 +1517,7 @@ if visualsPage then
         "Names & Distance",
         "Отображение имен игроков и дистанции в реальном времени",
         "EspNames",
-        205
+        275
     )
     
     CreateToggle(
@@ -1531,7 +1525,7 @@ if visualsPage then
         "Full Bright / Полная яркость",
         "Включая функцию карта становится намного светлее.",
         "FullBright",
-        265
+        340
     )
 end
 
@@ -1543,71 +1537,24 @@ if TabButtons[1] then
 end
 
 -- ======================================================
--- ФУНКЦИЯ ПОИСКА БЛИЖАЙШЕГО ИГРОКА
--- ======================================================
-local function GetClosestPlayer()
-    local closestPlayer = nil
-    local shortestDistance = _G.AimbotFOV
-    local localChar = LocalPlayer.Character
-    local localRoot = localChar and localChar:FindFirstChild("HumanoidRootPart")
-    
-    if not localRoot then
-        return nil
-    end
-    
-    local viewportSize = Camera.ViewportSize
-    local screenCenter = viewportSize / 2
-    
-    for _, player in pairs(Players:GetPlayers()) do
-        if player == LocalPlayer then
-            continue
-        end
-        
-        local char = player.Character
-        local targetPart = char and char:FindFirstChild(_G.TargetBone)
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        
-        if targetPart and hum and hum.Health > 0 then
-            local pos2D, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
-            
-            if onScreen then
-                local distance = (Vector2.new(pos2D.X, pos2D.Y) - screenCenter).Magnitude
-                
-                if distance < shortestDistance then
-                    shortestDistance = distance
-                    closestPlayer = player
-                end
-            end
-        end
-    end
-    
-    return closestPlayer
-end
-
--- ======================================================
--- ГЛОБАЛЬНЫЙ РЕНДЕР-ЦИКЛ
+-- AIMBOT РЕНДЕР (ИЗ КОДА MEDRIT, НО ТОЛЬКО ПРОТИВНИКИ)
 -- ======================================================
 RunService.RenderStepped:Connect(function()
-    local viewportSize = Camera.ViewportSize
-    local screenCenter = Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
-    
-    if _G.AimbotEnabled and FOVCircle then
+    -- Обновляем FOV круг
+    if _G.FOVEnabled and FOVCircle then
         FOVCircle.Visible = true
-        FOVCircle.Position = screenCenter
+        local viewportSize = Camera.ViewportSize
+        FOVCircle.Position = Vector2.new(viewportSize.X / 2, viewportSize.Y / 2)
         FOVCircle.Radius = _G.AimbotFOV
     elseif FOVCircle then
         FOVCircle.Visible = false
     end
     
-    if _G.AimbotEnabled and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
-        local targetPlayer = GetClosestPlayer()
-        
-        if targetPlayer and targetPlayer.Character then
-            local aimPart = targetPlayer.Character:FindFirstChild(_G.TargetBone)
-            
-            if aimPart then
-                Camera.CFrame = CFrame.new(Camera.CFrame.Position, aimPart.Position)
-            end
+    -- Aimbot (только противники)
+    if _G.AimbotEnabled then
+        local target = GetTargetInFOV()
+        if target then
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Position)
         end
     end
 end)
@@ -1668,12 +1615,15 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         PlayClickSound()
         ToggleFullBright()
         print(string.format("[DEBUG] FullBright: %s", tostring(_G.FullBrightEnabled)))
+    elseif input.KeyCode == Enum.KeyCode.F7 then
+        PlayClickSound()
+        _G.FOVEnabled = not _G.FOVEnabled
+        print(string.format("[DEBUG] FOV: %s", tostring(_G.FOVEnabled)))
     end
 end)
 
-print("[META] v3.13 Loaded Successfully!")
-print("[META] Chams: new version (red outlines)")
-print("[META] 3D Box: no flickering!")
-print("[META] Names & Distance: fixed respawn bug!")
-print("[META] F1 - Aimbot | F2 - Chams | F3 - 3D Box | F4 - Tracers | F5 - Names | F6 - FullBright")
+print("[META] v3.14 Loaded Successfully!")
+print("[META] Aimbot: upgraded (only enemies, Medrit style)")
+print("[META] FOV Circle: now in Visuals tab (F7)")
+print("[META] F1 - Aimbot | F2 - Chams | F3 - 3D Box | F4 - Tracers | F5 - Names | F6 - FullBright | F7 - FOV")
 print("[META] Press Insert or F8 to toggle menu")
