@@ -142,91 +142,79 @@ local function ToggleFullBright()
 end
 
 -- ======================================================
--- CHAMS (С ПРАВИЛЬНЫМ ОПРЕДЕЛЕНИЕМ КОМАНД - FIX)
+-- CHAMS (НОВЫЙ КОД)
 -- ======================================================
 local Tag = "AdolfFX"
-local ChamsData = {}
+local ChamsActive = false
+local ChamsList = {}
 
-local function IsEnemy(Plr)
-    local LP = Players.LocalPlayer
+local function ApplyChams(character, player)
+    if not character or character:FindFirstChild(Tag) then return end
     
-    if Plr.Team and LP.Team and Plr.Team ~= LP.Team then
-        return true
-    end
+    local highlight = Instance.new("Highlight")
+    highlight.Name = Tag
+    highlight.FillColor = Color3.fromRGB(255, 0, 0)
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.FillTransparency = 0.5
+    highlight.OutlineTransparency = 0.1
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.Adornee = character
+    highlight.Parent = character
+    highlight.Enabled = _G.BoxESP
     
-    if Plr.TeamColor and LP.TeamColor and Plr.TeamColor ~= LP.TeamColor then
-        return true
-    end
-    
-    if Plr.Team == nil or Plr.Team == Enum.Team.Neutral then
-        return true
-    end
-    
-    return false
+    ChamsList[character] = highlight
 end
 
-local function Paint(Chr, Plr)
-    if not Chr or Chr:FindFirstChild(Tag) then return end
-    
-    local H = Instance.new("Highlight")
-    local enemy = IsEnemy(Plr)
-    
-    H.Name = Tag
-    H.FillColor = enemy and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(0, 255, 0)
-    H.OutlineColor = Color3.fromRGB(255, 255, 255)
-    H.FillTransparency = 0.5
-    H.OutlineTransparency = 0.1
-    H.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    H.Adornee = Chr
-    H.Parent = Chr
-    H.Enabled = _G.BoxESP
-    
-    ChamsData[Chr] = H
+local function RemoveChams(character)
+    if character and character:FindFirstChild(Tag) then
+        character[Tag]:Destroy()
+        ChamsList[character] = nil
+    end
 end
+
+local function HookPlayer(player)
+    if player == LocalPlayer then return end
+    
+    player.CharacterAdded:Connect(function(character)
+        task.wait(0.1)
+        if _G.BoxESP then
+            ApplyChams(character, player)
+        end
+    end)
+    
+    if player.Character and _G.BoxESP then
+        ApplyChams(player.Character, player)
+    end
+end
+
+for _, player in pairs(Players:GetPlayers()) do
+    HookPlayer(player)
+end
+
+Players.PlayerAdded:Connect(HookPlayer)
 
 function UpdateChams()
     if _G.BoxESP then
-        for _, v in pairs(Players:GetPlayers()) do
-            if v ~= LocalPlayer and v.Character then
-                local h = v.Character:FindFirstChild(Tag)
-                if h then
-                    h.Enabled = true
-                    local enemy = IsEnemy(v)
-                    h.FillColor = enemy and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(0, 255, 0)
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character then
+                local existing = player.Character:FindFirstChild(Tag)
+                if existing then
+                    existing.Enabled = true
                 else
-                    Paint(v.Character, v)
+                    ApplyChams(player.Character, player)
                 end
             end
         end
     else
-        for _, v in pairs(Players:GetPlayers()) do
-            if v.Character and v.Character:FindFirstChild(Tag) then
-                v.Character[Tag].Enabled = false
+        for _, player in pairs(Players:GetPlayers()) do
+            if player.Character and player.Character:FindFirstChild(Tag) then
+                player.Character[Tag].Enabled = false
             end
         end
     end
 end
 
-local function Hook(Plr)
-    if Plr == LocalPlayer then return end
-    
-    Plr.CharacterAdded:Connect(function(c)
-        task.wait(0.1)
-        if _G.BoxESP and c then
-            Paint(c, Plr)
-        end
-    end)
-    
-    if Plr.Character and _G.BoxESP then
-        Paint(Plr.Character, Plr)
-    end
-end
-
-for _, v in pairs(Players:GetPlayers()) do
-    Hook(v)
-end
-
-Players.PlayerAdded:Connect(Hook)
+print("[CHAMS] Loaded with menu control!")
 
 -- ======================================================
 -- 3D BOX ESP (БЕЗ МЕРЦАНИЯ)
@@ -1026,7 +1014,7 @@ TabContainer.Position = UDim2.new(0, 0, 0, 39)
 TabContainer.BackgroundTransparency = 1
 TabContainer.Parent = MainFrame
 
-local TabNames = {"Aimbot", "Visuals", "AI"}
+local TabNames = {"Aimbot", "Visuals"}
 local TabButtons = {}
 local ContentPages = {}
 
@@ -1509,7 +1497,7 @@ if visualsPage then
     CreateToggle(
         visualsPage,
         "Chams / Подсветка",
-        "Красные/зеленые силуэты игроков в зависимости от команды",
+        "Красные силуэты игроков",
         "BoxESP",
         15
     )
@@ -1684,7 +1672,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 print("[META] v3.13 Loaded Successfully!")
-print("[META] Chams: fixed team detection (red enemies, green allies)")
+print("[META] Chams: new version (red outlines)")
 print("[META] 3D Box: no flickering!")
 print("[META] Names & Distance: fixed respawn bug!")
 print("[META] F1 - Aimbot | F2 - Chams | F3 - 3D Box | F4 - Tracers | F5 - Names | F6 - FullBright")
