@@ -1548,7 +1548,7 @@ if visualsPage then
 end
 
 -- ======================================================
--- AI СТРАНИЦА (С ЧАТОМ)
+-- AI СТРАНИЦА (С ЧАТОМ И РАБОТАЮЩЕЙ КЛАВИАТУРОЙ)
 -- ======================================================
 local aiPage = ContentPages["AI"]
 if aiPage then
@@ -1598,7 +1598,7 @@ if aiPage then
     inputCorner.CornerRadius = UDim.new(0, 10)
     inputCorner.Parent = inputContainer
     
-    -- Поле ввода
+    -- Поле ввода (с поддержкой клавиатуры)
     local inputBox = Instance.new("TextBox")
     inputBox.Size = UDim2.new(1, -20, 1, 0)
     inputBox.Position = UDim2.new(0, 10, 0, 0)
@@ -1611,7 +1611,18 @@ if aiPage then
     inputBox.TextSize = 16
     inputBox.Selectable = true
     inputBox.Active = true
+    inputBox.MultiLine = false
     inputBox.Parent = inputContainer
+    
+    -- Принудительный захват фокуса при клике
+    local function focusInput()
+        inputBox:CaptureFocus()
+    end
+    
+    inputBox.MouseButton1Click:Connect(focusInput)
+    inputContainer.MouseButton1Click:Connect(function()
+        inputBox:CaptureFocus()
+    end)
     
     y = y + 60
     
@@ -1629,11 +1640,20 @@ if aiPage then
     local sendCorner = Instance.new("UICorner")
     sendCorner.CornerRadius = UDim.new(0, 8)
     sendCorner.Parent = sendBtn
+    
+    -- Hover эффект
+    sendBtn.MouseEnter:Connect(function()
+        sendBtn.BackgroundColor3 = Color3.fromRGB(79, 150, 255)
+    end)
+    sendBtn.MouseLeave:Connect(function()
+        sendBtn.BackgroundColor3 = Color3.fromRGB(59, 130, 246)
+    end)
+    
     y = y + 50
     
-    -- Контейнер для сообщений (скроллинг)
+    -- Контейнер для сообщений
     local messagesContainer = Instance.new("ScrollingFrame")
-    messagesContainer.Size = UDim2.new(0.9, 0, 0.5, 0)
+    messagesContainer.Size = UDim2.new(0.9, 0, 0.45, 0)
     messagesContainer.Position = UDim2.new(0.05, 0, 0, y)
     messagesContainer.BackgroundColor3 = Color3.fromRGB(20, 23, 30)
     messagesContainer.BackgroundTransparency = 0.3
@@ -1814,11 +1834,6 @@ if aiPage then
         if enterPressed then
             sendBtn.MouseButton1Click:Fire()
         end
-    end)
-    
-    -- Клик для открытия клавиатуры
-    inputBox.MouseButton1Click:Connect(function()
-        inputBox:CaptureFocus()
     end)
 end
 
