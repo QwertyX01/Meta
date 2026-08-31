@@ -1,5 +1,5 @@
--- ROCKET::META_UI_V7.0.26
--- CHAMS ТОЛЬКО ДЛЯ ВРАГОВ + РАСШИРЕННОЕ ОПРЕДЕЛЕНИЕ КОМАНД
+-- ROCKET::META_UI_V7.0.28
+-- CHAMS ТОЛЬКО ДЛЯ ВРАГОВ + РАСШИРЕННОЕ ОПРЕДЕЛЕНИЕ КОМАНД + ИСПРАВЛЕН ПОРЯДОК
 
 -- Генерация случайного ключа для защиты от обнаружения по имени переменной
 local UI_NAME_MASK = "RobloxGui" .. tostring(math.random(1000, 9999))
@@ -258,7 +258,6 @@ local ChamsConnections = {}
 local ChamsTag = "EnemyHighlight_" .. tostring(math.random(1000, 9999))
 
 local function GetPlayerTeam(player)
-    -- 1. Стандартное свойство Team
     if player.Team then
         if type(player.Team) == "string" then
             return player.Team
@@ -269,36 +268,30 @@ local function GetPlayerTeam(player)
         end
     end
     
-    -- 2. TeamName (StringValue или ObjectValue)
     local teamNameObj = player:FindFirstChild("TeamName")
     if teamNameObj then
         return teamNameObj.Value or teamNameObj.Name
     end
     
-    -- 3. TeamColor
     if player.TeamColor then
         return tostring(player.TeamColor)
     end
     
-    -- 4. TeamValue (NumberValue или IntValue)
     local teamValueObj = player:FindFirstChild("TeamValue")
     if teamValueObj then
         return tostring(teamValueObj.Value)
     end
     
-    -- 5. TeamFolder (если есть папка с названием команды)
     local teamFolder = player:FindFirstChild("TeamFolder")
     if teamFolder then
         return teamFolder.Name
     end
     
-    -- 6. TeamTag (StringValue)
     local teamTag = player:FindFirstChild("TeamTag")
     if teamTag then
         return teamTag.Value or teamTag.Name
     end
     
-    -- 7. Проверка в персонаже
     local char = player.Character
     if char then
         local teamObj = char:FindFirstChild("Team")
@@ -317,7 +310,6 @@ local function GetPlayerTeam(player)
         end
     end
     
-    -- 8. Проверка в ReplicatedStorage
     local replicatedStorage = game:GetService("ReplicatedStorage")
     if replicatedStorage then
         local teamData = replicatedStorage:FindFirstChild("TeamData")
@@ -343,7 +335,6 @@ local function IsEnemy(player)
         return true
     end
     
-    -- Если команды не определены — считаем всех врагами (кроме себя)
     if not myTeam or not theirTeam then
         return true
     end
@@ -854,7 +845,6 @@ if visualsPage then
     table.insert(langUpdateCallbacks, UpdateChamsText)
 end
 
--- ===== НАСТРОЙКИ (UI Color, Opacity, Rainbow, Scale, Flying Dots, Reset) =====
 local settingsPage = ContentPages["Settings"]
 if settingsPage then
     settingsPage.CanvasSize = UDim2.new(0, 0, 0, 600)
@@ -1838,9 +1828,6 @@ if settingsPage then
         UpdateIndicatorColor(_G.MenuThemeColor)
         SearchStroke.Color = _G.MenuThemeColor
         
-        RemoveChams()
-        SetChamsToggleState(false)
-        
         for _, btn in ipairs(langButtonData) do
             pcall(btn.Update, false)
         end
@@ -1929,4 +1916,3 @@ end)
 
 -- ===== ЧИСТКА (БЕЗ АВТОМАТИЧЕСКОГО УДАЛЕНИЯ) =====
 -- Удаляем только если скрипт явно выгружен через _G.UnloadChams
--- Никаких Heartbeat для удаления меню!
