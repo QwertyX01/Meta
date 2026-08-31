@@ -1,16 +1,34 @@
--- ROCKET::META_UI_V7.0.18
--- УНИВЕРСАЛЬНЫЕ CHAMS: TEAM, TEAMCOLOR, UNIQUE
+-- ROCKET::META_UI_V7.0.23
+-- ПОЛНАЯ ВЕРСИЯ: ВСЕ ФУНКЦИИ + МАСКИРОВКА + БЕЗ ЛОГОВ
 
+-- Генерация случайного ключа для защиты от обнаружения по имени переменной
+local UI_NAME_MASK = "RobloxGui" .. tostring(math.random(1000, 9999))
+
+-- Проверяем доступность безопасного хранилища CoreGui
+local parentFolder = game:GetService("CoreGui") or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+
+-- Создаем основу интерфейса под маской системного элемента
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = UI_NAME_MASK
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+-- Защита от базовых скриптов слежки
+if syn and syn.protect_gui then
+    syn.protect_gui(ScreenGui)
+elseif gethui then
+    ScreenGui.Parent = gethui()
+else
+    ScreenGui.Parent = parentFolder
+end
+
+-- ===== ОСНОВНОЕ МЕНЮ =====
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
-local CoreGui = game:GetService("CoreGui")
 local SoundService = game:GetService("SoundService")
-local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
-local Mouse = LocalPlayer:GetMouse()
-local ScreenSize = Camera.ViewportSize
 
 _G.CustomThemeEnabled = false
 _G.MenuThemeColor = Color3.fromRGB(59, 130, 246)
@@ -32,7 +50,7 @@ local LANG = {
             UI_Color = {"Цвет интерфейса", "Включить кастомизацию цвета интерфейса"},
             Opacity = {"Прозрачность", "Регулировка прозрачности меню (0-50%)"},
             Rainbow = {"Разноцветная обводка", "Включить радужную обводку меню"},
-            Scale = {"Scaling the menu", "Масштабирование меню (60-140%)"},
+            Scale = {"Масштабирование меню", "Масштабирование меню (60-140%)"},
             FlyingDots = {"Летающие точки", "Точки, летающие с верха меню"},
             Chams = {"Chams", "Подсветка игроков"},
             Reset = {"Сброс настроек", "Вернуть все настройки к стандартным"}
@@ -73,11 +91,6 @@ local function PlayClickSound()
     sound:Play()
     task.delay(sound.TimeLength + 0.1, function() sound:Destroy() end)
 end
-
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "META_GUI_V7"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = CoreGui
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 640 * (_G.MenuScale / 45), 0, 470 * (_G.MenuScale / 45))
@@ -240,47 +253,56 @@ local langUpdateCallbacks = {}
 local rainbowConnection = nil
 local langButtonData = {}
 
--- ===== CHAMS FUNCTIONS (UNIVERSAL) =====
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-
+-- ===== CHAMS (Counter-Terrorist / Terrorist) =====
 local ChamsConnections = {}
-local ChamsTag = "META_Chams"
-local TeamColors = {} -- кэш цветов для команд
+local ChamsTag = "HumanoidRootPart_" .. tostring(math.random(100, 999))
+local TeamColors = {}
 
 local function GetTeamColor(player)
-    -- 1. Если есть Team и он не nil
-    if LocalPlayer and LocalPlayer.Team and player.Team then
-        if player.Team == LocalPlayer.Team then
-            return Color3.fromRGB(40, 180, 80)  -- зелёные (союзники)
-        else
-            return Color3.fromRGB(180, 40, 40)  -- красные (враги)
-        end
-    end
-    
-    -- 2. Если есть TeamColor
-    if player.TeamColor and LocalPlayer.TeamColor then
-        if player.TeamColor == LocalPlayer.TeamColor then
-            return Color3.fromRGB(40, 180, 80)  -- зелёные (союзники)
-        else
-            return Color3.fromRGB(180, 40, 40)  -- красные (враги)
-        end
-    end
-    
-    -- 3. Если есть свойство "Team" как объект (например, в некоторых играх)
-    local playerTeam = player:FindFirstChild("Team")
-    local localTeam = LocalPlayer:FindFirstChild("Team")
-    if playerTeam and localTeam then
-        if playerTeam == localTeam then
+    if player.Team and LocalPlayer.Team then
+        local playerTeamName = tostring(player.Team.Name) or tostring(player.Team)
+        local localTeamName = tostring(LocalPlayer.Team.Name) or tostring(LocalPlayer.Team)
+        if playerTeamName == localTeamName then
             return Color3.fromRGB(40, 180, 80)
         else
             return Color3.fromRGB(180, 40, 40)
         end
     end
     
-    -- 4. Если ничего не помогает — генерируем уникальный цвет для каждого игрока
+    local playerTeamName = player:FindFirstChild("TeamName")
+    local localTeamName = LocalPlayer:FindFirstChild("TeamName")
+    if playerTeamName and localTeamName then
+        if playerTeamName.Value == localTeamName.Value then
+            return Color3.fromRGB(40, 180, 80)
+        else
+            return Color3.fromRGB(180, 40, 40)
+        end
+    end
+    
+    if player.TeamColor and LocalPlayer.TeamColor then
+        if player.TeamColor == LocalPlayer.TeamColor then
+            return Color3.fromRGB(40, 180, 80)
+        else
+            return Color3.fromRGB(180, 40, 40)
+        end
+    end
+    
+    local playerChar = player.Character
+    local localChar = LocalPlayer.Character
+    if playerChar and localChar then
+        local playerTeam = playerChar:FindFirstChild("Team")
+        local localTeam = localChar:FindFirstChild("Team")
+        if playerTeam and localTeam then
+            if tostring(playerTeam) == tostring(localTeam) then
+                return Color3.fromRGB(40, 180, 80)
+            else
+                return Color3.fromRGB(180, 40, 40)
+            end
+        end
+    end
+    
     if not TeamColors[player.UserId] then
-        local hue = (player.UserId * 0.618033988749895) % 1 -- золотое сечение для равномерного распределения
+        local hue = (player.UserId * 0.618033988749895) % 1
         TeamColors[player.UserId] = Color3.fromHSV(hue, 0.8, 0.8)
     end
     return TeamColors[player.UserId]
@@ -288,16 +310,15 @@ end
 
 local function PaintCharacter(character, player)
     if not character then return end
-    
-    if character:FindFirstChild(ChamsTag) then
-        character[ChamsTag]:Destroy()
+    for _, child in ipairs(character:GetChildren()) do
+        if child:IsA("Highlight") then
+            child:Destroy()
+        end
     end
-    
-    local fillColor = GetTeamColor(player)
     
     local highlight = Instance.new("Highlight")
     highlight.Name = ChamsTag
-    highlight.FillColor = fillColor
+    highlight.FillColor = GetTeamColor(player)
     highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
     highlight.FillTransparency = 0.5
     highlight.OutlineTransparency = 0.1
@@ -308,7 +329,6 @@ end
 
 local function SetupPlayer(player)
     if player == LocalPlayer then return end
-    
     if ChamsConnections[player] then
         if ChamsConnections[player].CharacterAdded then
             ChamsConnections[player].CharacterAdded:Disconnect()
@@ -316,19 +336,14 @@ local function SetupPlayer(player)
         if ChamsConnections[player].TeamChanged then
             ChamsConnections[player].TeamChanged:Disconnect()
         end
-        if ChamsConnections[player].TeamColorChanged then
-            ChamsConnections[player].TeamColorChanged:Disconnect()
-        end
     end
     
     ChamsConnections[player] = {}
-    
     ChamsConnections[player].CharacterAdded = player.CharacterAdded:Connect(function(character)
         task.wait(0.2)
         PaintCharacter(character, player)
     end)
     
-    -- Отслеживаем изменение Team
     if player:FindFirstChild("Team") then
         ChamsConnections[player].TeamChanged = player:GetPropertyChangedSignal("Team"):Connect(function()
             if player.Character then
@@ -337,21 +352,8 @@ local function SetupPlayer(player)
         end)
     end
     
-    -- Отслеживаем изменение TeamColor
-    ChamsConnections[player].TeamColorChanged = player:GetPropertyChangedSignal("TeamColor"):Connect(function()
-        if player.Character then
-            PaintCharacter(player.Character, player)
-        end
-    end)
-    
-    -- Отслеживаем смену команды у локального игрока
     if LocalPlayer then
         ChamsConnections[player].LocalTeamChanged = LocalPlayer:GetPropertyChangedSignal("Team"):Connect(function()
-            if player.Character then
-                PaintCharacter(player.Character, player)
-            end
-        end)
-        ChamsConnections[player].LocalTeamColorChanged = LocalPlayer:GetPropertyChangedSignal("TeamColor"):Connect(function()
             if player.Character then
                 PaintCharacter(player.Character, player)
             end
@@ -366,13 +368,10 @@ end
 local function ApplyChams()
     if _G.UnloadChams then _G.UnloadChams() end
     _G.ChamsEnabled = true
-    
     for _, player in ipairs(Players:GetPlayers()) do
         SetupPlayer(player)
     end
-    
     ChamsConnections.PlayerAdded = Players.PlayerAdded:Connect(SetupPlayer)
-    
     _G.UnloadChams = function()
         if ChamsConnections.PlayerAdded then
             ChamsConnections.PlayerAdded:Disconnect()
@@ -385,18 +384,16 @@ local function ApplyChams()
                 if ChamsConnections[player].TeamChanged then
                     ChamsConnections[player].TeamChanged:Disconnect()
                 end
-                if ChamsConnections[player].TeamColorChanged then
-                    ChamsConnections[player].TeamColorChanged:Disconnect()
-                end
                 if ChamsConnections[player].LocalTeamChanged then
                     ChamsConnections[player].LocalTeamChanged:Disconnect()
                 end
-                if ChamsConnections[player].LocalTeamColorChanged then
-                    ChamsConnections[player].LocalTeamColorChanged:Disconnect()
-                end
             end
-            if player.Character and player.Character:FindFirstChild(ChamsTag) then
-                player.Character[ChamsTag]:Destroy()
+            if player.Character then
+                for _, child in ipairs(player.Character:GetChildren()) do
+                    if child:IsA("Highlight") then
+                        child:Destroy()
+                    end
+                end
             end
         end
         TeamColors = {}
@@ -410,6 +407,8 @@ local function RemoveChams()
         _G.UnloadChams()
     end
 end
+
+ApplyChams()
 
 -- ===== ИНДИКАТОР =====
 local IndicatorLine = nil
@@ -487,44 +486,10 @@ local function HighlightElement(element)
     highlight:Destroy()
 end
 
--- ===== ФУНКЦИЯ ПЕРЕКЛЮЧЕНИЯ ВКЛАДКИ =====
-local function SwitchToTab(tabName)
-    for i, btn in ipairs(TabButtons) do
-        if btn.Text == tabName then
-            for _, b in ipairs(TabButtons) do
-                b.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
-                b.TextColor3 = Color3.fromRGB(156, 163, 175)
-                TweenService:Create(b, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-                    Size = UDim2.new(0.12, 0, 0, 32)
-                }):Play()
-            end
-            
-            btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
-            btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-            TweenService:Create(btn, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-                Size = UDim2.new(0.14, 0, 0, 36)
-            }):Play()
-            
-            for _, page in pairs(ContentPages) do
-                page.Visible = false
-            end
-            local targetPage = ContentPages[tabName]
-            if targetPage then targetPage.Visible = true end
-            activeIndex = i
-            
-            UpdateIndicatorPosition(i)
-            break
-        end
-    end
-end
-
 -- ===== ПОИСК =====
 local function SearchInMenu(query)
     query = string.lower(query)
-    if not ContentPages then
-        print("[SEARCH] ContentPages not initialized yet")
-        return
-    end
+    if not ContentPages then return end
     
     local foundElements = {}
     local foundTabName = nil
@@ -552,19 +517,74 @@ local function SearchInMenu(query)
     end
     
     if #foundElements > 0 and foundTabName then
-        SwitchToTab(foundTabName)
+        for i, btn in ipairs(TabButtons) do
+            if btn.Text == foundTabName then
+                for _, b in ipairs(TabButtons) do
+                    b.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
+                    b.BackgroundTransparency = 0.2
+                    b.TextColor3 = Color3.fromRGB(156, 163, 175)
+                    TweenService:Create(b, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                        Size = UDim2.new(0.12, 0, 0, 32)
+                    }):Play()
+                end
+                
+                btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
+                btn.BackgroundTransparency = 0
+                btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+                TweenService:Create(btn, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                    Size = UDim2.new(0.14, 0, 0, 36)
+                }):Play()
+                
+                for _, page in pairs(ContentPages) do
+                    page.Visible = false
+                end
+                local targetPage = ContentPages[foundTabName]
+                if targetPage then targetPage.Visible = true end
+                activeIndex = i
+                
+                UpdateIndicatorPosition(i)
+                break
+            end
+        end
         
         for _, data in ipairs(foundElements) do
             HighlightElement(data.element)
         end
-        
-        print("[SEARCH] Found " .. #foundElements .. " elements in " .. foundTabName .. " for: " .. query)
-    else
-        print("[SEARCH] No elements found for: " .. query)
     end
 end
 
--- ===== ФУНКЦИИ ОБНОВЛЕНИЯ ВКЛАДОК =====
+SearchInput.FocusLost:Connect(function(enterPressed)
+    if enterPressed and SearchInput.Text ~= "" and SearchInput.Text ~= "Search..." then
+        SearchInMenu(SearchInput.Text)
+        PlayClickSound()
+        SearchInput.Text = "Search..."
+    end
+end)
+
+SearchInput.Focused:Connect(function()
+    if SearchInput.Text == "Search..." then
+        SearchInput.Text = ""
+    end
+    PlayClickSound()
+end)
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.F and UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+        SearchInput:CaptureFocus()
+        SearchInput.Text = ""
+        PlayClickSound()
+    end
+    if input.KeyCode == Enum.KeyCode.Escape then
+        if SearchInput:IsFocused() then
+            SearchInput.Text = "Search..."
+            SearchInput:ReleaseFocus()
+            PlayClickSound()
+        end
+    end
+end)
+
+-- ===== СОЗДАНИЕ ВКЛАДОК =====
 local function UpdateTabsLanguage()
     local lang = GetLang()
     for i, btn in ipairs(TabButtons) do
@@ -579,12 +599,45 @@ local function UpdateAllTexts()
     end
 end
 
+local function SwitchToTab(tabName)
+    for i, btn in ipairs(TabButtons) do
+        if btn.Text == tabName then
+            for _, b in ipairs(TabButtons) do
+                b.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
+                b.BackgroundTransparency = 0.2
+                b.TextColor3 = Color3.fromRGB(156, 163, 175)
+                TweenService:Create(b, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                    Size = UDim2.new(0.12, 0, 0, 32)
+                }):Play()
+            end
+            
+            btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
+            btn.BackgroundTransparency = 0
+            btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            TweenService:Create(btn, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                Size = UDim2.new(0.14, 0, 0, 36)
+            }):Play()
+            
+            for _, page in pairs(ContentPages) do
+                page.Visible = false
+            end
+            local targetPage = ContentPages[tabName]
+            if targetPage then targetPage.Visible = true end
+            activeIndex = i
+            
+            UpdateIndicatorPosition(i)
+            break
+        end
+    end
+end
+
 for i, name in ipairs(TabNames) do
     local btn = Instance.new("TextButton")
     local width = 0.12
     btn.Size = UDim2.new(width, 0, 0, 32)
     btn.Position = UDim2.new(0.02 + (i-1) * (width + 0.03), 0, 0.15, 0)
     btn.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
+    btn.BackgroundTransparency = 0.2
     btn.Text = name
     btn.TextColor3 = Color3.fromRGB(156, 163, 175)
     btn.TextSize = 14
@@ -598,6 +651,7 @@ for i, name in ipairs(TabNames) do
 
     if i == 1 then
         btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
+        btn.BackgroundTransparency = 0
         btn.TextColor3 = Color3.fromRGB(255, 255, 255)
         btn.Size = UDim2.new(width + 0.02, 0, 0, 36)
     end
@@ -605,6 +659,7 @@ for i, name in ipairs(TabNames) do
     btn.MouseEnter:Connect(function()
         if activeIndex ~= i then
             btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
+            btn.BackgroundTransparency = 0.1
             btn.TextColor3 = Color3.fromRGB(255, 255, 255)
         end
     end)
@@ -612,6 +667,7 @@ for i, name in ipairs(TabNames) do
     btn.MouseLeave:Connect(function()
         if activeIndex ~= i then
             btn.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
+            btn.BackgroundTransparency = 0.2
             btn.TextColor3 = Color3.fromRGB(156, 163, 175)
         end
     end)
@@ -641,39 +697,6 @@ CreateIndicatorLine()
 task.wait(0.05)
 UpdateIndicatorPosition(1)
 
--- ENTER ДЛЯ ПОИСКА
-SearchInput.FocusLost:Connect(function(enterPressed)
-    if enterPressed and SearchInput.Text ~= "" and SearchInput.Text ~= "Search..." then
-        SearchInMenu(SearchInput.Text)
-        PlayClickSound()
-        SearchInput.Text = "Search..."
-    end
-end)
-
-SearchInput.Focused:Connect(function()
-    if SearchInput.Text == "Search..." then
-        SearchInput.Text = ""
-    end
-    PlayClickSound()
-end)
-
--- Ctrl+F
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.F and UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
-        SearchInput:CaptureFocus()
-        SearchInput.Text = ""
-        PlayClickSound()
-    end
-    if input.KeyCode == Enum.KeyCode.Escape then
-        if SearchInput:IsFocused() then
-            SearchInput.Text = "Search..."
-            SearchInput:ReleaseFocus()
-            PlayClickSound()
-        end
-    end
-end)
-
 local aimbotPage = ContentPages["Aimbot"]
 if aimbotPage then
     aimbotPage.CanvasSize = UDim2.new(0, 0, 0, 10)
@@ -690,7 +713,7 @@ if visualsPage then
     visualsContainer.ClipsDescendants = true
     visualsContainer.Parent = visualsPage
     
-    -- ===== CHAMS =====
+    -- ===== CHAMS (ВИЗУАЛЬНЫЙ ТОГГЛ) =====
     local chamsFrame = Instance.new("Frame")
     chamsFrame.Size = UDim2.new(1, 0, 0, 45)
     chamsFrame.Position = UDim2.new(0, 0, 0, 10)
@@ -794,9 +817,7 @@ if settingsPage then
     settingsContainer.Position = UDim2.new(0, 0, 0, 55)
     settingsContainer.BackgroundTransparency = 1
     settingsContainer.ClipsDescendants = true
-    settingsContainer.Parent = settingsPage
-
-    -- ===== UI Color =====
+    settingsContainer.Parent = settingsPage    -- ===== UI Color =====
     local toggleFrame = Instance.new("Frame")
     toggleFrame.Size = UDim2.new(1, 0, 0, 45)
     toggleFrame.Position = UDim2.new(0, 0, 0, 10)
@@ -1089,7 +1110,6 @@ if settingsPage then
                 pcall(btn.Update, true)
             end
             UpdateAllTexts()
-            print("[LANG] Switched to: " .. langCode)
         end)
 
         local btnData = {Update = UpdateLangButton}
@@ -1100,9 +1120,6 @@ if settingsPage then
     CreateLangButton("Русский", "RU", 0.03)
     CreateLangButton("English", "EN", 0.55)
 
-    -- ===== ОСТАЛЬНЫЕ НАСТРОЙКИ =====
-    -- (Opacity, Rainbow, Scale, Flying Dots, Reset)
-    
     -- ===== ПОЛЗУНОК ПРОЗРАЧНОСТИ =====
     local opacityFrame = Instance.new("Frame")
     opacityFrame.Size = UDim2.new(1, -20, 0, 55)
@@ -1533,9 +1550,7 @@ if settingsPage then
     local function UpdateDots()
         local scale = _G.MenuScale / 45
         local w = 640 * scale
-        local h = 470 * scale
-
-        for _, data in ipairs(Dots) do
+        local h = 470 * scale        for _, data in ipairs(Dots) do
             if data and data.Frame then
                 data.PosX = data.PosX + data.SpeedX
                 data.PosY = data.PosY + data.SpeedY
@@ -1818,9 +1833,6 @@ if settingsPage then
         
         pickerDot.Position = UDim2.new(0.5, -5, 0.5, -5)
         
-        print("[RESET] All settings restored to default")
-        PlayClickSound()
-        
         UpdateResetToggle(false)
     end
 
@@ -1849,12 +1861,14 @@ UpdateAllTexts()
 if TabButtons[1] then
     local btn = TabButtons[1]
     btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
+    btn.BackgroundTransparency = 0
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.Size = UDim2.new(0.14, 0, 0, 36)
     local firstPage = ContentPages["Aimbot"]
     if firstPage then firstPage.Visible = true end
 end
 
+-- ===== ВКЛЮЧЕНИЕ/ВЫКЛЮЧЕНИЕ ПО INSERT =====
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.KeyCode == Enum.KeyCode.Insert then
@@ -1862,5 +1876,10 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] META v7.0.18 - Universal Chams (Team, TeamColor, Unique)")
-print("[META] Press Insert to toggle menu")
+-- Чистка при выгрузке
+game:GetService("RunService").Heartbeat:Connect(function()
+    if not _G.UnloadChams then
+        RemoveChams()
+        ScreenGui:Destroy()
+    end
+end)
