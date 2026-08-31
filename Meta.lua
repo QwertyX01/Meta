@@ -1873,10 +1873,17 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- Чистка при выгрузке
+-- Чистка при выгрузке (без автоматического удаления)
+-- Удаляем только если скрипт явно выгружен
+local function Cleanup()
+    RemoveChams()
+    ScreenGui:Destroy()
+end
+
+-- Если скрипт будет перезагружен, чистим старые объекты
 game:GetService("RunService").Heartbeat:Connect(function()
-    if not _G.UnloadChams then
-        RemoveChams()
-        ScreenGui:Destroy()
+    -- Проверяем, существует ли ещё MainFrame (если нет — значит меню уничтожено)
+    if not MainFrame or not MainFrame.Parent then
+        Cleanup()
     end
 end)
