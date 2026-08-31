@@ -1,5 +1,5 @@
--- ROCKET::META_UI_V7.0.24
--- CHAMS ТОЛЬКО ДЛЯ ВРАГОВ + ВКЛЮЧЕНИЕ ПО КЛИКУ
+-- ROCKET::META_UI_V7.0.26
+-- CHAMS ТОЛЬКО ДЛЯ ВРАГОВ + РАСШИРЕННОЕ ОПРЕДЕЛЕНИЕ КОМАНД
 
 -- Генерация случайного ключа для защиты от обнаружения по имени переменной
 local UI_NAME_MASK = "RobloxGui" .. tostring(math.random(1000, 9999))
@@ -253,11 +253,12 @@ local langUpdateCallbacks = {}
 local rainbowConnection = nil
 local langButtonData = {}
 
--- ===== CHAMS (ТОЛЬКО ВРАГИ, ВКЛЮЧАЕТСЯ ПО КЛИКУ) =====
+-- ===== CHAMS (РАСШИРЕННОЕ ОПРЕДЕЛЕНИЕ КОМАНД) =====
 local ChamsConnections = {}
 local ChamsTag = "EnemyHighlight_" .. tostring(math.random(1000, 9999))
 
 local function GetPlayerTeam(player)
+    -- 1. Стандартное свойство Team
     if player.Team then
         if type(player.Team) == "string" then
             return player.Team
@@ -268,19 +269,64 @@ local function GetPlayerTeam(player)
         end
     end
     
-    if player:FindFirstChild("TeamName") then
-        return player.TeamName.Value
+    -- 2. TeamName (StringValue или ObjectValue)
+    local teamNameObj = player:FindFirstChild("TeamName")
+    if teamNameObj then
+        return teamNameObj.Value or teamNameObj.Name
     end
     
+    -- 3. TeamColor
     if player.TeamColor then
         return tostring(player.TeamColor)
     end
     
+    -- 4. TeamValue (NumberValue или IntValue)
+    local teamValueObj = player:FindFirstChild("TeamValue")
+    if teamValueObj then
+        return tostring(teamValueObj.Value)
+    end
+    
+    -- 5. TeamFolder (если есть папка с названием команды)
+    local teamFolder = player:FindFirstChild("TeamFolder")
+    if teamFolder then
+        return teamFolder.Name
+    end
+    
+    -- 6. TeamTag (StringValue)
+    local teamTag = player:FindFirstChild("TeamTag")
+    if teamTag then
+        return teamTag.Value or teamTag.Name
+    end
+    
+    -- 7. Проверка в персонаже
     local char = player.Character
     if char then
         local teamObj = char:FindFirstChild("Team")
         if teamObj then
             return teamObj.Value or teamObj.Name
+        end
+        
+        local charTeamName = char:FindFirstChild("TeamName")
+        if charTeamName then
+            return charTeamName.Value or charTeamName.Name
+        end
+        
+        local charTeamColor = char:FindFirstChild("TeamColor")
+        if charTeamColor then
+            return tostring(charTeamColor)
+        end
+    end
+    
+    -- 8. Проверка в ReplicatedStorage
+    local replicatedStorage = game:GetService("ReplicatedStorage")
+    if replicatedStorage then
+        local teamData = replicatedStorage:FindFirstChild("TeamData")
+        if teamData then
+            for _, child in ipairs(teamData:GetChildren()) do
+                if child.Name == player.Name then
+                    return child.Value or child.Name
+                end
+            end
         end
     end
     
@@ -288,14 +334,21 @@ local function GetPlayerTeam(player)
 end
 
 local function IsEnemy(player)
+    if player == LocalPlayer then return false
+    
     local myTeam = GetPlayerTeam(LocalPlayer)
     local theirTeam = GetPlayerTeam(player)
     
-    if not myTeam or not theirTeam then
-        return false
+    if myTeam and theirTeam and myTeam ~= theirTeam then
+        return true
     end
     
-    return myTeam ~= theirTeam
+    -- Если команды не определены — считаем всех врагами (кроме себя)
+    if not myTeam or not theirTeam then
+        return true
+    end
+    
+    return false
 end
 
 local function PaintCharacter(character, player)
@@ -801,6 +854,7 @@ if visualsPage then
     table.insert(langUpdateCallbacks, UpdateChamsText)
 end
 
+-- ===== НАСТРОЙКИ (UI Color, Opacity, Rainbow, Scale, Flying Dots, Reset) =====
 local settingsPage = ContentPages["Settings"]
 if settingsPage then
     settingsPage.CanvasSize = UDim2.new(0, 0, 0, 600)
@@ -1873,17 +1927,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- Чистка при выгрузке (без автоматического удаления)
--- Удаляем только если скрипт явно выгружен
-local function Cleanup()
-    RemoveChams()
-    ScreenGui:Destroy()
-end
-
--- Если скрипт будет перезагружен, чистим старые объекты
-game:GetService("RunService").Heartbeat:Connect(function()
-    -- Проверяем, существует ли ещё MainFrame (если нет — значит меню уничтожено)
-    if not MainFrame or not MainFrame.Parent then
-        Cleanup()
-    end
-end)
+-- ===== ЧИСТКА (БЕЗ АВТОМАТИЧЕСКОГО УДАЛЕНИЯ) =====
+-- Удаляем только если скрипт явно выгружен через _G.UnloadChams
+-- Никаких Heartbeat для удаления меню!
