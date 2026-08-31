@@ -1,4 +1,4 @@
--- ROCKET::META_UI_V7.0.16
+-- ROCKET::META_UI_V7.0.17
 -- CHAMS: ВРАГИ КРАСНЫЕ, СОЮЗНИКИ ЗЕЛЁНЫЕ, БЕЗ КОМАНДЫ — ЖЁЛТЫЕ
 
 local Players = game:GetService("Players")
@@ -240,7 +240,10 @@ local langUpdateCallbacks = {}
 local rainbowConnection = nil
 local langButtonData = {}
 
--- ===== CHAMS FUNCTIONS (FIXED) =====
+-- ===== CHAMS FUNCTIONS (ВАШ КОД) =====
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
 local ChamsConnections = {}
 local ChamsTag = "META_Chams"
 
@@ -252,13 +255,15 @@ local function PaintCharacter(character, player)
     end
     
     local fillColor
-    if LocalPlayer.Team and player.Team then
+    -- Проверяем, что обе команды существуют и LocalPlayer сам состоит в команде
+    if LocalPlayer and LocalPlayer.Team and player.Team then
         if player.Team == LocalPlayer.Team then
             fillColor = Color3.fromRGB(40, 180, 80)  -- зелёные (союзники)
         else
             fillColor = Color3.fromRGB(180, 40, 40)  -- красные (враги)
         end
     else
+        -- Если команд в игре нет или игрок без команды — красим в жёлтый
         fillColor = Color3.fromRGB(200, 200, 50)  -- жёлтые (без команды)
     end
     
@@ -288,7 +293,7 @@ local function SetupPlayer(player)
     ChamsConnections[player] = {}
     
     ChamsConnections[player].CharacterAdded = player.CharacterAdded:Connect(function(character)
-        task.wait(0.1)
+        task.wait(0.2) -- Немного увеличили задержку, чтобы персонаж успел полностью прогрузиться
         PaintCharacter(character, player)
     end)
     
@@ -297,6 +302,15 @@ local function SetupPlayer(player)
             PaintCharacter(player.Character, player)
         end
     end)
+    
+    -- Также отслеживаем смену команды у самого себя, чтобы обновить цвета врагов/союзников
+    if LocalPlayer then
+        ChamsConnections[player].LocalTeamChanged = LocalPlayer:GetPropertyChangedSignal("Team"):Connect(function()
+            if player.Character then
+                PaintCharacter(player.Character, player)
+            end
+        end)
+    end
     
     if player.Character then
         PaintCharacter(player.Character, player)
@@ -324,6 +338,9 @@ local function ApplyChams()
                 end
                 if ChamsConnections[player].TeamChanged then
                     ChamsConnections[player].TeamChanged:Disconnect()
+                end
+                if ChamsConnections[player].LocalTeamChanged then
+                    ChamsConnections[player].LocalTeamChanged:Disconnect()
                 end
             end
             if player.Character and player.Character:FindFirstChild(ChamsTag) then
@@ -1792,5 +1809,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] META v7.0.16 - Chams: enemies red, allies green, no team = yellow")
+print("[META] META v7.0.17 - Chams: enemies red, allies green, no team = yellow")
 print("[META] Press Insert to toggle menu")
