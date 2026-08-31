@@ -1,5 +1,5 @@
--- ROCKET::META_UI_V7.0.17
--- CHAMS: ВРАГИ КРАСНЫЕ, СОЮЗНИКИ ЗЕЛЁНЫЕ, БЕЗ КОМАНДЫ — ЖЁЛТЫЕ
+-- ROCKET::META_UI_V7.0.18
+-- УНИВЕРСАЛЬНЫЕ CHAMS: TEAM, TEAMCOLOR, UNIQUE
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -240,12 +240,51 @@ local langUpdateCallbacks = {}
 local rainbowConnection = nil
 local langButtonData = {}
 
--- ===== CHAMS FUNCTIONS (ВАШ КОД) =====
+-- ===== CHAMS FUNCTIONS (UNIVERSAL) =====
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
 local ChamsConnections = {}
 local ChamsTag = "META_Chams"
+local TeamColors = {} -- кэш цветов для команд
+
+local function GetTeamColor(player)
+    -- 1. Если есть Team и он не nil
+    if LocalPlayer and LocalPlayer.Team and player.Team then
+        if player.Team == LocalPlayer.Team then
+            return Color3.fromRGB(40, 180, 80)  -- зелёные (союзники)
+        else
+            return Color3.fromRGB(180, 40, 40)  -- красные (враги)
+        end
+    end
+    
+    -- 2. Если есть TeamColor
+    if player.TeamColor and LocalPlayer.TeamColor then
+        if player.TeamColor == LocalPlayer.TeamColor then
+            return Color3.fromRGB(40, 180, 80)  -- зелёные (союзники)
+        else
+            return Color3.fromRGB(180, 40, 40)  -- красные (враги)
+        end
+    end
+    
+    -- 3. Если есть свойство "Team" как объект (например, в некоторых играх)
+    local playerTeam = player:FindFirstChild("Team")
+    local localTeam = LocalPlayer:FindFirstChild("Team")
+    if playerTeam and localTeam then
+        if playerTeam == localTeam then
+            return Color3.fromRGB(40, 180, 80)
+        else
+            return Color3.fromRGB(180, 40, 40)
+        end
+    end
+    
+    -- 4. Если ничего не помогает — генерируем уникальный цвет для каждого игрока
+    if not TeamColors[player.UserId] then
+        local hue = (player.UserId * 0.618033988749895) % 1 -- золотое сечение для равномерного распределения
+        TeamColors[player.UserId] = Color3.fromHSV(hue, 0.8, 0.8)
+    end
+    return TeamColors[player.UserId]
+end
 
 local function PaintCharacter(character, player)
     if not character then return end
@@ -254,18 +293,7 @@ local function PaintCharacter(character, player)
         character[ChamsTag]:Destroy()
     end
     
-    local fillColor
-    -- Проверяем, что обе команды существуют и LocalPlayer сам состоит в команде
-    if LocalPlayer and LocalPlayer.Team and player.Team then
-        if player.Team == LocalPlayer.Team then
-            fillColor = Color3.fromRGB(40, 180, 80)  -- зелёные (союзники)
-        else
-            fillColor = Color3.fromRGB(180, 40, 40)  -- красные (враги)
-        end
-    else
-        -- Если команд в игре нет или игрок без команды — красим в жёлтый
-        fillColor = Color3.fromRGB(200, 200, 50)  -- жёлтые (без команды)
-    end
+    local fillColor = GetTeamColor(player)
     
     local highlight = Instance.new("Highlight")
     highlight.Name = ChamsTag
@@ -288,24 +316,42 @@ local function SetupPlayer(player)
         if ChamsConnections[player].TeamChanged then
             ChamsConnections[player].TeamChanged:Disconnect()
         end
+        if ChamsConnections[player].TeamColorChanged then
+            ChamsConnections[player].TeamColorChanged:Disconnect()
+        end
     end
     
     ChamsConnections[player] = {}
     
     ChamsConnections[player].CharacterAdded = player.CharacterAdded:Connect(function(character)
-        task.wait(0.2) -- Немного увеличили задержку, чтобы персонаж успел полностью прогрузиться
+        task.wait(0.2)
         PaintCharacter(character, player)
     end)
     
-    ChamsConnections[player].TeamChanged = player:GetPropertyChangedSignal("Team"):Connect(function()
+    -- Отслеживаем изменение Team
+    if player:FindFirstChild("Team") then
+        ChamsConnections[player].TeamChanged = player:GetPropertyChangedSignal("Team"):Connect(function()
+            if player.Character then
+                PaintCharacter(player.Character, player)
+            end
+        end)
+    end
+    
+    -- Отслеживаем изменение TeamColor
+    ChamsConnections[player].TeamColorChanged = player:GetPropertyChangedSignal("TeamColor"):Connect(function()
         if player.Character then
             PaintCharacter(player.Character, player)
         end
     end)
     
-    -- Также отслеживаем смену команды у самого себя, чтобы обновить цвета врагов/союзников
+    -- Отслеживаем смену команды у локального игрока
     if LocalPlayer then
         ChamsConnections[player].LocalTeamChanged = LocalPlayer:GetPropertyChangedSignal("Team"):Connect(function()
+            if player.Character then
+                PaintCharacter(player.Character, player)
+            end
+        end)
+        ChamsConnections[player].LocalTeamColorChanged = LocalPlayer:GetPropertyChangedSignal("TeamColor"):Connect(function()
             if player.Character then
                 PaintCharacter(player.Character, player)
             end
@@ -339,14 +385,21 @@ local function ApplyChams()
                 if ChamsConnections[player].TeamChanged then
                     ChamsConnections[player].TeamChanged:Disconnect()
                 end
+                if ChamsConnections[player].TeamColorChanged then
+                    ChamsConnections[player].TeamColorChanged:Disconnect()
+                end
                 if ChamsConnections[player].LocalTeamChanged then
                     ChamsConnections[player].LocalTeamChanged:Disconnect()
+                end
+                if ChamsConnections[player].LocalTeamColorChanged then
+                    ChamsConnections[player].LocalTeamColorChanged:Disconnect()
                 end
             end
             if player.Character and player.Character:FindFirstChild(ChamsTag) then
                 player.Character[ChamsTag]:Destroy()
             end
         end
+        TeamColors = {}
         _G.UnloadChams = nil
         _G.ChamsEnabled = false
     end
@@ -1809,5 +1862,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] META v7.0.17 - Chams: enemies red, allies green, no team = yellow")
+print("[META] META v7.0.18 - Universal Chams (Team, TeamColor, Unique)")
 print("[META] Press Insert to toggle menu")
