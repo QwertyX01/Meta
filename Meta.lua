@@ -1,5 +1,5 @@
--- ROCKET::META_UI_V7.0.23
--- ПОЛНАЯ ВЕРСИЯ: ВСЕ ФУНКЦИИ + МАСКИРОВКА + БЕЗ ЛОГОВ
+-- ROCKET::META_UI_V7.0.24
+-- CHAMS ТОЛЬКО ДЛЯ ВРАГОВ + ВКЛЮЧЕНИЕ ПО КЛИКУ
 
 -- Генерация случайного ключа для защиты от обнаружения по имени переменной
 local UI_NAME_MASK = "RobloxGui" .. tostring(math.random(1000, 9999))
@@ -52,7 +52,7 @@ local LANG = {
             Rainbow = {"Разноцветная обводка", "Включить радужную обводку меню"},
             Scale = {"Масштабирование меню", "Масштабирование меню (60-140%)"},
             FlyingDots = {"Летающие точки", "Точки, летающие с верха меню"},
-            Chams = {"Chams", "Подсветка игроков"},
+            Chams = {"Chams", "Подсветка врагов"},
             Reset = {"Сброс настроек", "Вернуть все настройки к стандартным"}
         }
     },
@@ -64,7 +64,7 @@ local LANG = {
             Rainbow = {"UI Rainbow Color", "Enable rainbow menu outline"},
             Scale = {"Scaling the menu", "Menu scaling (60-140%)"},
             FlyingDots = {"Flying Dots", "Floating dots from the top of the menu"},
-            Chams = {"Chams", "Highlight players"},
+            Chams = {"Chams", "Highlight enemies"},
             Reset = {"Reset Settings", "Return all settings to default"}
         }
     }
@@ -253,82 +253,76 @@ local langUpdateCallbacks = {}
 local rainbowConnection = nil
 local langButtonData = {}
 
--- ===== CHAMS (Counter-Terrorist / Terrorist) =====
+-- ===== CHAMS (ТОЛЬКО ВРАГИ, ВКЛЮЧАЕТСЯ ПО КЛИКУ) =====
 local ChamsConnections = {}
-local ChamsTag = "HumanoidRootPart_" .. tostring(math.random(100, 999))
-local TeamColors = {}
+local ChamsTag = "EnemyHighlight_" .. tostring(math.random(1000, 9999))
 
-local function GetTeamColor(player)
-    if player.Team and LocalPlayer.Team then
-        local playerTeamName = tostring(player.Team.Name) or tostring(player.Team)
-        local localTeamName = tostring(LocalPlayer.Team.Name) or tostring(LocalPlayer.Team)
-        if playerTeamName == localTeamName then
-            return Color3.fromRGB(40, 180, 80)
+local function GetPlayerTeam(player)
+    if player.Team then
+        if type(player.Team) == "string" then
+            return player.Team
+        elseif type(player.Team) == "Instance" and player.Team.Name then
+            return player.Team.Name
         else
-            return Color3.fromRGB(180, 40, 40)
+            return tostring(player.Team)
         end
     end
     
-    local playerTeamName = player:FindFirstChild("TeamName")
-    local localTeamName = LocalPlayer:FindFirstChild("TeamName")
-    if playerTeamName and localTeamName then
-        if playerTeamName.Value == localTeamName.Value then
-            return Color3.fromRGB(40, 180, 80)
-        else
-            return Color3.fromRGB(180, 40, 40)
+    if player:FindFirstChild("TeamName") then
+        return player.TeamName.Value
+    end
+    
+    if player.TeamColor then
+        return tostring(player.TeamColor)
+    end
+    
+    local char = player.Character
+    if char then
+        local teamObj = char:FindFirstChild("Team")
+        if teamObj then
+            return teamObj.Value or teamObj.Name
         end
     end
     
-    if player.TeamColor and LocalPlayer.TeamColor then
-        if player.TeamColor == LocalPlayer.TeamColor then
-            return Color3.fromRGB(40, 180, 80)
-        else
-            return Color3.fromRGB(180, 40, 40)
-        end
+    return nil
+end
+
+local function IsEnemy(player)
+    local myTeam = GetPlayerTeam(LocalPlayer)
+    local theirTeam = GetPlayerTeam(player)
+    
+    if not myTeam or not theirTeam then
+        return false
     end
     
-    local playerChar = player.Character
-    local localChar = LocalPlayer.Character
-    if playerChar and localChar then
-        local playerTeam = playerChar:FindFirstChild("Team")
-        local localTeam = localChar:FindFirstChild("Team")
-        if playerTeam and localTeam then
-            if tostring(playerTeam) == tostring(localTeam) then
-                return Color3.fromRGB(40, 180, 80)
-            else
-                return Color3.fromRGB(180, 40, 40)
-            end
-        end
-    end
-    
-    if not TeamColors[player.UserId] then
-        local hue = (player.UserId * 0.618033988749895) % 1
-        TeamColors[player.UserId] = Color3.fromHSV(hue, 0.8, 0.8)
-    end
-    return TeamColors[player.UserId]
+    return myTeam ~= theirTeam
 end
 
 local function PaintCharacter(character, player)
     if not character then return end
+    
     for _, child in ipairs(character:GetChildren()) do
-        if child:IsA("Highlight") then
+        if child:IsA("Highlight") and child.Name == ChamsTag then
             child:Destroy()
         end
     end
     
-    local highlight = Instance.new("Highlight")
-    highlight.Name = ChamsTag
-    highlight.FillColor = GetTeamColor(player)
-    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-    highlight.FillTransparency = 0.5
-    highlight.OutlineTransparency = 0.1
-    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    highlight.Adornee = character
-    highlight.Parent = character
+    if _G.ChamsEnabled and IsEnemy(player) then
+        local highlight = Instance.new("Highlight")
+        highlight.Name = ChamsTag
+        highlight.FillColor = Color3.fromRGB(180, 40, 40)
+        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+        highlight.FillTransparency = 0.5
+        highlight.OutlineTransparency = 0.1
+        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+        highlight.Adornee = character
+        highlight.Parent = character
+    end
 end
 
 local function SetupPlayer(player)
     if player == LocalPlayer then return end
+    
     if ChamsConnections[player] then
         if ChamsConnections[player].CharacterAdded then
             ChamsConnections[player].CharacterAdded:Disconnect()
@@ -339,26 +333,17 @@ local function SetupPlayer(player)
     end
     
     ChamsConnections[player] = {}
+    
     ChamsConnections[player].CharacterAdded = player.CharacterAdded:Connect(function(character)
-        task.wait(0.2)
+        task.wait(0.1)
         PaintCharacter(character, player)
     end)
     
-    if player:FindFirstChild("Team") then
-        ChamsConnections[player].TeamChanged = player:GetPropertyChangedSignal("Team"):Connect(function()
-            if player.Character then
-                PaintCharacter(player.Character, player)
-            end
-        end)
-    end
-    
-    if LocalPlayer then
-        ChamsConnections[player].LocalTeamChanged = LocalPlayer:GetPropertyChangedSignal("Team"):Connect(function()
-            if player.Character then
-                PaintCharacter(player.Character, player)
-            end
-        end)
-    end
+    ChamsConnections[player].TeamChanged = player:GetPropertyChangedSignal("Team"):Connect(function()
+        if player.Character then
+            PaintCharacter(player.Character, player)
+        end
+    end)
     
     if player.Character then
         PaintCharacter(player.Character, player)
@@ -368,13 +353,27 @@ end
 local function ApplyChams()
     if _G.UnloadChams then _G.UnloadChams() end
     _G.ChamsEnabled = true
+    
     for _, player in ipairs(Players:GetPlayers()) do
         SetupPlayer(player)
     end
+    
     ChamsConnections.PlayerAdded = Players.PlayerAdded:Connect(SetupPlayer)
+    
+    ChamsConnections.LocalTeamChanged = LocalPlayer:GetPropertyChangedSignal("Team"):Connect(function()
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character then
+                PaintCharacter(player.Character, player)
+            end
+        end
+    end)
+    
     _G.UnloadChams = function()
         if ChamsConnections.PlayerAdded then
             ChamsConnections.PlayerAdded:Disconnect()
+        end
+        if ChamsConnections.LocalTeamChanged then
+            ChamsConnections.LocalTeamChanged:Disconnect()
         end
         for _, player in ipairs(Players:GetPlayers()) do
             if ChamsConnections[player] then
@@ -384,19 +383,15 @@ local function ApplyChams()
                 if ChamsConnections[player].TeamChanged then
                     ChamsConnections[player].TeamChanged:Disconnect()
                 end
-                if ChamsConnections[player].LocalTeamChanged then
-                    ChamsConnections[player].LocalTeamChanged:Disconnect()
-                end
             end
             if player.Character then
                 for _, child in ipairs(player.Character:GetChildren()) do
-                    if child:IsA("Highlight") then
+                    if child:IsA("Highlight") and child.Name == ChamsTag then
                         child:Destroy()
                     end
                 end
             end
         end
-        TeamColors = {}
         _G.UnloadChams = nil
         _G.ChamsEnabled = false
     end
@@ -407,8 +402,6 @@ local function RemoveChams()
         _G.UnloadChams()
     end
 end
-
-ApplyChams()
 
 -- ===== ИНДИКАТОР =====
 local IndicatorLine = nil
@@ -735,7 +728,7 @@ if visualsPage then
     chamsDesc.Size = UDim2.new(0.7, 0, 0, 16)
     chamsDesc.Position = UDim2.new(0, 0, 0, 22)
     chamsDesc.BackgroundTransparency = 1
-    chamsDesc.Text = "Highlight players"
+    chamsDesc.Text = "Highlight enemies"
     chamsDesc.TextColor3 = Color3.fromRGB(113, 113, 122)
     chamsDesc.TextSize = 11
     chamsDesc.Font = Enum.Font.Gotham
@@ -817,7 +810,9 @@ if settingsPage then
     settingsContainer.Position = UDim2.new(0, 0, 0, 55)
     settingsContainer.BackgroundTransparency = 1
     settingsContainer.ClipsDescendants = true
-    settingsContainer.Parent = settingsPage    -- ===== UI Color =====
+    settingsContainer.Parent = settingsPage
+
+    -- ===== UI Color =====
     local toggleFrame = Instance.new("Frame")
     toggleFrame.Size = UDim2.new(1, 0, 0, 45)
     toggleFrame.Position = UDim2.new(0, 0, 0, 10)
@@ -1550,7 +1545,9 @@ if settingsPage then
     local function UpdateDots()
         local scale = _G.MenuScale / 45
         local w = 640 * scale
-        local h = 470 * scale        for _, data in ipairs(Dots) do
+        local h = 470 * scale
+
+        for _, data in ipairs(Dots) do
             if data and data.Frame then
                 data.PosX = data.PosX + data.SpeedX
                 data.PosY = data.PosY + data.SpeedY
