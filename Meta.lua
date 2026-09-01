@@ -1,6 +1,6 @@
 loadstring([[
--- ROCKET::META_UI_V7.0.16
--- CHAMS: FIXED TEAM DETECTION, ADDED TEAM CHECK METHOD SELECTOR
+-- ROCKET::META_UI_V7.0.17
+-- CHAMS: TEAM CHECK TOGGLE, ALLIES INVISIBLE, ENEMIES RED
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -21,7 +21,8 @@ _G.RainbowEnabled = false
 _G.MenuScale = 45
 _G.FlyingDots = false
 _G.ChamsEnabled = false
-_G.TeamCheckMethod = "Auto" -- Auto, Team, TeamColor, Attribute, Folder, None
+_G.TeamCheckEnabled = true
+_G.TeamCheckMethod = "Auto"
 
 local Dots = {}
 local DotConnection = nil
@@ -37,7 +38,7 @@ local LANG = {
             Scale = {"Scaling the menu", "Масштабирование меню (60-140%)"},
             FlyingDots = {"Летающие точки", "Точки, летающие с верху меню"},
             Chams = {"Chams", "Подсветка игроков"},
-            TeamCheck = {"Метод команд", "Способ определения союзников и врагов"},
+            TeamCheck = {"Team Check", "Скрывать союзников, показывать врагов"},
             Reset = {"Сброс настроек", "Вернуть все настройки к стандартным"}
         }
     },
@@ -50,7 +51,7 @@ local LANG = {
             Scale = {"Scaling the menu", "Menu scaling (60-140%)"},
             FlyingDots = {"Flying Dots", "Floating dots from the top of the menu"},
             Chams = {"Chams", "Highlight players"},
-            TeamCheck = {"Team Check Method", "Method of determining allies and enemies"},
+            TeamCheck = {"Team Check", "Hide allies, show enemies only"},
             Reset = {"Reset Settings", "Return all settings to default"}
         }
     }
@@ -246,7 +247,7 @@ local langUpdateCallbacks = {}
 local rainbowConnection = nil
 local langButtonData = {}
 
--- ===== CHAMS FUNCTIONS (FIXED TEAM DETECTION) =====
+-- ===== CHAMS FUNCTIONS =====
 local ChamsConnections = {}
 local ChamsTag = "META_Chams"
 
@@ -255,33 +256,24 @@ local function GetTeamIdentifier(player)
     local method = _G.TeamCheckMethod or "Auto"
 
     if method == "Auto" then
-        -- Метод 1: Стандартная команда
         if player.Team then
             teamId = player.Team.Name
         end
-
-        -- Метод 2: TeamColor
         if not teamId and player.TeamColor then
             teamId = tostring(player.TeamColor)
         end
-
-        -- Метод 3: Атрибуты
         if not teamId then
             local teamAttr = player:GetAttribute("Team") or player:GetAttribute("TeamName") or player:GetAttribute("team") or player:GetAttribute("TeamColor")
             if teamAttr then
                 teamId = tostring(teamAttr)
             end
         end
-
-        -- Метод 4: StringValue в игроке
         if not teamId then
             local teamValue = player:FindFirstChild("Team") or player:FindFirstChild("TeamName") or player:FindFirstChild("team") or player:FindFirstChild("TeamColor")
             if teamValue and (teamValue:IsA("StringValue") or teamValue:IsA("ObjectValue") or teamValue:IsA("IntValue")) then
                 teamId = tostring(teamValue.Value)
             end
         end
-
-        -- Метод 5: Folder с командами в workspace
         if not teamId then
             pcall(function()
                 local teamsFolder = workspace:FindFirstChild("Teams") or workspace:FindFirstChild("TeamsFolder")
@@ -300,8 +292,6 @@ local function GetTeamIdentifier(player)
                 end
             end)
         end
-
-        -- Метод 6: Проверка через Neutral
         if not teamId and player.Neutral ~= nil then
             teamId = tostring(player.Neutral)
         end
@@ -342,11 +332,14 @@ local function GetTeamIdentifier(player)
     return teamId
 end
 
-local function IsEnemy(player)
-    local isEnemy = true
+local function IsAlly(player)
+    -- Если Team Check выключен - все враги
+    if not _G.TeamCheckEnabled then
+        return false
+    end
 
     if _G.TeamCheckMethod == "None" then
-        return true
+        return false
     end
 
     local localTeamId = GetTeamIdentifier(LocalPlayer)
@@ -354,52 +347,45 @@ local function IsEnemy(player)
 
     if localTeamId and playerTeamId then
         if localTeamId == playerTeamId then
-            isEnemy = false
+            return true
         else
-            isEnemy = true
+            return false
         end
     else
         -- Fallback: TeamColor
         if LocalPlayer.TeamColor and player.TeamColor then
             if LocalPlayer.TeamColor == player.TeamColor then
-                isEnemy = false
+                return true
             else
-                isEnemy = true
+                return false
             end
-        else
-            -- Если у LocalPlayer нет команды, а у игрока есть
-            if player.Team and not LocalPlayer.Team then
-                isEnemy = true
-            elseif not player.Team and LocalPlayer.Team then
-                isEnemy = true
-            elseif not player.Team and not LocalPlayer.Team then
-                -- Если у обоих нет команд, пробуем Neutral
-                if player.Neutral ~= nil and LocalPlayer.Neutral ~= nil then
-                    if player.Neutral == LocalPlayer.Neutral then
-                        isEnemy = false
-                    else
-                        isEnemy = true
-                    end
-                else
-                    isEnemy = true
-                end
+        elseif LocalPlayer.Neutral ~= nil and player.Neutral ~= nil then
+            if LocalPlayer.Neutral == player.Neutral then
+                return true
+            else
+                return false
             end
         end
     end
 
-    return isEnemy
+    return false
 end
 
 local function PaintCharacter(character, player)
     if not character then return end
 
+    -- Удаляем старую подсветку
     if character:FindFirstChild(ChamsTag) then
         character[ChamsTag]:Destroy()
     end
 
-    local isEnemy = IsEnemy(player)
+    -- Если союзник и Team Check включен - не показываем
+    if IsAlly(player) then
+        return
+    end
 
-    local fillColor = isEnemy and Color3.fromRGB(180, 40, 40) or Color3.fromRGB(40, 180, 80)
+    -- Все остальные (враги) - красные
+    local fillColor = Color3.fromRGB(180, 40, 40)
 
     local highlight = Instance.new("Highlight")
     highlight.Name = ChamsTag
@@ -422,8 +408,14 @@ local function SetupPlayer(player)
         if ChamsConnections[player].TeamChanged then
             ChamsConnections[player].TeamChanged:Disconnect()
         end
+        if ChamsConnections[player].TeamColorChanged then
+            ChamsConnections[player].TeamColorChanged:Disconnect()
+        end
         if ChamsConnections[player].AttributeChanged then
             ChamsConnections[player].AttributeChanged:Disconnect()
+        end
+        if ChamsConnections[player].AttributeChanged2 then
+            ChamsConnections[player].AttributeChanged2:Disconnect()
         end
     end
 
@@ -890,7 +882,7 @@ if visualsPage then
     end
     table.insert(langUpdateCallbacks, UpdateChamsText)
 
-    -- ===== TEAM CHECK METHOD =====
+    -- ===== TEAM CHECK =====
     local teamCheckFrame = Instance.new("Frame")
     teamCheckFrame.Size = UDim2.new(1, 0, 0, 45)
     teamCheckFrame.Position = UDim2.new(0, 0, 0, 60)
@@ -901,7 +893,7 @@ if visualsPage then
     teamCheckLabel.Size = UDim2.new(0.6, 0, 0, 20)
     teamCheckLabel.Position = UDim2.new(0, 0, 0, 0)
     teamCheckLabel.BackgroundTransparency = 1
-    teamCheckLabel.Text = "Team Check Method"
+    teamCheckLabel.Text = "Team Check"
     teamCheckLabel.TextColor3 = Color3.fromRGB(209, 213, 219)
     teamCheckLabel.TextSize = 13
     teamCheckLabel.Font = Enum.Font.GothamBold
@@ -912,29 +904,77 @@ if visualsPage then
     teamCheckDesc.Size = UDim2.new(0.7, 0, 0, 16)
     teamCheckDesc.Position = UDim2.new(0, 0, 0, 22)
     teamCheckDesc.BackgroundTransparency = 1
-    teamCheckDesc.Text = "Method of determining allies and enemies"
+    teamCheckDesc.Text = "Hide allies, show enemies only"
     teamCheckDesc.TextColor3 = Color3.fromRGB(113, 113, 122)
     teamCheckDesc.TextSize = 11
     teamCheckDesc.Font = Enum.Font.Gotham
     teamCheckDesc.TextXAlignment = Enum.TextXAlignment.Left
     teamCheckDesc.Parent = teamCheckFrame
 
+    local teamCheckToggleBg = Instance.new("Frame")
+    teamCheckToggleBg.Size = UDim2.new(0, 44, 0, 24)
+    teamCheckToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
+    teamCheckToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
+    teamCheckToggleBg.BorderSizePixel = 0
+    teamCheckToggleBg.Parent = teamCheckFrame
+
+    local teamCheckToggleCorner = Instance.new("UICorner")
+    teamCheckToggleCorner.CornerRadius = UDim.new(1, 0)
+    teamCheckToggleCorner.Parent = teamCheckToggleBg
+
+    local teamCheckToggleHandle = Instance.new("Frame")
+    teamCheckToggleHandle.Size = UDim2.new(0, 18, 0, 18)
+    teamCheckToggleHandle.Position = UDim2.new(0, 3, 0.5, -9)
+    teamCheckToggleHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    teamCheckToggleHandle.BorderSizePixel = 0
+    teamCheckToggleHandle.Parent = teamCheckToggleBg
+
+    local teamCheckToggleHandleCorner = Instance.new("UICorner")
+    teamCheckToggleHandleCorner.CornerRadius = UDim.new(1, 0)
+    teamCheckToggleHandleCorner.Parent = teamCheckToggleHandle
+
+    local teamCheckClickArea = Instance.new("TextButton")
+    teamCheckClickArea.Size = UDim2.new(0, 44, 0, 24)
+    teamCheckClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
+    teamCheckClickArea.BackgroundTransparency = 1
+    teamCheckClickArea.Text = ""
+    teamCheckClickArea.ZIndex = 10
+    teamCheckClickArea.Parent = teamCheckFrame
+
+    -- Контейнер для методов (виден только при Team Check)
+    local methodContainer = Instance.new("Frame")
+    methodContainer.Size = UDim2.new(1, 0, 0, 120)
+    methodContainer.Position = UDim2.new(0, 0, 0, 110)
+    methodContainer.BackgroundTransparency = 1
+    methodContainer.Visible = _G.TeamCheckEnabled
+    methodContainer.Parent = visualsPage
+
+    local methodLabel = Instance.new("TextLabel")
+    methodLabel.Size = UDim2.new(0.6, 0, 0, 20)
+    methodLabel.Position = UDim2.new(0, 0, 0, 0)
+    methodLabel.BackgroundTransparency = 1
+    methodLabel.Text = "Team Check Method"
+    methodLabel.TextColor3 = Color3.fromRGB(209, 213, 219)
+    methodLabel.TextSize = 13
+    methodLabel.Font = Enum.Font.GothamBold
+    methodLabel.TextXAlignment = Enum.TextXAlignment.Left
+    methodLabel.Parent = methodContainer
+
     -- Кнопки методов
-    local methodButtons = {}
     local methodButtonData = {}
     local methodsPerRow = 3
     local methodButtonWidth = 0.28
     local methodButtonHeight = 28
     local methodGapX = 0.03
     local methodStartX = 0.0
-    local methodStartY = 42
+    local methodStartY = 25
 
     local function UpdateMethodButtons()
         for i, btnData in ipairs(methodButtonData) do
             local isActive = (_G.TeamCheckMethod == btnData.Method)
             local targetBg = isActive and Color3.fromRGB(59, 130, 246) or Color3.fromRGB(42, 47, 58)
             local targetTextColor = isActive and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(156, 163, 175)
-            
+
             TweenService:Create(btnData.Bg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
                 BackgroundColor3 = targetBg
             }):Play()
@@ -953,7 +993,7 @@ if visualsPage then
         btnBg.Position = UDim2.new(methodStartX + col * (methodButtonWidth + methodGapX), 0, methodStartY + row * (methodButtonHeight + 8), 0)
         btnBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
         btnBg.BorderSizePixel = 0
-        btnBg.Parent = teamCheckFrame
+        btnBg.Parent = methodContainer
 
         local btnCorner = Instance.new("UICorner")
         btnCorner.CornerRadius = UDim.new(0, 6)
@@ -989,6 +1029,35 @@ if visualsPage then
     end
 
     UpdateMethodButtons()
+
+    local function SetTeamCheckToggleState(value)
+        if value then
+            TweenService:Create(teamCheckToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+                BackgroundColor3 = Color3.fromRGB(59, 130, 246)
+            }):Play()
+            TweenService:Create(teamCheckToggleHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+                Position = UDim2.new(0, 23, 0.5, -9)
+            }):Play()
+            methodContainer.Visible = true
+        else
+            TweenService:Create(teamCheckToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+                BackgroundColor3 = Color3.fromRGB(42, 47, 58)
+            }):Play()
+            TweenService:Create(teamCheckToggleHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+                Position = UDim2.new(0, 3, 0.5, -9)
+            }):Play()
+            methodContainer.Visible = false
+        end
+        _G.TeamCheckEnabled = value
+        RefreshChams()
+    end
+
+    SetTeamCheckToggleState(_G.TeamCheckEnabled)
+
+    teamCheckClickArea.MouseButton1Click:Connect(function()
+        PlayClickSound()
+        SetTeamCheckToggleState(not _G.TeamCheckEnabled)
+    end)
 
     local function UpdateTeamCheckText()
         local lang = GetLang()
@@ -1976,6 +2045,7 @@ if settingsPage then
         _G.MenuScale = 45
         _G.FlyingDots = false
         _G.ChamsEnabled = false
+        _G.TeamCheckEnabled = true
         _G.TeamCheckMethod = "Auto"
 
         MainFrame.BackgroundTransparency = 0.12
@@ -1985,6 +2055,8 @@ if settingsPage then
 
         RemoveChams()
         SetChamsToggleState(false)
+        SetTeamCheckToggleState(true)
+        UpdateMethodButtons()
 
         for _, btn in ipairs(langButtonData) do
             pcall(btn.Update, false)
@@ -2028,8 +2100,6 @@ if settingsPage then
         scaleValue.Text = tostring(math.round((_G.MenuScale / 45) * 100)) .. "%"
 
         pickerDot.Position = UDim2.new(0.5, -5, 0.5, -5)
-
-        UpdateMethodButtons()
 
         print("[RESET] All settings restored to default")
         PlayClickSound()
@@ -2075,6 +2145,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] META v7.0.16 - Fixed Team Detection, Added Team Check Method Selector")
+print("[META] META v7.0.17 - Team Check Toggle: Allies Invisible, Enemies Red")
 print("[META] Press Insert to toggle menu")
 ]])()
