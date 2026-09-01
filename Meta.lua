@@ -1,6 +1,6 @@
 loadstring([[
--- ROCKET::META_UI_V7.0.20
--- CHAMS: RODUX TEAM DETECTION, ENEMY RED, ALLY INVISIBLE
+-- ROCKET::META_UI_V7.0.21
+-- FIXED: TAB SWITCHING AFTER LANGUAGE CHANGE, UPDATED CHAMS DESCRIPTION
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -35,7 +35,7 @@ local LANG = {
             Rainbow = {"Разноцветная обводка", "Включить радужную обводку меню"},
             Scale = {"Scaling the menu", "Масштабирование меню (60-140%)"},
             FlyingDots = {"Летающие точки", "Точки, летающие с верху меню"},
-            Chams = {"Chams", "Подсветка врагов красным"},
+            Chams = {"Chams", "Функция которая делает противников красным цветом"},
             Reset = {"Сброс настроек", "Вернуть все настройки к стандартным"}
         }
     },
@@ -47,7 +47,7 @@ local LANG = {
             Rainbow = {"UI Rainbow Color", "Enable rainbow menu outline"},
             Scale = {"Scaling the menu", "Menu scaling (60-140%)"},
             FlyingDots = {"Flying Dots", "Floating dots from the top of the menu"},
-            Chams = {"Chams", "Highlight enemies red"},
+            Chams = {"Chams", "Function that makes enemies red"},
             Reset = {"Reset Settings", "Return all settings to default"}
         }
     }
@@ -248,55 +248,48 @@ local ChamsTag = "META_Chams"
 local function IsEnemy(player)
     if not player or player == LocalPlayer then return false end
 
-    -- Проверка №1: Сравнение физических объектов Team
     if player.Team and LocalPlayer.Team then
         if player.Team ~= LocalPlayer.Team then
             return true
         end
-        -- Проверка №2: Если объекты одинаковые, но имена внутри Rodux разные (T и CT)
         if player.Team.Name ~= LocalPlayer.Team.Name then
             return true
         end
     end
 
-    -- Проверка №3: Сравнение по TeamColor (Rodux всегда синхронизирует цвета таблиц)
     if player.TeamColor and LocalPlayer.TeamColor then
         if player.TeamColor ~= LocalPlayer.TeamColor then
             return true
         end
     end
 
-    -- Если проверки выше не дали точного ответа, сверяем стандартные скрытые атрибуты
     local mySide = LocalPlayer:GetAttribute("Team") or LocalPlayer:GetAttribute("Side") or ""
     local enemySide = player:GetAttribute("Team") or player:GetAttribute("Side") or ""
     if mySide ~= "" and enemySide ~= "" then
         return mySide ~= enemySide
     end
 
-    return false -- Тиммейтов не трогаем вообще
+    return false
 end
 
 local function PaintCharacter(character, player)
     if not character or not player then return end
 
-    -- Удаляем старую подсветку перед обновлением
     if character:FindFirstChild(ChamsTag) then
         character[ChamsTag]:Destroy()
     end
 
-    -- ЕСЛИ ПРОТИВНИК — ДЕЛАЕМ КРАСНЫМ
     if IsEnemy(player) then
         local highlight = Instance.new("Highlight")
         highlight.Name = ChamsTag
-        highlight.FillColor = Color3.fromRGB(255, 30, 30) -- Яркий чистый красный цвет
-        highlight.OutlineColor = Color3.fromRGB(255, 255, 255) -- Белая обводка, чтобы видеть через стены
+        highlight.FillColor = Color3.fromRGB(255, 30, 30)
+        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
         highlight.FillTransparency = 0.45
         highlight.OutlineTransparency = 0.1
         highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
         highlight.Adornee = character
         highlight.Parent = character
     end
-    -- Если это тиммейт, скрипт просто ничего не создаст, и он останется обычным
 end
 
 local function SetupPlayer(player)
@@ -306,13 +299,11 @@ local function SetupPlayer(player)
         ChamsConnections[player]:Disconnect()
     end
 
-    -- Красим врага при его возрождении (с задержкой, чтобы игра успела выдать ему команду в Rodux)
     ChamsConnections[player] = player.CharacterAdded:Connect(function(character)
         task.wait(0.6)
         PaintCharacter(character, player)
     end)
 
-    -- Если враг уже бегает на карте — красим сразу
     if player.Character then
         task.wait(0.2)
         PaintCharacter(player.Character, player)
@@ -323,15 +314,12 @@ local function ApplyChams()
     if _G.UnloadChams then _G.UnloadChams() end
     _G.ChamsEnabled = true
 
-    -- Запускаем для всех текущих игроков на сервере
     for _, player in ipairs(Players:GetPlayers()) do
         SetupPlayer(player)
     end
 
-    -- Отслеживаем новых игроков, которые заходят на сервер
     ChamsConnections.PlayerAdded = Players.PlayerAdded:Connect(SetupPlayer)
 
-    -- ФОНОВЫЙ ПОТОК (Перепроверяет команды каждые 2 секунды, чтобы чамсы не слетали при смене раунда)
     task.spawn(function()
         while _G.ChamsEnabled do
             for _, player in ipairs(Players:GetPlayers()) do
@@ -342,7 +330,7 @@ local function ApplyChams()
                     if shouldBeRed and not hasChams then
                         PaintCharacter(player.Character, player)
                     elseif not shouldBeRed and hasChams then
-                        player.Character[ChamsTag]:Destroy() -- Если враг стал тиммейтом — убираем подсветку
+                        player.Character[ChamsTag]:Destroy()
                     end
                 end
             end
@@ -350,7 +338,6 @@ local function ApplyChams()
         end
     end)
 
-    -- Авто-перекраска всех игроков, если ТЫ САМ сменил команду
     LocalPlayer:GetPropertyChangedSignal("Team"):Connect(function()
         task.wait(0.5)
         for _, p in ipairs(Players:GetPlayers()) do
@@ -358,7 +345,6 @@ local function ApplyChams()
         end
     end)
 
-    -- Функция полного удаления чита из памяти игры
     _G.UnloadChams = function()
         _G.ChamsEnabled = false
         if ChamsConnections.PlayerAdded then ChamsConnections.PlayerAdded:Disconnect() end
@@ -404,7 +390,6 @@ local function UpdateIndicatorPosition(index)
     if not IndicatorLine then return end
     if index < 1 or index > #TabButtons then return end
 
-    local btn = TabButtons[index]
     local width = 0.12
     local xPos = 0.02 + (index - 1) * (width + 0.03)
 
@@ -453,35 +438,37 @@ local function HighlightElement(element)
     highlight:Destroy()
 end
 
--- ===== ФУНКЦИЯ ПЕРЕКЛЮЧЕНИЯ ВКЛАДКИ =====
-local function SwitchToTab(tabName)
-    for i, btn in ipairs(TabButtons) do
-        if btn.Text == tabName then
-            for _, b in ipairs(TabButtons) do
-                b.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
-                b.TextColor3 = Color3.fromRGB(156, 163, 175)
-                TweenService:Create(b, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-                    Size = UDim2.new(0.12, 0, 0, 32)
-                }):Play()
-            end
+-- ===== ФУНКЦИЯ ПЕРЕКЛЮЧЕНИЯ ВКЛАДКИ (ИСПРАВЛЕННАЯ) =====
+local function SwitchToTab(index)
+    if index < 1 or index > #TabButtons then return end
 
-            btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
-            btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-            TweenService:Create(btn, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-                Size = UDim2.new(0.14, 0, 0, 36)
-            }):Play()
-
-            for _, page in pairs(ContentPages) do
-                page.Visible = false
-            end
-            local targetPage = ContentPages[tabName]
-            if targetPage then targetPage.Visible = true end
-            activeIndex = i
-
-            UpdateIndicatorPosition(i)
-            break
-        end
+    for i, b in ipairs(TabButtons) do
+        b.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
+        b.TextColor3 = Color3.fromRGB(156, 163, 175)
+        TweenService:Create(b, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0.12, 0, 0, 32)
+        }):Play()
     end
+
+    local btn = TabButtons[index]
+    btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TweenService:Create(btn, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0.14, 0, 0, 36)
+    }):Play()
+
+    for name, page in pairs(ContentPages) do
+        page.Visible = false
+    end
+
+    local targetName = TabNames[index]
+    local targetPage = ContentPages[targetName]
+    if targetPage then
+        targetPage.Visible = true
+    end
+
+    activeIndex = index
+    UpdateIndicatorPosition(index)
 end
 
 -- ===== ПОИСК =====
@@ -518,7 +505,12 @@ local function SearchInMenu(query)
     end
 
     if #foundElements > 0 and foundTabName then
-        SwitchToTab(foundTabName)
+        for idx, tabName in ipairs(TabNames) do
+            if tabName == foundTabName then
+                SwitchToTab(idx)
+                break
+            end
+        end
 
         for _, data in ipairs(foundElements) do
             HighlightElement(data.element)
@@ -584,7 +576,7 @@ for i, name in ipairs(TabNames) do
 
     btn.MouseButton1Click:Connect(function()
         PlayTabSound()
-        SwitchToTab(name)
+        SwitchToTab(i)
     end)
 
     table.insert(TabButtons, btn)
@@ -678,7 +670,7 @@ if visualsPage then
     chamsDesc.Size = UDim2.new(0.7, 0, 0, 16)
     chamsDesc.Position = UDim2.new(0, 0, 0, 22)
     chamsDesc.BackgroundTransparency = 1
-    chamsDesc.Text = "Highlight enemies red"
+    chamsDesc.Text = "Function that makes enemies red"
     chamsDesc.TextColor3 = Color3.fromRGB(113, 113, 122)
     chamsDesc.TextSize = 11
     chamsDesc.Font = Enum.Font.Gotham
@@ -1825,6 +1817,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] META v7.0.20 - Chams: Rodux Team Detection")
+print("[META] META v7.0.21 - Fixed Tab Switching After Language Change")
 print("[META] Press Insert to toggle menu")
 ]])()
