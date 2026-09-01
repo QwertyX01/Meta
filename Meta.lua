@@ -1,5 +1,5 @@
--- ROCKET::META_UI_V7.0.29
--- ПОЛНОСТЬЮ РАБОЧЕЕ МЕНЮ БЕЗ АВТОЧИСТКИ
+-- ROCKET::META_UI_V7.0.30
+-- ИСПРАВЛЕНА ОШИБКА: ВСЕ ФУНКЦИИ ОБЪЯВЛЕНЫ ВВЕРХУ
 
 -- Генерация случайного ключа для защиты от обнаружения по имени переменной
 local UI_NAME_MASK = "RobloxGui" .. tostring(math.random(1000, 9999))
@@ -92,168 +92,7 @@ local function PlayClickSound()
     task.delay(sound.TimeLength + 0.1, function() sound:Destroy() end)
 end
 
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 640 * (_G.MenuScale / 45), 0, 470 * (_G.MenuScale / 45))
-MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(17, 20, 26)
-MainFrame.BackgroundTransparency = _G.MenuOpacity / 100
-MainFrame.ClipsDescendants = true
-MainFrame.Parent = ScreenGui
-MainFrame.Draggable = true
-MainFrame.Active = true
-MainFrame.Selectable = true
-
--- ===== АНИМАЦИЯ ПОЯВЛЕНИЯ =====
-MainFrame.BackgroundTransparency = 1
-MainFrame.Size = UDim2.new(0, 640 * (_G.MenuScale / 45) * 0.7, 0, 470 * (_G.MenuScale / 45) * 0.7)
-
-task.wait(0.05)
-
-TweenService:Create(MainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-    Size = UDim2.new(0, 640 * (_G.MenuScale / 45), 0, 470 * (_G.MenuScale / 45)),
-    BackgroundTransparency = _G.MenuOpacity / 100
-}):Play()
-
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 12)
-MainCorner.Parent = MainFrame
-
-local MainStroke = Instance.new("UIStroke")
-MainStroke.Thickness = 2
-MainStroke.Color = _G.MenuThemeColor
-MainStroke.Transparency = 0.4
-MainStroke.Parent = MainFrame
-
-local function UpdateMenuScale()
-    if not MainFrame then return end
-    local scale = _G.MenuScale / 45
-    MainFrame.Size = UDim2.new(0, 640 * scale, 0, 470 * scale)
-    if _G.FlyingDots then
-        RebuildDots()
-    end
-end
-
-local Header = Instance.new("Frame")
-Header.Size = UDim2.new(1, 0, 0, 38)
-Header.BackgroundTransparency = 1
-Header.Parent = MainFrame
-
-local MetaLabel = Instance.new("TextLabel")
-MetaLabel.Size = UDim2.new(0.1, 0, 1, 0)
-MetaLabel.Position = UDim2.new(0, 15, 0, 0)
-MetaLabel.BackgroundTransparency = 1
-MetaLabel.Text = "META"
-MetaLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-MetaLabel.TextSize = 20
-MetaLabel.Font = Enum.Font.GothamBold
-MetaLabel.TextXAlignment = Enum.TextXAlignment.Left
-MetaLabel.TextYAlignment = Enum.TextYAlignment.Center
-MetaLabel.Parent = Header
-
-local GameNameLabel = Instance.new("TextLabel")
-GameNameLabel.Size = UDim2.new(0.35, 0, 1, 0)
-GameNameLabel.Position = UDim2.new(0.32, 0, 0, 0)
-GameNameLabel.BackgroundTransparency = 1
-GameNameLabel.Text = "Loading..."
-GameNameLabel.TextColor3 = Color3.fromRGB(156, 163, 175)
-GameNameLabel.TextSize = 13
-GameNameLabel.Font = Enum.Font.Gotham
-GameNameLabel.TextXAlignment = Enum.TextXAlignment.Left
-GameNameLabel.TextYAlignment = Enum.TextYAlignment.Center
-GameNameLabel.Parent = Header
-
-pcall(function()
-    local MarketplaceService = game:GetService("MarketplaceService")
-    local info = MarketplaceService:GetProductInfo(game.PlaceId)
-    if info and info.Name then
-        GameNameLabel.Text = info.Name
-    else
-        GameNameLabel.Text = "Unknown Game"
-    end
-end)
-
--- ===== ПОИСК =====
-local SearchContainer = Instance.new("Frame")
-SearchContainer.Size = UDim2.new(0.3, 0, 0.7, 0)
-SearchContainer.Position = UDim2.new(0.68, 0, 0.15, 0)
-SearchContainer.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
-SearchContainer.BackgroundTransparency = 0.5
-SearchContainer.BorderSizePixel = 0
-SearchContainer.Parent = Header
-
-local SearchCorner = Instance.new("UICorner")
-SearchCorner.CornerRadius = UDim.new(0, 6)
-SearchCorner.Parent = SearchContainer
-
-local SearchStroke = Instance.new("UIStroke")
-SearchStroke.Thickness = 1
-SearchStroke.Color = _G.MenuThemeColor
-SearchStroke.Transparency = 0.6
-SearchStroke.Parent = SearchContainer
-
-local SearchInput = Instance.new("TextBox")
-SearchInput.Size = UDim2.new(1, -12, 1, 0)
-SearchInput.Position = UDim2.new(0, 8, 0, 0)
-SearchInput.BackgroundTransparency = 1
-SearchInput.Text = "Search..."
-SearchInput.TextColor3 = Color3.fromRGB(209, 213, 219)
-SearchInput.TextSize = 13
-SearchInput.Font = Enum.Font.Gotham
-SearchInput.TextXAlignment = Enum.TextXAlignment.Left
-SearchInput.TextYAlignment = Enum.TextYAlignment.Center
-SearchInput.ClearTextOnFocus = false
-SearchInput.Parent = SearchContainer
-
-local SearchClose = Instance.new("TextButton")
-SearchClose.Size = UDim2.new(0, 16, 1, 0)
-SearchClose.Position = UDim2.new(1, -20, 0, 0)
-SearchClose.BackgroundTransparency = 1
-SearchClose.Text = "✕"
-SearchClose.TextColor3 = Color3.fromRGB(156, 163, 175)
-SearchClose.TextSize = 11
-SearchClose.Font = Enum.Font.Gotham
-SearchClose.TextXAlignment = Enum.TextXAlignment.Center
-SearchClose.TextYAlignment = Enum.TextYAlignment.Center
-SearchClose.Visible = false
-SearchClose.Parent = SearchContainer
-
-SearchClose.MouseButton1Click:Connect(function()
-    SearchInput.Text = "Search..."
-    SearchClose.Visible = false
-    PlayClickSound()
-end)
-
-SearchInput:GetPropertyChangedSignal("Text"):Connect(function()
-    if SearchInput.Text ~= "" and SearchInput.Text ~= "Search..." then
-        SearchClose.Visible = true
-    else
-        SearchClose.Visible = false
-    end
-end)
-
-local Separator = Instance.new("Frame")
-Separator.Size = UDim2.new(1, -20, 0, 1)
-Separator.Position = UDim2.new(0, 10, 0, 38)
-Separator.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
-Separator.BorderSizePixel = 0
-Separator.Parent = MainFrame
-
-local TabContainer = Instance.new("Frame")
-TabContainer.Size = UDim2.new(1, 0, 0, 48)
-TabContainer.Position = UDim2.new(0, 0, 0, 39)
-TabContainer.BackgroundTransparency = 1
-TabContainer.Parent = MainFrame
-
-local TabNames = {"Aimbot", "Visuals", "Settings"}
-local TabButtons = {}
-local ContentPages = {}
-local activeIndex = 1
-local langUpdateCallbacks = {}
-local rainbowConnection = nil
-local langButtonData = {}
-
--- ===== CHAMS (РАСШИРЕННОЕ ОПРЕДЕЛЕНИЕ КОМАНД) =====
+-- ===== CHAMS (ГЛОБАЛЬНЫЕ ФУНКЦИИ) =====
 local ChamsConnections = {}
 local ChamsTag = "EnemyHighlight_" .. tostring(math.random(1000, 9999))
 
@@ -446,6 +285,168 @@ local function RemoveChams()
         _G.UnloadChams()
     end
 end
+
+-- ===== ОСНОВНОЙ GUI =====
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 640 * (_G.MenuScale / 45), 0, 470 * (_G.MenuScale / 45))
+MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(17, 20, 26)
+MainFrame.BackgroundTransparency = _G.MenuOpacity / 100
+MainFrame.ClipsDescendants = true
+MainFrame.Parent = ScreenGui
+MainFrame.Draggable = true
+MainFrame.Active = true
+MainFrame.Selectable = true
+
+-- ===== АНИМАЦИЯ ПОЯВЛЕНИЯ =====
+MainFrame.BackgroundTransparency = 1
+MainFrame.Size = UDim2.new(0, 640 * (_G.MenuScale / 45) * 0.7, 0, 470 * (_G.MenuScale / 45) * 0.7)
+
+task.wait(0.05)
+
+TweenService:Create(MainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+    Size = UDim2.new(0, 640 * (_G.MenuScale / 45), 0, 470 * (_G.MenuScale / 45)),
+    BackgroundTransparency = _G.MenuOpacity / 100
+}):Play()
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 12)
+MainCorner.Parent = MainFrame
+
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Thickness = 2
+MainStroke.Color = _G.MenuThemeColor
+MainStroke.Transparency = 0.4
+MainStroke.Parent = MainFrame
+
+local function UpdateMenuScale()
+    if not MainFrame then return end
+    local scale = _G.MenuScale / 45
+    MainFrame.Size = UDim2.new(0, 640 * scale, 0, 470 * scale)
+    if _G.FlyingDots then
+        RebuildDots()
+    end
+end
+
+local Header = Instance.new("Frame")
+Header.Size = UDim2.new(1, 0, 0, 38)
+Header.BackgroundTransparency = 1
+Header.Parent = MainFrame
+
+local MetaLabel = Instance.new("TextLabel")
+MetaLabel.Size = UDim2.new(0.1, 0, 1, 0)
+MetaLabel.Position = UDim2.new(0, 15, 0, 0)
+MetaLabel.BackgroundTransparency = 1
+MetaLabel.Text = "META"
+MetaLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+MetaLabel.TextSize = 20
+MetaLabel.Font = Enum.Font.GothamBold
+MetaLabel.TextXAlignment = Enum.TextXAlignment.Left
+MetaLabel.TextYAlignment = Enum.TextYAlignment.Center
+MetaLabel.Parent = Header
+
+local GameNameLabel = Instance.new("TextLabel")
+GameNameLabel.Size = UDim2.new(0.35, 0, 1, 0)
+GameNameLabel.Position = UDim2.new(0.32, 0, 0, 0)
+GameNameLabel.BackgroundTransparency = 1
+GameNameLabel.Text = "Loading..."
+GameNameLabel.TextColor3 = Color3.fromRGB(156, 163, 175)
+GameNameLabel.TextSize = 13
+GameNameLabel.Font = Enum.Font.Gotham
+GameNameLabel.TextXAlignment = Enum.TextXAlignment.Left
+GameNameLabel.TextYAlignment = Enum.TextYAlignment.Center
+GameNameLabel.Parent = Header
+
+pcall(function()
+    local MarketplaceService = game:GetService("MarketplaceService")
+    local info = MarketplaceService:GetProductInfo(game.PlaceId)
+    if info and info.Name then
+        GameNameLabel.Text = info.Name
+    else
+        GameNameLabel.Text = "Unknown Game"
+    end
+end)
+
+-- ===== ПОИСК =====
+local SearchContainer = Instance.new("Frame")
+SearchContainer.Size = UDim2.new(0.3, 0, 0.7, 0)
+SearchContainer.Position = UDim2.new(0.68, 0, 0.15, 0)
+SearchContainer.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
+SearchContainer.BackgroundTransparency = 0.5
+SearchContainer.BorderSizePixel = 0
+SearchContainer.Parent = Header
+
+local SearchCorner = Instance.new("UICorner")
+SearchCorner.CornerRadius = UDim.new(0, 6)
+SearchCorner.Parent = SearchContainer
+
+local SearchStroke = Instance.new("UIStroke")
+SearchStroke.Thickness = 1
+SearchStroke.Color = _G.MenuThemeColor
+SearchStroke.Transparency = 0.6
+SearchStroke.Parent = SearchContainer
+
+local SearchInput = Instance.new("TextBox")
+SearchInput.Size = UDim2.new(1, -12, 1, 0)
+SearchInput.Position = UDim2.new(0, 8, 0, 0)
+SearchInput.BackgroundTransparency = 1
+SearchInput.Text = "Search..."
+SearchInput.TextColor3 = Color3.fromRGB(209, 213, 219)
+SearchInput.TextSize = 13
+SearchInput.Font = Enum.Font.Gotham
+SearchInput.TextXAlignment = Enum.TextXAlignment.Left
+SearchInput.TextYAlignment = Enum.TextYAlignment.Center
+SearchInput.ClearTextOnFocus = false
+SearchInput.Parent = SearchContainer
+
+local SearchClose = Instance.new("TextButton")
+SearchClose.Size = UDim2.new(0, 16, 1, 0)
+SearchClose.Position = UDim2.new(1, -20, 0, 0)
+SearchClose.BackgroundTransparency = 1
+SearchClose.Text = "✕"
+SearchClose.TextColor3 = Color3.fromRGB(156, 163, 175)
+SearchClose.TextSize = 11
+SearchClose.Font = Enum.Font.Gotham
+SearchClose.TextXAlignment = Enum.TextXAlignment.Center
+SearchClose.TextYAlignment = Enum.TextYAlignment.Center
+SearchClose.Visible = false
+SearchClose.Parent = SearchContainer
+
+SearchClose.MouseButton1Click:Connect(function()
+    SearchInput.Text = "Search..."
+    SearchClose.Visible = false
+    PlayClickSound()
+end)
+
+SearchInput:GetPropertyChangedSignal("Text"):Connect(function()
+    if SearchInput.Text ~= "" and SearchInput.Text ~= "Search..." then
+        SearchClose.Visible = true
+    else
+        SearchClose.Visible = false
+    end
+end)
+
+local Separator = Instance.new("Frame")
+Separator.Size = UDim2.new(1, -20, 0, 1)
+Separator.Position = UDim2.new(0, 10, 0, 38)
+Separator.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
+Separator.BorderSizePixel = 0
+Separator.Parent = MainFrame
+
+local TabContainer = Instance.new("Frame")
+TabContainer.Size = UDim2.new(1, 0, 0, 48)
+TabContainer.Position = UDim2.new(0, 0, 0, 39)
+TabContainer.BackgroundTransparency = 1
+TabContainer.Parent = MainFrame
+
+local TabNames = {"Aimbot", "Visuals", "Settings"}
+local TabButtons = {}
+local ContentPages = {}
+local activeIndex = 1
+local langUpdateCallbacks = {}
+local rainbowConnection = nil
+local langButtonData = {}
 
 -- ===== ИНДИКАТОР =====
 local IndicatorLine = nil
@@ -845,10 +846,11 @@ if visualsPage then
     table.insert(langUpdateCallbacks, UpdateChamsText)
 end
 
+-- ===== НАСТРОЙКИ =====
 local settingsPage = ContentPages["Settings"]
 if settingsPage then
     settingsPage.CanvasSize = UDim2.new(0, 0, 0, 600)
-
+    
     local settingsContainer = Instance.new("Frame")
     settingsContainer.Size = UDim2.new(1, 0, 0, 500)
     settingsContainer.Position = UDim2.new(0, 0, 0, 55)
@@ -1828,6 +1830,9 @@ if settingsPage then
         UpdateIndicatorColor(_G.MenuThemeColor)
         SearchStroke.Color = _G.MenuThemeColor
         
+        -- Удаляем Chams при сбросе
+        RemoveChams()
+        
         for _, btn in ipairs(langButtonData) do
             pcall(btn.Update, false)
         end
@@ -1858,6 +1863,9 @@ if settingsPage then
         SetToggleState(false)
         pickerContainer.Visible = false
         ShiftContainer(false)
+        
+        -- Сбрасываем тоггл Chams в UI
+        SetChamsToggleState(false)
         
         local opacityPercent = _G.MenuOpacity / 50
         opacitySliderFill.Size = UDim2.new(opacityPercent, 0, 1, 0)
@@ -1913,5 +1921,3 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         MainFrame.Visible = not MainFrame.Visible
     end
 end)
-
--- ===== НИКАКОЙ ЧИСТКИ! МЕНЮ РАБОТАЕТ ПОКА СКРИПТ ЗАПУЩЕН =====
