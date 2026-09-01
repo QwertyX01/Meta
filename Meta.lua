@@ -1,6 +1,6 @@
 loadstring([[
--- ROCKET::META_UI_V7.0.19
--- CHAMS: ENEMY RED, ALLY INVISIBLE (TEAM CHECK)
+-- ROCKET::META_UI_V7.0.20
+-- CHAMS: RODUX TEAM DETECTION, ENEMY RED, ALLY INVISIBLE
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -241,72 +241,80 @@ local langUpdateCallbacks = {}
 local rainbowConnection = nil
 local langButtonData = {}
 
--- ===== CHAMS FUNCTIONS (ENEMY RED, ALLY INVISIBLE) =====
+-- ===== CHAMS FUNCTIONS (RODUX TEAM DETECTION) =====
 local ChamsConnections = {}
 local ChamsTag = "META_Chams"
 
-local function PaintCharacter(character, player)
-    if not character then return end
+local function IsEnemy(player)
+    if not player or player == LocalPlayer then return false end
 
-    -- Удаляем старую подсветку если есть
+    -- Проверка №1: Сравнение физических объектов Team
+    if player.Team and LocalPlayer.Team then
+        if player.Team ~= LocalPlayer.Team then
+            return true
+        end
+        -- Проверка №2: Если объекты одинаковые, но имена внутри Rodux разные (T и CT)
+        if player.Team.Name ~= LocalPlayer.Team.Name then
+            return true
+        end
+    end
+
+    -- Проверка №3: Сравнение по TeamColor (Rodux всегда синхронизирует цвета таблиц)
+    if player.TeamColor and LocalPlayer.TeamColor then
+        if player.TeamColor ~= LocalPlayer.TeamColor then
+            return true
+        end
+    end
+
+    -- Если проверки выше не дали точного ответа, сверяем стандартные скрытые атрибуты
+    local mySide = LocalPlayer:GetAttribute("Team") or LocalPlayer:GetAttribute("Side") or ""
+    local enemySide = player:GetAttribute("Team") or player:GetAttribute("Side") or ""
+    if mySide ~= "" and enemySide ~= "" then
+        return mySide ~= enemySide
+    end
+
+    return false -- Тиммейтов не трогаем вообще
+end
+
+local function PaintCharacter(character, player)
+    if not character or not player then return end
+
+    -- Удаляем старую подсветку перед обновлением
     if character:FindFirstChild(ChamsTag) then
         character[ChamsTag]:Destroy()
     end
 
-    -- Проверяем команды: если команд нет или команда игрока отличается от нашей — он враг
-    local isEnemy = true
-    if player.Team and LocalPlayer.Team then
-        if player.Team == LocalPlayer.Team then
-            isEnemy = false
-        end
-    end
-
-    -- Если враг — красим в красный. Если союзник — пропускаем
-    if isEnemy then
-        local fillColor = Color3.fromRGB(255, 40, 40) -- Яркий красный цвет
-
+    -- ЕСЛИ ПРОТИВНИК — ДЕЛАЕМ КРАСНЫМ
+    if IsEnemy(player) then
         local highlight = Instance.new("Highlight")
         highlight.Name = ChamsTag
-        highlight.FillColor = fillColor
-        highlight.OutlineColor = Color3.fromRGB(255, 255, 255) -- Белая обводка
-        highlight.FillTransparency = 0.5
+        highlight.FillColor = Color3.fromRGB(255, 30, 30) -- Яркий чистый красный цвет
+        highlight.OutlineColor = Color3.fromRGB(255, 255, 255) -- Белая обводка, чтобы видеть через стены
+        highlight.FillTransparency = 0.45
         highlight.OutlineTransparency = 0.1
         highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
         highlight.Adornee = character
         highlight.Parent = character
     end
+    -- Если это тиммейт, скрипт просто ничего не создаст, и он останется обычным
 end
 
 local function SetupPlayer(player)
     if player == LocalPlayer then return end
 
-    -- Отключаем старые соединения если есть
     if ChamsConnections[player] then
-        if ChamsConnections[player].CharacterAdded then
-            ChamsConnections[player].CharacterAdded:Disconnect()
-        end
-        if ChamsConnections[player].TeamChanged then
-            ChamsConnections[player].TeamChanged:Disconnect()
-        end
+        ChamsConnections[player]:Disconnect()
     end
 
-    ChamsConnections[player] = {}
-
-    -- При появлении персонажа - красим
-    ChamsConnections[player].CharacterAdded = player.CharacterAdded:Connect(function(character)
-        task.wait(0.1)
+    -- Красим врага при его возрождении (с задержкой, чтобы игра успела выдать ему команду в Rodux)
+    ChamsConnections[player] = player.CharacterAdded:Connect(function(character)
+        task.wait(0.6)
         PaintCharacter(character, player)
     end)
 
-    -- При смене команды - перекрашиваем
-    ChamsConnections[player].TeamChanged = player:GetPropertyChangedSignal("Team"):Connect(function()
-        if player.Character then
-            PaintCharacter(player.Character, player)
-        end
-    end)
-
-    -- Если персонаж уже есть - красим сразу
+    -- Если враг уже бегает на карте — красим сразу
     if player.Character then
+        task.wait(0.2)
         PaintCharacter(player.Character, player)
     end
 end
@@ -315,31 +323,51 @@ local function ApplyChams()
     if _G.UnloadChams then _G.UnloadChams() end
     _G.ChamsEnabled = true
 
+    -- Запускаем для всех текущих игроков на сервере
     for _, player in ipairs(Players:GetPlayers()) do
         SetupPlayer(player)
     end
 
+    -- Отслеживаем новых игроков, которые заходят на сервер
     ChamsConnections.PlayerAdded = Players.PlayerAdded:Connect(SetupPlayer)
 
-    _G.UnloadChams = function()
-        if ChamsConnections.PlayerAdded then
-            ChamsConnections.PlayerAdded:Disconnect()
-        end
-        for _, player in ipairs(Players:GetPlayers()) do
-            if ChamsConnections[player] then
-                if ChamsConnections[player].CharacterAdded then
-                    ChamsConnections[player].CharacterAdded:Disconnect()
-                end
-                if ChamsConnections[player].TeamChanged then
-                    ChamsConnections[player].TeamChanged:Disconnect()
+    -- ФОНОВЫЙ ПОТОК (Перепроверяет команды каждые 2 секунды, чтобы чамсы не слетали при смене раунда)
+    task.spawn(function()
+        while _G.ChamsEnabled do
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player.Character and player ~= LocalPlayer then
+                    local hasChams = player.Character:FindFirstChild(ChamsTag)
+                    local shouldBeRed = IsEnemy(player)
+
+                    if shouldBeRed and not hasChams then
+                        PaintCharacter(player.Character, player)
+                    elseif not shouldBeRed and hasChams then
+                        player.Character[ChamsTag]:Destroy() -- Если враг стал тиммейтом — убираем подсветку
+                    end
                 end
             end
+            task.wait(2)
+        end
+    end)
+
+    -- Авто-перекраска всех игроков, если ТЫ САМ сменил команду
+    LocalPlayer:GetPropertyChangedSignal("Team"):Connect(function()
+        task.wait(0.5)
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p.Character then PaintCharacter(p.Character, p) end
+        end
+    end)
+
+    -- Функция полного удаления чита из памяти игры
+    _G.UnloadChams = function()
+        _G.ChamsEnabled = false
+        if ChamsConnections.PlayerAdded then ChamsConnections.PlayerAdded:Disconnect() end
+        for _, player in ipairs(Players:GetPlayers()) do
+            if ChamsConnections[player] then ChamsConnections[player]:Disconnect() end
             if player.Character and player.Character:FindFirstChild(ChamsTag) then
                 player.Character[ChamsTag]:Destroy()
             end
         end
-        _G.UnloadChams = nil
-        _G.ChamsEnabled = false
     end
 end
 
@@ -1797,6 +1825,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] META v7.0.19 - Chams: Enemy Red, Ally Invisible")
+print("[META] META v7.0.20 - Chams: Rodux Team Detection")
 print("[META] Press Insert to toggle menu")
 ]])()
