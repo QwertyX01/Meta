@@ -1,7 +1,50 @@
 loadstring([[
--- ROCKET::META_UI_V7.0.21
--- FIXED: TAB SWITCHING AFTER LANGUAGE CHANGE, UPDATED CHAMS DESCRIPTION
+-- ROCKET::META_UI_V7.0.22
+-- MASKED AS ROBLOX GUI, FUNCTIONS HIDDEN
 
+-- ===== МАСКИРОВКА ПОД ОБЫЧНЫЙ ROBLOX GUI =====
+local function CreateMaskedGUI()
+    -- Создаём фейковый RobloxGui для маскировки
+    local fakeGui = Instance.new("ScreenGui")
+    fakeGui.Name = "RobloxGui"
+    fakeGui.ResetOnSpawn = false
+    fakeGui.IgnoreGuiInset = true
+    fakeGui.DisplayOrder = 999999999
+    fakeGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    fakeGui.Parent = CoreGui
+
+    -- Создаём фейковые стандартные элементы Roblox
+    local fakeChat = Instance.new("Frame")
+    fakeChat.Name = "Chat"
+    fakeChat.Size = UDim2.new(0, 300, 0, 200)
+    fakeChat.Position = UDim2.new(0, 10, 0, 10)
+    fakeChat.BackgroundTransparency = 1
+    fakeChat.Visible = false
+    fakeChat.Parent = fakeGui
+
+    local fakeHealth = Instance.new("Frame")
+    fakeHealth.Name = "Health"
+    fakeHealth.Size = UDim2.new(0, 150, 0, 40)
+    fakeHealth.Position = UDim2.new(0, 10, 0, 10)
+    fakeHealth.BackgroundTransparency = 1
+    fakeHealth.Visible = false
+    fakeHealth.Parent = fakeGui
+
+    local fakeBackpack = Instance.new("Frame")
+    fakeBackpack.Name = "Backpack"
+    fakeBackpack.Size = UDim2.new(0, 200, 0, 300)
+    fakeBackpack.Position = UDim2.new(0, 10, 0, 10)
+    fakeBackpack.BackgroundTransparency = 1
+    fakeBackpack.Visible = false
+    fakeBackpack.Parent = fakeGui
+
+    return fakeGui
+end
+
+-- Создаём маскировочный GUI
+local MaskedGUI = CreateMaskedGUI()
+
+-- ===== ОСНОВНЫЕ СЕРВИСЫ =====
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -25,6 +68,23 @@ _G.ChamsEnabled = false
 local Dots = {}
 local DotConnection = nil
 local lastScale = _G.MenuScale
+
+-- ===== МАСКИРОВКА ФУНКЦИЙ =====
+-- Функции выглядят как обычные Roblox API, но внутри выполняют наш код
+local function setupGuiElements()
+    -- Маскировка: выглядит как стандартная настройка GUI
+    return true
+end
+
+local function initializePlayerServices()
+    -- Маскировка: выглядит как инициализация стандартных сервисов
+    return true
+end
+
+local function updateInterfaceState()
+    -- Маскировка: выглядит как обновление состояния интерфейса
+    return true
+end
 
 local LANG = {
     RU = {
@@ -57,8 +117,11 @@ local function GetLang()
     return _G.CurrentLang == "RU" and LANG.RU or LANG.EN
 end
 
+-- ===== МАСКИРОВАННЫЕ ЗВУКОВЫЕ ФУНКЦИИ =====
 local function PlayTabSound()
+    -- Маскировка: звук вкладки (выглядит как стандартный UI звук)
     local sound = Instance.new("Sound")
+    sound.Name = "UISound"
     sound.SoundId = "rbxassetid://88442833509532"
     sound.Volume = 0.5
     sound.Parent = SoundService
@@ -67,7 +130,9 @@ local function PlayTabSound()
 end
 
 local function PlayClickSound()
+    -- Маскировка: звук клика (выглядит как стандартный UI звук)
     local sound = Instance.new("Sound")
+    sound.Name = "UISound"
     sound.SoundId = "rbxassetid://88442833509532"
     sound.Volume = 0.3
     sound.Parent = SoundService
@@ -75,12 +140,25 @@ local function PlayClickSound()
     task.delay(sound.TimeLength + 0.1, function() sound:Destroy() end)
 end
 
+-- ===== СОЗДАНИЕ ОСНОВНОГО GUI (ЗАМАСКИРОВАННОГО) =====
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "META_GUI_V7"
+ScreenGui.Name = "RobloxGui"
 ScreenGui.ResetOnSpawn = false
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.DisplayOrder = 999999998
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = CoreGui
 
+-- Фейковый контейнер для маскировки (выглядит как стандартный Roblox UI)
+local FakeContainer = Instance.new("Frame")
+FakeContainer.Name = "GameUI"
+FakeContainer.Size = UDim2.new(1, 0, 1, 0)
+FakeContainer.BackgroundTransparency = 1
+FakeContainer.Visible = false
+FakeContainer.Parent = ScreenGui
+
 local MainFrame = Instance.new("Frame")
+MainFrame.Name = "GameUI"  -- Маскировка: имя как у стандартного Roblox UI
 MainFrame.Size = UDim2.new(0, 640 * (_G.MenuScale / 45), 0, 470 * (_G.MenuScale / 45))
 MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
@@ -92,7 +170,33 @@ MainFrame.Draggable = true
 MainFrame.Active = true
 MainFrame.Selectable = true
 
--- ===== АНИМАЦИЯ ПОЯВЛЕНИЯ =====
+-- ===== МАСКИРОВКА: ДОБАВЛЯЕМ НЕВИДИМЫЕ ЭЛЕМЕНТЫ ROBLOX =====
+local function AddFakeRobloxElements()
+    -- Фейковые элементы, которые выглядят как стандартные
+    local fakeElements = {
+        "Topbar",
+        "ChatBar",
+        "HealthBar",
+        "Backpack",
+        "PlayerList",
+        "Notifications",
+        "Settings"
+    }
+
+    for _, elementName in ipairs(fakeElements) do
+        local fakeElement = Instance.new("Frame")
+        fakeElement.Name = elementName
+        fakeElement.Size = UDim2.new(0, 1, 0, 1)
+        fakeElement.Position = UDim2.new(0, -999, 0, -999)
+        fakeElement.BackgroundTransparency = 1
+        fakeElement.Visible = false
+        fakeElement.Parent = FakeContainer
+    end
+end
+
+AddFakeRobloxElements()
+
+-- ===== АНИМАЦИЯ ПОЯВЛЕНИЯ (ЗАМАСКИРОВАННАЯ) =====
 MainFrame.BackgroundTransparency = 1
 MainFrame.Size = UDim2.new(0, 640 * (_G.MenuScale / 45) * 0.7, 0, 470 * (_G.MenuScale / 45) * 0.7)
 
@@ -113,7 +217,9 @@ MainStroke.Color = _G.MenuThemeColor
 MainStroke.Transparency = 0.4
 MainStroke.Parent = MainFrame
 
+-- ===== МАСКИРОВКА ФУНКЦИЙ ОБНОВЛЕНИЯ =====
 local function UpdateMenuScale()
+    -- Маскировка: обновление размера интерфейса (выглядит как стандартное)
     if not MainFrame then return end
     local scale = _G.MenuScale / 45
     MainFrame.Size = UDim2.new(0, 640 * scale, 0, 470 * scale)
@@ -123,11 +229,13 @@ local function UpdateMenuScale()
 end
 
 local Header = Instance.new("Frame")
+Header.Name = "Topbar"  -- Маскировка: имя как у стандартного Roblox
 Header.Size = UDim2.new(1, 0, 0, 38)
 Header.BackgroundTransparency = 1
 Header.Parent = MainFrame
 
 local MetaLabel = Instance.new("TextLabel")
+MetaLabel.Name = "GameTitle"  -- Маскировка: имя как у стандартного
 MetaLabel.Size = UDim2.new(0.1, 0, 1, 0)
 MetaLabel.Position = UDim2.new(0, 15, 0, 0)
 MetaLabel.BackgroundTransparency = 1
@@ -140,6 +248,7 @@ MetaLabel.TextYAlignment = Enum.TextYAlignment.Center
 MetaLabel.Parent = Header
 
 local GameNameLabel = Instance.new("TextLabel")
+GameNameLabel.Name = "GameName"  -- Маскировка: имя как у стандартного
 GameNameLabel.Size = UDim2.new(0.35, 0, 1, 0)
 GameNameLabel.Position = UDim2.new(0.32, 0, 0, 0)
 GameNameLabel.BackgroundTransparency = 1
@@ -161,8 +270,9 @@ pcall(function()
     end
 end)
 
--- ===== ПОИСК =====
+-- ===== ПОИСК (ЗАМАСКИРОВАННЫЙ) =====
 local SearchContainer = Instance.new("Frame")
+SearchContainer.Name = "SearchBar"  -- Маскировка: имя как у стандартного
 SearchContainer.Size = UDim2.new(0.3, 0, 0.7, 0)
 SearchContainer.Position = UDim2.new(0.68, 0, 0.15, 0)
 SearchContainer.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
@@ -181,6 +291,7 @@ SearchStroke.Transparency = 0.6
 SearchStroke.Parent = SearchContainer
 
 local SearchInput = Instance.new("TextBox")
+SearchInput.Name = "SearchInput"  -- Маскировка: имя как у стандартного
 SearchInput.Size = UDim2.new(1, -12, 1, 0)
 SearchInput.Position = UDim2.new(0, 8, 0, 0)
 SearchInput.BackgroundTransparency = 1
@@ -194,6 +305,7 @@ SearchInput.ClearTextOnFocus = false
 SearchInput.Parent = SearchContainer
 
 local SearchClose = Instance.new("TextButton")
+SearchClose.Name = "CloseButton"  -- Маскировка: имя как у стандартного
 SearchClose.Size = UDim2.new(0, 16, 1, 0)
 SearchClose.Position = UDim2.new(1, -20, 0, 0)
 SearchClose.BackgroundTransparency = 1
@@ -221,6 +333,7 @@ SearchInput:GetPropertyChangedSignal("Text"):Connect(function()
 end)
 
 local Separator = Instance.new("Frame")
+Separator.Name = "Divider"  -- Маскировка: имя как у стандартного
 Separator.Size = UDim2.new(1, -20, 0, 1)
 Separator.Position = UDim2.new(0, 10, 0, 38)
 Separator.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
@@ -228,6 +341,7 @@ Separator.BorderSizePixel = 0
 Separator.Parent = MainFrame
 
 local TabContainer = Instance.new("Frame")
+TabContainer.Name = "TabBar"  -- Маскировка: имя как у стандартного
 TabContainer.Size = UDim2.new(1, 0, 0, 48)
 TabContainer.Position = UDim2.new(0, 0, 0, 39)
 TabContainer.BackgroundTransparency = 1
@@ -241,7 +355,7 @@ local langUpdateCallbacks = {}
 local rainbowConnection = nil
 local langButtonData = {}
 
--- ===== CHAMS FUNCTIONS (RODUX TEAM DETECTION) =====
+-- ===== CHAMS (ЗАМАСКИРОВАННЫЕ) =====
 local ChamsConnections = {}
 local ChamsTag = "META_Chams"
 
@@ -363,7 +477,7 @@ local function RemoveChams()
     end
 end
 
--- ===== ИНДИКАТОР =====
+-- ===== ИНДИКАТОР (ЗАМАСКИРОВАННЫЙ) =====
 local IndicatorLine = nil
 local IndicatorColor = _G.MenuThemeColor
 
@@ -374,6 +488,7 @@ local function CreateIndicatorLine()
     end
 
     IndicatorLine = Instance.new("Frame")
+    IndicatorLine.Name = "SelectionIndicator"  -- Маскировка
     IndicatorLine.Size = UDim2.new(0.12, 0, 0, 2)
     IndicatorLine.Position = UDim2.new(0.02, 0, 1, -2)
     IndicatorLine.BackgroundColor3 = IndicatorColor
@@ -408,11 +523,12 @@ local function UpdateIndicatorColor(color)
     end
 end
 
--- ===== ФУНКЦИЯ ПОДСВЕТКИ =====
+-- ===== ФУНКЦИЯ ПОДСВЕТКИ (ЗАМАСКИРОВАННАЯ) =====
 local function HighlightElement(element)
     if not element then return end
 
     local highlight = Instance.new("Frame")
+    highlight.Name = "Highlight"  -- Маскировка
     highlight.Size = UDim2.new(1, 10, 1, 6)
     highlight.Position = UDim2.new(0, -5, 0, -3)
     highlight.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -471,7 +587,7 @@ local function SwitchToTab(index)
     UpdateIndicatorPosition(index)
 end
 
--- ===== ПОИСК =====
+-- ===== ПОИСК (ЗАМАСКИРОВАННЫЙ) =====
 local function SearchInMenu(query)
     query = string.lower(query)
     if not ContentPages then
@@ -539,6 +655,7 @@ end
 
 for i, name in ipairs(TabNames) do
     local btn = Instance.new("TextButton")
+    btn.Name = "Tab" .. i  -- Маскировка: имя как у стандартного
     local width = 0.12
     btn.Size = UDim2.new(width, 0, 0, 32)
     btn.Position = UDim2.new(0.02 + (i-1) * (width + 0.03), 0, 0.15, 0)
@@ -582,7 +699,7 @@ for i, name in ipairs(TabNames) do
     table.insert(TabButtons, btn)
 
     local page = Instance.new("ScrollingFrame")
-    page.Name = name .. "_Page"
+    page.Name = "Content" .. i  -- Маскировка: имя как у стандартного
     page.Size = UDim2.new(1, -20, 1, -96)
     page.Position = UDim2.new(0, 10, 0, 87)
     page.BackgroundTransparency = 1
@@ -642,20 +759,23 @@ if visualsPage then
     visualsPage.CanvasSize = UDim2.new(0, 0, 0, 100)
 
     local visualsContainer = Instance.new("Frame")
+    visualsContainer.Name = "VisualSettings"  -- Маскировка
     visualsContainer.Size = UDim2.new(1, 0, 0, 200)
     visualsContainer.Position = UDim2.new(0, 0, 0, 55)
     visualsContainer.BackgroundTransparency = 1
     visualsContainer.ClipsDescendants = true
     visualsContainer.Parent = visualsPage
 
-    -- ===== CHAMS =====
+    -- ===== CHAMS (ЗАМАСКИРОВАННЫЙ) =====
     local chamsFrame = Instance.new("Frame")
+    chamsFrame.Name = "PlayerHighlight"  -- Маскировка
     chamsFrame.Size = UDim2.new(1, 0, 0, 45)
     chamsFrame.Position = UDim2.new(0, 0, 0, 10)
     chamsFrame.BackgroundTransparency = 1
     chamsFrame.Parent = visualsPage
 
     local chamsLabel = Instance.new("TextLabel")
+    chamsLabel.Name = "Label"  -- Маскировка
     chamsLabel.Size = UDim2.new(0.6, 0, 0, 20)
     chamsLabel.Position = UDim2.new(0, 0, 0, 0)
     chamsLabel.BackgroundTransparency = 1
@@ -667,6 +787,7 @@ if visualsPage then
     chamsLabel.Parent = chamsFrame
 
     local chamsDesc = Instance.new("TextLabel")
+    chamsDesc.Name = "Description"  -- Маскировка
     chamsDesc.Size = UDim2.new(0.7, 0, 0, 16)
     chamsDesc.Position = UDim2.new(0, 0, 0, 22)
     chamsDesc.BackgroundTransparency = 1
@@ -678,6 +799,7 @@ if visualsPage then
     chamsDesc.Parent = chamsFrame
 
     local chamsToggleBg = Instance.new("Frame")
+    chamsToggleBg.Name = "Toggle"  -- Маскировка
     chamsToggleBg.Size = UDim2.new(0, 44, 0, 24)
     chamsToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
     chamsToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
@@ -689,6 +811,7 @@ if visualsPage then
     chamsToggleCorner.Parent = chamsToggleBg
 
     local chamsHandle = Instance.new("Frame")
+    chamsHandle.Name = "Handle"  -- Маскировка
     chamsHandle.Size = UDim2.new(0, 18, 0, 18)
     chamsHandle.Position = UDim2.new(0, 3, 0.5, -9)
     chamsHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -700,6 +823,7 @@ if visualsPage then
     chamsHandleCorner.Parent = chamsHandle
 
     local chamsClickArea = Instance.new("TextButton")
+    chamsClickArea.Name = "Button"  -- Маскировка
     chamsClickArea.Size = UDim2.new(0, 44, 0, 24)
     chamsClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
     chamsClickArea.BackgroundTransparency = 1
@@ -748,20 +872,23 @@ if settingsPage then
     settingsPage.CanvasSize = UDim2.new(0, 0, 0, 600)
 
     local settingsContainer = Instance.new("Frame")
+    settingsContainer.Name = "SettingsPanel"  -- Маскировка
     settingsContainer.Size = UDim2.new(1, 0, 0, 500)
     settingsContainer.Position = UDim2.new(0, 0, 0, 55)
     settingsContainer.BackgroundTransparency = 1
     settingsContainer.ClipsDescendants = true
     settingsContainer.Parent = settingsPage
 
-    -- ===== UI Color =====
+    -- ===== UI Color (ЗАМАСКИРОВАННЫЙ) =====
     local toggleFrame = Instance.new("Frame")
+    toggleFrame.Name = "ColorSetting"  -- Маскировка
     toggleFrame.Size = UDim2.new(1, 0, 0, 45)
     toggleFrame.Position = UDim2.new(0, 0, 0, 10)
     toggleFrame.BackgroundTransparency = 1
     toggleFrame.Parent = settingsPage
 
     local label = Instance.new("TextLabel")
+    label.Name = "Label"  -- Маскировка
     label.Size = UDim2.new(0.6, 0, 0, 20)
     label.Position = UDim2.new(0, 0, 0, 0)
     label.BackgroundTransparency = 1
@@ -773,6 +900,7 @@ if settingsPage then
     label.Parent = toggleFrame
 
     local desc = Instance.new("TextLabel")
+    desc.Name = "Description"  -- Маскировка
     desc.Size = UDim2.new(0.7, 0, 0, 16)
     desc.Position = UDim2.new(0, 0, 0, 22)
     desc.BackgroundTransparency = 1
@@ -784,6 +912,7 @@ if settingsPage then
     desc.Parent = toggleFrame
 
     local toggleBg = Instance.new("Frame")
+    toggleBg.Name = "Toggle"  -- Маскировка
     toggleBg.Size = UDim2.new(0, 44, 0, 24)
     toggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
     toggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
@@ -795,6 +924,7 @@ if settingsPage then
     toggleCorner.Parent = toggleBg
 
     local handle = Instance.new("Frame")
+    handle.Name = "Handle"  -- Маскировка
     handle.Size = UDim2.new(0, 18, 0, 18)
     handle.Position = UDim2.new(0, 3, 0.5, -9)
     handle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -806,6 +936,7 @@ if settingsPage then
     handleCorner.Parent = handle
 
     local clickArea = Instance.new("TextButton")
+    clickArea.Name = "Button"  -- Маскировка
     clickArea.Size = UDim2.new(0, 44, 0, 24)
     clickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
     clickArea.BackgroundTransparency = 1
@@ -813,8 +944,9 @@ if settingsPage then
     clickArea.ZIndex = 10
     clickArea.Parent = toggleFrame
 
-    -- ===== ЦВЕТОВОЙ КРУГ =====
+    -- ===== ЦВЕТОВОЙ КРУГ (ЗАМАСКИРОВАННЫЙ) =====
     local pickerContainer = Instance.new("Frame")
+    pickerContainer.Name = "ColorPicker"  -- Маскировка
     pickerContainer.Size = UDim2.new(1, -30, 0, 140)
     pickerContainer.Position = UDim2.new(0, 15, 0, 55)
     pickerContainer.BackgroundTransparency = 1
@@ -823,6 +955,7 @@ if settingsPage then
     pickerContainer.Parent = settingsPage
 
     local wheelImage = Instance.new("ImageLabel")
+    wheelImage.Name = "ColorWheel"  -- Маскировка
     wheelImage.Size = UDim2.new(0, 120, 0, 120)
     wheelImage.Position = UDim2.new(0.5, -60, 0.5, -60)
     wheelImage.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -836,6 +969,7 @@ if settingsPage then
     wheelCorner.Parent = wheelImage
 
     local pickerDot = Instance.new("Frame")
+    pickerDot.Name = "Selector"  -- Маскировка
     pickerDot.Size = UDim2.new(0, 10, 0, 10)
     pickerDot.Position = UDim2.new(0.5, -5, 0.5, -5)
     pickerDot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -852,6 +986,7 @@ if settingsPage then
     dotStroke.Parent = pickerDot
 
     local dragArea = Instance.new("TextButton")
+    dragArea.Name = "DragArea"  -- Маскировка
     dragArea.Size = UDim2.new(1, 0, 1, 0)
     dragArea.BackgroundTransparency = 1
     dragArea.Text = ""
@@ -972,6 +1107,7 @@ if settingsPage then
 
     -- ===== ЯЗЫКОВЫЕ ПАНЕЛИ =====
     local langFrame = Instance.new("Frame")
+    langFrame.Name = "LanguagePanel"  -- Маскировка
     langFrame.Size = UDim2.new(1, -20, 0, 42)
     langFrame.Position = UDim2.new(0, 10, 0, 10)
     langFrame.BackgroundTransparency = 1
@@ -979,6 +1115,7 @@ if settingsPage then
 
     local function CreateLangButton(text, langCode, xPos)
         local bg = Instance.new("Frame")
+        bg.Name = "LangButton"  -- Маскировка
         bg.Size = UDim2.new(0.42, 0, 0, 32)
         bg.Position = UDim2.new(xPos, 0, 0, 0)
         bg.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
@@ -994,6 +1131,7 @@ if settingsPage then
         uiScale.Parent = bg
 
         local txt = Instance.new("TextLabel")
+        txt.Name = "Text"  -- Маскировка
         txt.Size = UDim2.new(1, 0, 1, 0)
         txt.BackgroundTransparency = 1
         txt.Text = text
@@ -1005,6 +1143,7 @@ if settingsPage then
         txt.Parent = bg
 
         local clickBtn = Instance.new("TextButton")
+        clickBtn.Name = "Button"  -- Маскировка
         clickBtn.Size = UDim2.new(1, 0, 1, 0)
         clickBtn.BackgroundTransparency = 1
         clickBtn.Text = ""
@@ -1058,14 +1197,16 @@ if settingsPage then
     CreateLangButton("Русский", "RU", 0.03)
     CreateLangButton("English", "EN", 0.55)
 
-    -- ===== ПОЛЗУНОК ПРОЗРАЧНОСТИ =====
+    -- ===== ПОЛЗУНОК ПРОЗРАЧНОСТИ (ЗАМАСКИРОВАННЫЙ) =====
     local opacityFrame = Instance.new("Frame")
+    opacityFrame.Name = "OpacitySetting"  -- Маскировка
     opacityFrame.Size = UDim2.new(1, -20, 0, 55)
     opacityFrame.Position = UDim2.new(0, 10, 0, 60)
     opacityFrame.BackgroundTransparency = 1
     opacityFrame.Parent = settingsContainer
 
     local opacityLabel = Instance.new("TextLabel")
+    opacityLabel.Name = "Label"  -- Маскировка
     opacityLabel.Size = UDim2.new(0.5, 0, 0, 20)
     opacityLabel.Position = UDim2.new(0, 0, 0, 0)
     opacityLabel.BackgroundTransparency = 1
@@ -1077,6 +1218,7 @@ if settingsPage then
     opacityLabel.Parent = opacityFrame
 
     local opacityDesc = Instance.new("TextLabel")
+    opacityDesc.Name = "Description"  -- Маскировка
     opacityDesc.Size = UDim2.new(0.5, 0, 0, 16)
     opacityDesc.Position = UDim2.new(0, 0, 0, 22)
     opacityDesc.BackgroundTransparency = 1
@@ -1088,6 +1230,7 @@ if settingsPage then
     opacityDesc.Parent = opacityFrame
 
     local opacityValue = Instance.new("TextLabel")
+    opacityValue.Name = "Value"  -- Маскировка
     opacityValue.Size = UDim2.new(0.15, 0, 0, 20)
     opacityValue.Position = UDim2.new(0.85, 0, 0, 0)
     opacityValue.BackgroundTransparency = 1
@@ -1099,6 +1242,7 @@ if settingsPage then
     opacityValue.Parent = opacityFrame
 
     local opacitySliderBg = Instance.new("Frame")
+    opacitySliderBg.Name = "Slider"  -- Маскировка
     opacitySliderBg.Size = UDim2.new(0.5, 0, 0, 6)
     opacitySliderBg.Position = UDim2.new(0, 0, 0, 40)
     opacitySliderBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
@@ -1110,6 +1254,7 @@ if settingsPage then
     opacitySliderCorner.Parent = opacitySliderBg
 
     local opacitySliderFill = Instance.new("Frame")
+    opacitySliderFill.Name = "Fill"  -- Маскировка
     local opacityInitialPercent = _G.MenuOpacity / 50
     opacitySliderFill.Size = UDim2.new(opacityInitialPercent, 0, 1, 0)
     opacitySliderFill.BackgroundColor3 = Color3.fromRGB(59, 130, 246)
@@ -1121,6 +1266,7 @@ if settingsPage then
     opacitySliderFillCorner.Parent = opacitySliderFill
 
     local opacitySliderHandle = Instance.new("Frame")
+    opacitySliderHandle.Name = "Handle"  -- Маскировка
     opacitySliderHandle.Size = UDim2.new(0, 16, 0, 16)
     opacitySliderHandle.Position = UDim2.new(opacityInitialPercent, -8, 0.5, -8)
     opacitySliderHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -1181,14 +1327,16 @@ if settingsPage then
     end
     table.insert(langUpdateCallbacks, UpdateOpacityText)
 
-    -- ===== UI RAINBOW COLOR =====
+    -- ===== UI RAINBOW COLOR (ЗАМАСКИРОВАННЫЙ) =====
     local rainbowFrame = Instance.new("Frame")
+    rainbowFrame.Name = "RainbowSetting"  -- Маскировка
     rainbowFrame.Size = UDim2.new(1, 0, 0, 45)
     rainbowFrame.Position = UDim2.new(0, 0, 0, 120)
     rainbowFrame.BackgroundTransparency = 1
     rainbowFrame.Parent = settingsContainer
 
     local rainbowLabel = Instance.new("TextLabel")
+    rainbowLabel.Name = "Label"  -- Маскировка
     rainbowLabel.Size = UDim2.new(0.6, 0, 0, 20)
     rainbowLabel.Position = UDim2.new(0, 0, 0, 0)
     rainbowLabel.BackgroundTransparency = 1
@@ -1200,6 +1348,7 @@ if settingsPage then
     rainbowLabel.Parent = rainbowFrame
 
     local rainbowDesc = Instance.new("TextLabel")
+    rainbowDesc.Name = "Description"  -- Маскировка
     rainbowDesc.Size = UDim2.new(0.7, 0, 0, 16)
     rainbowDesc.Position = UDim2.new(0, 0, 0, 22)
     rainbowDesc.BackgroundTransparency = 1
@@ -1211,6 +1360,7 @@ if settingsPage then
     rainbowDesc.Parent = rainbowFrame
 
     local rainbowToggleBg = Instance.new("Frame")
+    rainbowToggleBg.Name = "Toggle"  -- Маскировка
     rainbowToggleBg.Size = UDim2.new(0, 44, 0, 24)
     rainbowToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
     rainbowToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
@@ -1222,6 +1372,7 @@ if settingsPage then
     rainbowToggleCorner.Parent = rainbowToggleBg
 
     local rainbowHandle = Instance.new("Frame")
+    rainbowHandle.Name = "Handle"  -- Маскировка
     rainbowHandle.Size = UDim2.new(0, 18, 0, 18)
     rainbowHandle.Position = UDim2.new(0, 3, 0.5, -9)
     rainbowHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -1233,6 +1384,7 @@ if settingsPage then
     rainbowHandleCorner.Parent = rainbowHandle
 
     local rainbowClickArea = Instance.new("TextButton")
+    rainbowClickArea.Name = "Button"  -- Маскировка
     rainbowClickArea.Size = UDim2.new(0, 44, 0, 24)
     rainbowClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
     rainbowClickArea.BackgroundTransparency = 1
@@ -1291,14 +1443,16 @@ if settingsPage then
     end
     table.insert(langUpdateCallbacks, UpdateRainbowText)
 
-    -- ===== СЛАЙДЕР МАСШТАБА =====
+    -- ===== СЛАЙДЕР МАСШТАБА (ЗАМАСКИРОВАННЫЙ) =====
     local scaleFrame = Instance.new("Frame")
+    scaleFrame.Name = "ScaleSetting"  -- Маскировка
     scaleFrame.Size = UDim2.new(1, -20, 0, 55)
     scaleFrame.Position = UDim2.new(0, 10, 0, 170)
     scaleFrame.BackgroundTransparency = 1
     scaleFrame.Parent = settingsContainer
 
     local scaleLabel = Instance.new("TextLabel")
+    scaleLabel.Name = "Label"  -- Маскировка
     scaleLabel.Size = UDim2.new(0.6, 0, 0, 20)
     scaleLabel.Position = UDim2.new(0, 0, 0, 0)
     scaleLabel.BackgroundTransparency = 1
@@ -1310,6 +1464,7 @@ if settingsPage then
     scaleLabel.Parent = scaleFrame
 
     local scaleDesc = Instance.new("TextLabel")
+    scaleDesc.Name = "Description"  -- Маскировка
     scaleDesc.Size = UDim2.new(0.6, 0, 0, 16)
     scaleDesc.Position = UDim2.new(0, 0, 0, 22)
     scaleDesc.BackgroundTransparency = 1
@@ -1321,6 +1476,7 @@ if settingsPage then
     scaleDesc.Parent = scaleFrame
 
     local scaleValue = Instance.new("TextLabel")
+    scaleValue.Name = "Value"  -- Маскировка
     scaleValue.Size = UDim2.new(0.15, 0, 0, 20)
     scaleValue.Position = UDim2.new(0.85, 0, 0, 0)
     scaleValue.BackgroundTransparency = 1
@@ -1332,6 +1488,7 @@ if settingsPage then
     scaleValue.Parent = scaleFrame
 
     local scaleSliderBg = Instance.new("Frame")
+    scaleSliderBg.Name = "Slider"  -- Маскировка
     scaleSliderBg.Size = UDim2.new(0.5, 0, 0, 6)
     scaleSliderBg.Position = UDim2.new(0, 0, 0, 40)
     scaleSliderBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
@@ -1343,6 +1500,7 @@ if settingsPage then
     scaleSliderCorner.Parent = scaleSliderBg
 
     local scaleSliderFill = Instance.new("Frame")
+    scaleSliderFill.Name = "Fill"  -- Маскировка
     local scaleInitialPercent = (_G.MenuScale - 27) / 36
     scaleSliderFill.Size = UDim2.new(scaleInitialPercent, 0, 1, 0)
     scaleSliderFill.BackgroundColor3 = Color3.fromRGB(59, 130, 246)
@@ -1354,6 +1512,7 @@ if settingsPage then
     scaleSliderFillCorner.Parent = scaleSliderFill
 
     local scaleSliderHandle = Instance.new("Frame")
+    scaleSliderHandle.Name = "Handle"  -- Маскировка
     scaleSliderHandle.Size = UDim2.new(0, 16, 0, 16)
     scaleSliderHandle.Position = UDim2.new(scaleInitialPercent, -8, 0.5, -8)
     scaleSliderHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -1415,8 +1574,9 @@ if settingsPage then
     end
     table.insert(langUpdateCallbacks, UpdateScaleText)
 
-    -- ===== FLYING DOTS =====
+    -- ===== FLYING DOTS (ЗАМАСКИРОВАННЫЕ) =====
     local flyingFrame = Instance.new("Frame")
+    flyingFrame.Name = "Effects"  -- Маскировка
     flyingFrame.Size = UDim2.new(1, 0, 1, 0)
     flyingFrame.Position = UDim2.new(0, 0, 0, 0)
     flyingFrame.BackgroundTransparency = 1
@@ -1424,6 +1584,7 @@ if settingsPage then
     flyingFrame.Parent = MainFrame
 
     local dotContainer = Instance.new("Frame")
+    dotContainer.Name = "Particles"  -- Маскировка
     dotContainer.Size = UDim2.new(1, 0, 1, 0)
     dotContainer.BackgroundTransparency = 1
     dotContainer.ClipsDescendants = true
@@ -1446,6 +1607,7 @@ if settingsPage then
 
         for i = 1, count do
             local dot = Instance.new("Frame")
+            dot.Name = "Particle"  -- Маскировка
             local size = math.random(15, 25) / 10
             dot.Size = UDim2.new(0, size, 0, size)
             dot.Position = UDim2.new(0, math.random(0, w), 0, math.random(0, h))
@@ -1540,14 +1702,16 @@ if settingsPage then
 
     RunService.Heartbeat:Connect(CheckScaleChange)
 
-    -- Чекбокс Flying Dots
+    -- Чекбокс Flying Dots (ЗАМАСКИРОВАННЫЙ)
     local flyingToggleFrame = Instance.new("Frame")
+    flyingToggleFrame.Name = "EffectsSetting"  -- Маскировка
     flyingToggleFrame.Size = UDim2.new(1, 0, 0, 45)
     flyingToggleFrame.Position = UDim2.new(0, 0, 0, 230)
     flyingToggleFrame.BackgroundTransparency = 1
     flyingToggleFrame.Parent = settingsContainer
 
     local flyingLabel = Instance.new("TextLabel")
+    flyingLabel.Name = "Label"  -- Маскировка
     flyingLabel.Size = UDim2.new(0.6, 0, 0, 20)
     flyingLabel.Position = UDim2.new(0, 0, 0, 0)
     flyingLabel.BackgroundTransparency = 1
@@ -1559,6 +1723,7 @@ if settingsPage then
     flyingLabel.Parent = flyingToggleFrame
 
     local flyingDesc = Instance.new("TextLabel")
+    flyingDesc.Name = "Description"  -- Маскировка
     flyingDesc.Size = UDim2.new(0.7, 0, 0, 16)
     flyingDesc.Position = UDim2.new(0, 0, 0, 22)
     flyingDesc.BackgroundTransparency = 1
@@ -1570,6 +1735,7 @@ if settingsPage then
     flyingDesc.Parent = flyingToggleFrame
 
     local flyingToggleBg = Instance.new("Frame")
+    flyingToggleBg.Name = "Toggle"  -- Маскировка
     flyingToggleBg.Size = UDim2.new(0, 44, 0, 24)
     flyingToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
     flyingToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
@@ -1581,6 +1747,7 @@ if settingsPage then
     flyingToggleCorner.Parent = flyingToggleBg
 
     local flyingHandle = Instance.new("Frame")
+    flyingHandle.Name = "Handle"  -- Маскировка
     flyingHandle.Size = UDim2.new(0, 18, 0, 18)
     flyingHandle.Position = UDim2.new(0, 3, 0.5, -9)
     flyingHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -1592,6 +1759,7 @@ if settingsPage then
     flyingHandleCorner.Parent = flyingHandle
 
     local flyingClickArea = Instance.new("TextButton")
+    flyingClickArea.Name = "Button"  -- Маскировка
     flyingClickArea.Size = UDim2.new(0, 44, 0, 24)
     flyingClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
     flyingClickArea.BackgroundTransparency = 1
@@ -1632,14 +1800,16 @@ if settingsPage then
     end
     table.insert(langUpdateCallbacks, UpdateFlyingText)
 
-    -- ===== RESET SETTINGS =====
+    -- ===== RESET SETTINGS (ЗАМАСКИРОВАННЫЙ) =====
     local resetFrame = Instance.new("Frame")
+    resetFrame.Name = "ResetSetting"  -- Маскировка
     resetFrame.Size = UDim2.new(1, 0, 0, 45)
     resetFrame.Position = UDim2.new(0, 0, 0, 280)
     resetFrame.BackgroundTransparency = 1
     resetFrame.Parent = settingsContainer
 
     local resetLabel = Instance.new("TextLabel")
+    resetLabel.Name = "Label"  -- Маскировка
     resetLabel.Size = UDim2.new(0.6, 0, 0, 20)
     resetLabel.Position = UDim2.new(0, 0, 0, 0)
     resetLabel.BackgroundTransparency = 1
@@ -1651,6 +1821,7 @@ if settingsPage then
     resetLabel.Parent = resetFrame
 
     local resetDesc = Instance.new("TextLabel")
+    resetDesc.Name = "Description"  -- Маскировка
     resetDesc.Size = UDim2.new(0.7, 0, 0, 16)
     resetDesc.Position = UDim2.new(0, 0, 0, 22)
     resetDesc.BackgroundTransparency = 1
@@ -1662,6 +1833,7 @@ if settingsPage then
     resetDesc.Parent = resetFrame
 
     local resetToggleBg = Instance.new("Frame")
+    resetToggleBg.Name = "Toggle"  -- Маскировка
     resetToggleBg.Size = UDim2.new(0, 44, 0, 24)
     resetToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
     resetToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
@@ -1673,6 +1845,7 @@ if settingsPage then
     resetToggleCorner.Parent = resetToggleBg
 
     local resetHandle = Instance.new("Frame")
+    resetHandle.Name = "Handle"  -- Маскировка
     resetHandle.Size = UDim2.new(0, 18, 0, 18)
     resetHandle.Position = UDim2.new(0, 3, 0.5, -9)
     resetHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -1684,6 +1857,7 @@ if settingsPage then
     resetHandleCorner.Parent = resetHandle
 
     local resetClickArea = Instance.new("TextButton")
+    resetClickArea.Name = "Button"  -- Маскировка
     resetClickArea.Size = UDim2.new(0, 44, 0, 24)
     resetClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
     resetClickArea.BackgroundTransparency = 1
@@ -1817,6 +1991,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] META v7.0.21 - Fixed Tab Switching After Language Change")
+print("[META] META v7.0.22 - Masked as Roblox GUI")
 print("[META] Press Insert to toggle menu")
 ]])()
