@@ -1,5 +1,5 @@
--- ROCKET::META_UI_V7.0.30
--- ИСПРАВЛЕНА ОШИБКА: ВСЕ ФУНКЦИИ ОБЪЯВЛЕНЫ ВВЕРХУ
+-- ROCKET::META_UI_V7.0.26
+-- CHAMS ТОЛЬКО ДЛЯ ВРАГОВ + РАСШИРЕННОЕ ОПРЕДЕЛЕНИЕ КОМАНД
 
 -- Генерация случайного ключа для защиты от обнаружения по имени переменной
 local UI_NAME_MASK = "RobloxGui" .. tostring(math.random(1000, 9999))
@@ -92,201 +92,6 @@ local function PlayClickSound()
     task.delay(sound.TimeLength + 0.1, function() sound:Destroy() end)
 end
 
--- ===== CHAMS (ГЛОБАЛЬНЫЕ ФУНКЦИИ) =====
-local ChamsConnections = {}
-local ChamsTag = "EnemyHighlight_" .. tostring(math.random(1000, 9999))
-
-local function GetPlayerTeam(player)
-    if player.Team then
-        if type(player.Team) == "string" then
-            return player.Team
-        elseif type(player.Team) == "Instance" and player.Team.Name then
-            return player.Team.Name
-        else
-            return tostring(player.Team)
-        end
-    end
-    
-    local teamNameObj = player:FindFirstChild("TeamName")
-    if teamNameObj then
-        return teamNameObj.Value or teamNameObj.Name
-    end
-    
-    if player.TeamColor then
-        return tostring(player.TeamColor)
-    end
-    
-    local teamValueObj = player:FindFirstChild("TeamValue")
-    if teamValueObj then
-        return tostring(teamValueObj.Value)
-    end
-    
-    local teamFolder = player:FindFirstChild("TeamFolder")
-    if teamFolder then
-        return teamFolder.Name
-    end
-    
-    local teamTag = player:FindFirstChild("TeamTag")
-    if teamTag then
-        return teamTag.Value or teamTag.Name
-    end
-    
-    local char = player.Character
-    if char then
-        local teamObj = char:FindFirstChild("Team")
-        if teamObj then
-            return teamObj.Value or teamObj.Name
-        end
-        
-        local charTeamName = char:FindFirstChild("TeamName")
-        if charTeamName then
-            return charTeamName.Value or charTeamName.Name
-        end
-        
-        local charTeamColor = char:FindFirstChild("TeamColor")
-        if charTeamColor then
-            return tostring(charTeamColor)
-        end
-    end
-    
-    local replicatedStorage = game:GetService("ReplicatedStorage")
-    if replicatedStorage then
-        local teamData = replicatedStorage:FindFirstChild("TeamData")
-        if teamData then
-            for _, child in ipairs(teamData:GetChildren()) do
-                if child.Name == player.Name then
-                    return child.Value or child.Name
-                end
-            end
-        end
-    end
-    
-    return nil
-end
-
-local function IsEnemy(player)
-    if player == LocalPlayer then return false
-    
-    local myTeam = GetPlayerTeam(LocalPlayer)
-    local theirTeam = GetPlayerTeam(player)
-    
-    if myTeam and theirTeam and myTeam ~= theirTeam then
-        return true
-    end
-    
-    if not myTeam or not theirTeam then
-        return true
-    end
-    
-    return false
-end
-
-local function PaintCharacter(character, player)
-    if not character then return end
-    
-    for _, child in ipairs(character:GetChildren()) do
-        if child:IsA("Highlight") and child.Name == ChamsTag then
-            child:Destroy()
-        end
-    end
-    
-    if _G.ChamsEnabled and IsEnemy(player) then
-        local highlight = Instance.new("Highlight")
-        highlight.Name = ChamsTag
-        highlight.FillColor = Color3.fromRGB(180, 40, 40)
-        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-        highlight.FillTransparency = 0.5
-        highlight.OutlineTransparency = 0.1
-        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-        highlight.Adornee = character
-        highlight.Parent = character
-    end
-end
-
-local function SetupPlayer(player)
-    if player == LocalPlayer then return end
-    
-    if ChamsConnections[player] then
-        if ChamsConnections[player].CharacterAdded then
-            ChamsConnections[player].CharacterAdded:Disconnect()
-        end
-        if ChamsConnections[player].TeamChanged then
-            ChamsConnections[player].TeamChanged:Disconnect()
-        end
-    end
-    
-    ChamsConnections[player] = {}
-    
-    ChamsConnections[player].CharacterAdded = player.CharacterAdded:Connect(function(character)
-        task.wait(0.1)
-        PaintCharacter(character, player)
-    end)
-    
-    ChamsConnections[player].TeamChanged = player:GetPropertyChangedSignal("Team"):Connect(function()
-        if player.Character then
-            PaintCharacter(player.Character, player)
-        end
-    end)
-    
-    if player.Character then
-        PaintCharacter(player.Character, player)
-    end
-end
-
-local function ApplyChams()
-    if _G.UnloadChams then _G.UnloadChams() end
-    _G.ChamsEnabled = true
-    
-    for _, player in ipairs(Players:GetPlayers()) do
-        SetupPlayer(player)
-    end
-    
-    ChamsConnections.PlayerAdded = Players.PlayerAdded:Connect(SetupPlayer)
-    
-    ChamsConnections.LocalTeamChanged = LocalPlayer:GetPropertyChangedSignal("Team"):Connect(function()
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer and player.Character then
-                PaintCharacter(player.Character, player)
-            end
-        end
-    end)
-    
-    _G.UnloadChams = function()
-        if ChamsConnections.PlayerAdded then
-            ChamsConnections.PlayerAdded:Disconnect()
-        end
-        if ChamsConnections.LocalTeamChanged then
-            ChamsConnections.LocalTeamChanged:Disconnect()
-        end
-        for _, player in ipairs(Players:GetPlayers()) do
-            if ChamsConnections[player] then
-                if ChamsConnections[player].CharacterAdded then
-                    ChamsConnections[player].CharacterAdded:Disconnect()
-                end
-                if ChamsConnections[player].TeamChanged then
-                    ChamsConnections[player].TeamChanged:Disconnect()
-                end
-            end
-            if player.Character then
-                for _, child in ipairs(player.Character:GetChildren()) do
-                    if child:IsA("Highlight") and child.Name == ChamsTag then
-                        child:Destroy()
-                    end
-                end
-            end
-        end
-        _G.UnloadChams = nil
-        _G.ChamsEnabled = false
-    end
-end
-
-local function RemoveChams()
-    if _G.UnloadChams then
-        _G.UnloadChams()
-    end
-end
-
--- ===== ОСНОВНОЙ GUI =====
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 640 * (_G.MenuScale / 45), 0, 470 * (_G.MenuScale / 45))
 MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -447,6 +252,209 @@ local activeIndex = 1
 local langUpdateCallbacks = {}
 local rainbowConnection = nil
 local langButtonData = {}
+
+-- ===== CHAMS (РАСШИРЕННОЕ ОПРЕДЕЛЕНИЕ КОМАНД) =====
+local ChamsConnections = {}
+local ChamsTag = "EnemyHighlight_" .. tostring(math.random(1000, 9999))
+
+local function GetPlayerTeam(player)
+    -- 1. Стандартное свойство Team
+    if player.Team then
+        if type(player.Team) == "string" then
+            return player.Team
+        elseif type(player.Team) == "Instance" and player.Team.Name then
+            return player.Team.Name
+        else
+            return tostring(player.Team)
+        end
+    end
+    
+    -- 2. TeamName (StringValue или ObjectValue)
+    local teamNameObj = player:FindFirstChild("TeamName")
+    if teamNameObj then
+        return teamNameObj.Value or teamNameObj.Name
+    end
+    
+    -- 3. TeamColor
+    if player.TeamColor then
+        return tostring(player.TeamColor)
+    end
+    
+    -- 4. TeamValue (NumberValue или IntValue)
+    local teamValueObj = player:FindFirstChild("TeamValue")
+    if teamValueObj then
+        return tostring(teamValueObj.Value)
+    end
+    
+    -- 5. TeamFolder (если есть папка с названием команды)
+    local teamFolder = player:FindFirstChild("TeamFolder")
+    if teamFolder then
+        return teamFolder.Name
+    end
+    
+    -- 6. TeamTag (StringValue)
+    local teamTag = player:FindFirstChild("TeamTag")
+    if teamTag then
+        return teamTag.Value or teamTag.Name
+    end
+    
+    -- 7. Проверка в персонаже
+    local char = player.Character
+    if char then
+        local teamObj = char:FindFirstChild("Team")
+        if teamObj then
+            return teamObj.Value or teamObj.Name
+        end
+        
+        local charTeamName = char:FindFirstChild("TeamName")
+        if charTeamName then
+            return charTeamName.Value or charTeamName.Name
+        end
+        
+        local charTeamColor = char:FindFirstChild("TeamColor")
+        if charTeamColor then
+            return tostring(charTeamColor)
+        end
+    end
+    
+    -- 8. Проверка в ReplicatedStorage
+    local replicatedStorage = game:GetService("ReplicatedStorage")
+    if replicatedStorage then
+        local teamData = replicatedStorage:FindFirstChild("TeamData")
+        if teamData then
+            for _, child in ipairs(teamData:GetChildren()) do
+                if child.Name == player.Name then
+                    return child.Value or child.Name
+                end
+            end
+        end
+    end
+    
+    return nil
+end
+
+local function IsEnemy(player)
+    if player == LocalPlayer then return false
+    
+    local myTeam = GetPlayerTeam(LocalPlayer)
+    local theirTeam = GetPlayerTeam(player)
+    
+    if myTeam and theirTeam and myTeam ~= theirTeam then
+        return true
+    end
+    
+    -- Если команды не определены — считаем всех врагами (кроме себя)
+    if not myTeam or not theirTeam then
+        return true
+    end
+    
+    return false
+end
+
+local function PaintCharacter(character, player)
+    if not character then return end
+    
+    for _, child in ipairs(character:GetChildren()) do
+        if child:IsA("Highlight") and child.Name == ChamsTag then
+            child:Destroy()
+        end
+    end
+    
+    if _G.ChamsEnabled and IsEnemy(player) then
+        local highlight = Instance.new("Highlight")
+        highlight.Name = ChamsTag
+        highlight.FillColor = Color3.fromRGB(180, 40, 40)
+        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+        highlight.FillTransparency = 0.5
+        highlight.OutlineTransparency = 0.1
+        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+        highlight.Adornee = character
+        highlight.Parent = character
+    end
+end
+
+local function SetupPlayer(player)
+    if player == LocalPlayer then return end
+    
+    if ChamsConnections[player] then
+        if ChamsConnections[player].CharacterAdded then
+            ChamsConnections[player].CharacterAdded:Disconnect()
+        end
+        if ChamsConnections[player].TeamChanged then
+            ChamsConnections[player].TeamChanged:Disconnect()
+        end
+    end
+    
+    ChamsConnections[player] = {}
+    
+    ChamsConnections[player].CharacterAdded = player.CharacterAdded:Connect(function(character)
+        task.wait(0.1)
+        PaintCharacter(character, player)
+    end)
+    
+    ChamsConnections[player].TeamChanged = player:GetPropertyChangedSignal("Team"):Connect(function()
+        if player.Character then
+            PaintCharacter(player.Character, player)
+        end
+    end)
+    
+    if player.Character then
+        PaintCharacter(player.Character, player)
+    end
+end
+
+local function ApplyChams()
+    if _G.UnloadChams then _G.UnloadChams() end
+    _G.ChamsEnabled = true
+    
+    for _, player in ipairs(Players:GetPlayers()) do
+        SetupPlayer(player)
+    end
+    
+    ChamsConnections.PlayerAdded = Players.PlayerAdded:Connect(SetupPlayer)
+    
+    ChamsConnections.LocalTeamChanged = LocalPlayer:GetPropertyChangedSignal("Team"):Connect(function()
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character then
+                PaintCharacter(player.Character, player)
+            end
+        end
+    end)
+    
+    _G.UnloadChams = function()
+        if ChamsConnections.PlayerAdded then
+            ChamsConnections.PlayerAdded:Disconnect()
+        end
+        if ChamsConnections.LocalTeamChanged then
+            ChamsConnections.LocalTeamChanged:Disconnect()
+        end
+        for _, player in ipairs(Players:GetPlayers()) do
+            if ChamsConnections[player] then
+                if ChamsConnections[player].CharacterAdded then
+                    ChamsConnections[player].CharacterAdded:Disconnect()
+                end
+                if ChamsConnections[player].TeamChanged then
+                    ChamsConnections[player].TeamChanged:Disconnect()
+                end
+            end
+            if player.Character then
+                for _, child in ipairs(player.Character:GetChildren()) do
+                    if child:IsA("Highlight") and child.Name == ChamsTag then
+                        child:Destroy()
+                    end
+                end
+            end
+        end
+        _G.UnloadChams = nil
+        _G.ChamsEnabled = false
+    end
+end
+
+local function RemoveChams()
+    if _G.UnloadChams then
+        _G.UnloadChams()
+    end
+end
 
 -- ===== ИНДИКАТОР =====
 local IndicatorLine = nil
@@ -846,11 +854,11 @@ if visualsPage then
     table.insert(langUpdateCallbacks, UpdateChamsText)
 end
 
--- ===== НАСТРОЙКИ =====
+-- ===== НАСТРОЙКИ (UI Color, Opacity, Rainbow, Scale, Flying Dots, Reset) =====
 local settingsPage = ContentPages["Settings"]
 if settingsPage then
     settingsPage.CanvasSize = UDim2.new(0, 0, 0, 600)
-    
+
     local settingsContainer = Instance.new("Frame")
     settingsContainer.Size = UDim2.new(1, 0, 0, 500)
     settingsContainer.Position = UDim2.new(0, 0, 0, 55)
@@ -1830,8 +1838,8 @@ if settingsPage then
         UpdateIndicatorColor(_G.MenuThemeColor)
         SearchStroke.Color = _G.MenuThemeColor
         
-        -- Удаляем Chams при сбросе
         RemoveChams()
+        SetChamsToggleState(false)
         
         for _, btn in ipairs(langButtonData) do
             pcall(btn.Update, false)
@@ -1863,9 +1871,6 @@ if settingsPage then
         SetToggleState(false)
         pickerContainer.Visible = false
         ShiftContainer(false)
-        
-        -- Сбрасываем тоггл Chams в UI
-        SetChamsToggleState(false)
         
         local opacityPercent = _G.MenuOpacity / 50
         opacitySliderFill.Size = UDim2.new(opacityPercent, 0, 1, 0)
@@ -1921,3 +1926,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         MainFrame.Visible = not MainFrame.Visible
     end
 end)
+
+-- ===== ЧИСТКА (БЕЗ АВТОМАТИЧЕСКОГО УДАЛЕНИЯ) =====
+-- Удаляем только если скрипт явно выгружен через _G.UnloadChams
+-- Никаких Heartbeat для удаления меню!
