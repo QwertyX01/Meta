@@ -1,34 +1,17 @@
--- ROCKET::META_UI_V7.0.26
--- CHAMS ТОЛЬКО ДЛЯ ВРАГОВ + РАСШИРЕННОЕ ОПРЕДЕЛЕНИЕ КОМАНД
 
--- Генерация случайного ключа для защиты от обнаружения по имени переменной
-local UI_NAME_MASK = "RobloxGui" .. tostring(math.random(1000, 9999))
+-- ROCKET::META_UI_V7_ANIMATION
+-- ПЛАВНОЕ ПОЯВЛЕНИЕ МЕНЮ ПРИ ЗАПУСКЕ
 
--- Проверяем доступность безопасного хранилища CoreGui
-local parentFolder = game:GetService("CoreGui") or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
-
--- Создаем основу интерфейса под маской системного элемента
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = UI_NAME_MASK
-ScreenGui.ResetOnSpawn = false
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-
--- Защита от базовых скриптов слежки
-if syn and syn.protect_gui then
-    syn.protect_gui(ScreenGui)
-elseif gethui then
-    ScreenGui.Parent = gethui()
-else
-    ScreenGui.Parent = parentFolder
-end
-
--- ===== ОСНОВНОЕ МЕНЮ =====
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
 local SoundService = game:GetService("SoundService")
+local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
+local ScreenSize = Camera.ViewportSize
 
 _G.CustomThemeEnabled = false
 _G.MenuThemeColor = Color3.fromRGB(59, 130, 246)
@@ -37,7 +20,6 @@ _G.MenuOpacity = 12
 _G.RainbowEnabled = false
 _G.MenuScale = 45
 _G.FlyingDots = false
-_G.ChamsEnabled = false
 
 local Dots = {}
 local DotConnection = nil
@@ -50,9 +32,8 @@ local LANG = {
             UI_Color = {"Цвет интерфейса", "Включить кастомизацию цвета интерфейса"},
             Opacity = {"Прозрачность", "Регулировка прозрачности меню (0-50%)"},
             Rainbow = {"Разноцветная обводка", "Включить радужную обводку меню"},
-            Scale = {"Масштабирование меню", "Масштабирование меню (60-140%)"},
+            Scale = {"Scaling the menu", "Масштабирование меню (60-140%)"},
             FlyingDots = {"Летающие точки", "Точки, летающие с верха меню"},
-            Chams = {"Chams", "Подсветка врагов"},
             Reset = {"Сброс настроек", "Вернуть все настройки к стандартным"}
         }
     },
@@ -64,7 +45,6 @@ local LANG = {
             Rainbow = {"UI Rainbow Color", "Enable rainbow menu outline"},
             Scale = {"Scaling the menu", "Menu scaling (60-140%)"},
             FlyingDots = {"Flying Dots", "Floating dots from the top of the menu"},
-            Chams = {"Chams", "Highlight enemies"},
             Reset = {"Reset Settings", "Return all settings to default"}
         }
     }
@@ -91,6 +71,11 @@ local function PlayClickSound()
     sound:Play()
     task.delay(sound.TimeLength + 0.1, function() sound:Destroy() end)
 end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "META_GUI_V7"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = CoreGui
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 640 * (_G.MenuScale / 45), 0, 470 * (_G.MenuScale / 45))
@@ -134,103 +119,46 @@ local function UpdateMenuScale()
     end
 end
 
+local OwnerLabel = Instance.new("TextLabel")
+OwnerLabel.Size = UDim2.new(0.3, 0, 0, 20)
+OwnerLabel.Position = UDim2.new(0.01, 0, 0.92, 0)
+OwnerLabel.BackgroundTransparency = 1
+OwnerLabel.Text = "Owner : QwertyX01"
+OwnerLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+OwnerLabel.TextSize = 12
+OwnerLabel.Font = Enum.Font.Gotham
+OwnerLabel.TextXAlignment = Enum.TextXAlignment.Left
+OwnerLabel.TextYAlignment = Enum.TextYAlignment.Bottom
+OwnerLabel.Parent = MainFrame
+
 local Header = Instance.new("Frame")
 Header.Size = UDim2.new(1, 0, 0, 38)
 Header.BackgroundTransparency = 1
 Header.Parent = MainFrame
 
-local MetaLabel = Instance.new("TextLabel")
-MetaLabel.Size = UDim2.new(0.1, 0, 1, 0)
-MetaLabel.Position = UDim2.new(0, 15, 0, 0)
-MetaLabel.BackgroundTransparency = 1
-MetaLabel.Text = "META"
-MetaLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-MetaLabel.TextSize = 20
-MetaLabel.Font = Enum.Font.GothamBold
-MetaLabel.TextXAlignment = Enum.TextXAlignment.Left
-MetaLabel.TextYAlignment = Enum.TextYAlignment.Center
-MetaLabel.Parent = Header
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(0.5, 0, 1, 0)
+Title.Position = UDim2.new(0, 15, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "META"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 20
+Title.Font = Enum.Font.GothamBold
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.TextYAlignment = Enum.TextYAlignment.Center
+Title.Parent = Header
 
-local GameNameLabel = Instance.new("TextLabel")
-GameNameLabel.Size = UDim2.new(0.35, 0, 1, 0)
-GameNameLabel.Position = UDim2.new(0.32, 0, 0, 0)
-GameNameLabel.BackgroundTransparency = 1
-GameNameLabel.Text = "Loading..."
-GameNameLabel.TextColor3 = Color3.fromRGB(156, 163, 175)
-GameNameLabel.TextSize = 13
-GameNameLabel.Font = Enum.Font.Gotham
-GameNameLabel.TextXAlignment = Enum.TextXAlignment.Left
-GameNameLabel.TextYAlignment = Enum.TextYAlignment.Center
-GameNameLabel.Parent = Header
-
-pcall(function()
-    local MarketplaceService = game:GetService("MarketplaceService")
-    local info = MarketplaceService:GetProductInfo(game.PlaceId)
-    if info and info.Name then
-        GameNameLabel.Text = info.Name
-    else
-        GameNameLabel.Text = "Unknown Game"
-    end
-end)
-
--- ===== ПОИСК =====
-local SearchContainer = Instance.new("Frame")
-SearchContainer.Size = UDim2.new(0.3, 0, 0.7, 0)
-SearchContainer.Position = UDim2.new(0.68, 0, 0.15, 0)
-SearchContainer.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
-SearchContainer.BackgroundTransparency = 0.5
-SearchContainer.BorderSizePixel = 0
-SearchContainer.Parent = Header
-
-local SearchCorner = Instance.new("UICorner")
-SearchCorner.CornerRadius = UDim.new(0, 6)
-SearchCorner.Parent = SearchContainer
-
-local SearchStroke = Instance.new("UIStroke")
-SearchStroke.Thickness = 1
-SearchStroke.Color = _G.MenuThemeColor
-SearchStroke.Transparency = 0.6
-SearchStroke.Parent = SearchContainer
-
-local SearchInput = Instance.new("TextBox")
-SearchInput.Size = UDim2.new(1, -12, 1, 0)
-SearchInput.Position = UDim2.new(0, 8, 0, 0)
-SearchInput.BackgroundTransparency = 1
-SearchInput.Text = "Search..."
-SearchInput.TextColor3 = Color3.fromRGB(209, 213, 219)
-SearchInput.TextSize = 13
-SearchInput.Font = Enum.Font.Gotham
-SearchInput.TextXAlignment = Enum.TextXAlignment.Left
-SearchInput.TextYAlignment = Enum.TextYAlignment.Center
-SearchInput.ClearTextOnFocus = false
-SearchInput.Parent = SearchContainer
-
-local SearchClose = Instance.new("TextButton")
-SearchClose.Size = UDim2.new(0, 16, 1, 0)
-SearchClose.Position = UDim2.new(1, -20, 0, 0)
-SearchClose.BackgroundTransparency = 1
-SearchClose.Text = "✕"
-SearchClose.TextColor3 = Color3.fromRGB(156, 163, 175)
-SearchClose.TextSize = 11
-SearchClose.Font = Enum.Font.Gotham
-SearchClose.TextXAlignment = Enum.TextXAlignment.Center
-SearchClose.TextYAlignment = Enum.TextYAlignment.Center
-SearchClose.Visible = false
-SearchClose.Parent = SearchContainer
-
-SearchClose.MouseButton1Click:Connect(function()
-    SearchInput.Text = "Search..."
-    SearchClose.Visible = false
-    PlayClickSound()
-end)
-
-SearchInput:GetPropertyChangedSignal("Text"):Connect(function()
-    if SearchInput.Text ~= "" and SearchInput.Text ~= "Search..." then
-        SearchClose.Visible = true
-    else
-        SearchClose.Visible = false
-    end
-end)
+local Version = Instance.new("TextLabel")
+Version.Size = UDim2.new(0.5, 0, 1, 0)
+Version.Position = UDim2.new(0.5, 0, 0, 0)
+Version.BackgroundTransparency = 1
+Version.Text = "v7.0"
+Version.TextColor3 = Color3.fromRGB(156, 163, 175)
+Version.TextSize = 14
+Version.Font = Enum.Font.Gotham
+Version.TextXAlignment = Enum.TextXAlignment.Right
+Version.TextYAlignment = Enum.TextYAlignment.Center
+Version.Parent = Header
 
 local Separator = Instance.new("Frame")
 Separator.Size = UDim2.new(1, -20, 0, 1)
@@ -251,212 +179,8 @@ local ContentPages = {}
 local activeIndex = 1
 local langUpdateCallbacks = {}
 local rainbowConnection = nil
-local langButtonData = {}
 
--- ===== CHAMS (РАСШИРЕННОЕ ОПРЕДЕЛЕНИЕ КОМАНД) =====
-local ChamsConnections = {}
-local ChamsTag = "EnemyHighlight_" .. tostring(math.random(1000, 9999))
-
-local function GetPlayerTeam(player)
-    -- 1. Стандартное свойство Team
-    if player.Team then
-        if type(player.Team) == "string" then
-            return player.Team
-        elseif type(player.Team) == "Instance" and player.Team.Name then
-            return player.Team.Name
-        else
-            return tostring(player.Team)
-        end
-    end
-    
-    -- 2. TeamName (StringValue или ObjectValue)
-    local teamNameObj = player:FindFirstChild("TeamName")
-    if teamNameObj then
-        return teamNameObj.Value or teamNameObj.Name
-    end
-    
-    -- 3. TeamColor
-    if player.TeamColor then
-        return tostring(player.TeamColor)
-    end
-    
-    -- 4. TeamValue (NumberValue или IntValue)
-    local teamValueObj = player:FindFirstChild("TeamValue")
-    if teamValueObj then
-        return tostring(teamValueObj.Value)
-    end
-    
-    -- 5. TeamFolder (если есть папка с названием команды)
-    local teamFolder = player:FindFirstChild("TeamFolder")
-    if teamFolder then
-        return teamFolder.Name
-    end
-    
-    -- 6. TeamTag (StringValue)
-    local teamTag = player:FindFirstChild("TeamTag")
-    if teamTag then
-        return teamTag.Value or teamTag.Name
-    end
-    
-    -- 7. Проверка в персонаже
-    local char = player.Character
-    if char then
-        local teamObj = char:FindFirstChild("Team")
-        if teamObj then
-            return teamObj.Value or teamObj.Name
-        end
-        
-        local charTeamName = char:FindFirstChild("TeamName")
-        if charTeamName then
-            return charTeamName.Value or charTeamName.Name
-        end
-        
-        local charTeamColor = char:FindFirstChild("TeamColor")
-        if charTeamColor then
-            return tostring(charTeamColor)
-        end
-    end
-    
-    -- 8. Проверка в ReplicatedStorage
-    local replicatedStorage = game:GetService("ReplicatedStorage")
-    if replicatedStorage then
-        local teamData = replicatedStorage:FindFirstChild("TeamData")
-        if teamData then
-            for _, child in ipairs(teamData:GetChildren()) do
-                if child.Name == player.Name then
-                    return child.Value or child.Name
-                end
-            end
-        end
-    end
-    
-    return nil
-end
-
-local function IsEnemy(player)
-    if player == LocalPlayer then return false
-    
-    local myTeam = GetPlayerTeam(LocalPlayer)
-    local theirTeam = GetPlayerTeam(player)
-    
-    if myTeam and theirTeam and myTeam ~= theirTeam then
-        return true
-    end
-    
-    -- Если команды не определены — считаем всех врагами (кроме себя)
-    if not myTeam or not theirTeam then
-        return true
-    end
-    
-    return false
-end
-
-local function PaintCharacter(character, player)
-    if not character then return end
-    
-    for _, child in ipairs(character:GetChildren()) do
-        if child:IsA("Highlight") and child.Name == ChamsTag then
-            child:Destroy()
-        end
-    end
-    
-    if _G.ChamsEnabled and IsEnemy(player) then
-        local highlight = Instance.new("Highlight")
-        highlight.Name = ChamsTag
-        highlight.FillColor = Color3.fromRGB(180, 40, 40)
-        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-        highlight.FillTransparency = 0.5
-        highlight.OutlineTransparency = 0.1
-        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-        highlight.Adornee = character
-        highlight.Parent = character
-    end
-end
-
-local function SetupPlayer(player)
-    if player == LocalPlayer then return end
-    
-    if ChamsConnections[player] then
-        if ChamsConnections[player].CharacterAdded then
-            ChamsConnections[player].CharacterAdded:Disconnect()
-        end
-        if ChamsConnections[player].TeamChanged then
-            ChamsConnections[player].TeamChanged:Disconnect()
-        end
-    end
-    
-    ChamsConnections[player] = {}
-    
-    ChamsConnections[player].CharacterAdded = player.CharacterAdded:Connect(function(character)
-        task.wait(0.1)
-        PaintCharacter(character, player)
-    end)
-    
-    ChamsConnections[player].TeamChanged = player:GetPropertyChangedSignal("Team"):Connect(function()
-        if player.Character then
-            PaintCharacter(player.Character, player)
-        end
-    end)
-    
-    if player.Character then
-        PaintCharacter(player.Character, player)
-    end
-end
-
-local function ApplyChams()
-    if _G.UnloadChams then _G.UnloadChams() end
-    _G.ChamsEnabled = true
-    
-    for _, player in ipairs(Players:GetPlayers()) do
-        SetupPlayer(player)
-    end
-    
-    ChamsConnections.PlayerAdded = Players.PlayerAdded:Connect(SetupPlayer)
-    
-    ChamsConnections.LocalTeamChanged = LocalPlayer:GetPropertyChangedSignal("Team"):Connect(function()
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer and player.Character then
-                PaintCharacter(player.Character, player)
-            end
-        end
-    end)
-    
-    _G.UnloadChams = function()
-        if ChamsConnections.PlayerAdded then
-            ChamsConnections.PlayerAdded:Disconnect()
-        end
-        if ChamsConnections.LocalTeamChanged then
-            ChamsConnections.LocalTeamChanged:Disconnect()
-        end
-        for _, player in ipairs(Players:GetPlayers()) do
-            if ChamsConnections[player] then
-                if ChamsConnections[player].CharacterAdded then
-                    ChamsConnections[player].CharacterAdded:Disconnect()
-                end
-                if ChamsConnections[player].TeamChanged then
-                    ChamsConnections[player].TeamChanged:Disconnect()
-                end
-            end
-            if player.Character then
-                for _, child in ipairs(player.Character:GetChildren()) do
-                    if child:IsA("Highlight") and child.Name == ChamsTag then
-                        child:Destroy()
-                    end
-                end
-            end
-        end
-        _G.UnloadChams = nil
-        _G.ChamsEnabled = false
-    end
-end
-
-local function RemoveChams()
-    if _G.UnloadChams then
-        _G.UnloadChams()
-    end
-end
-
--- ===== ИНДИКАТОР =====
+-- ===== НОВАЯ МЕХАНИКА ИНДИКАТОРОВ =====
 local IndicatorLine = nil
 local IndicatorColor = _G.MenuThemeColor
 
@@ -502,135 +226,7 @@ local function UpdateIndicatorColor(color)
     end
 end
 
--- ===== ФУНКЦИЯ ПОДСВЕТКИ =====
-local function HighlightElement(element)
-    if not element then return end
-    
-    local highlight = Instance.new("Frame")
-    highlight.Size = UDim2.new(1, 10, 1, 6)
-    highlight.Position = UDim2.new(0, -5, 0, -3)
-    highlight.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    highlight.BackgroundTransparency = 0.85
-    highlight.BorderSizePixel = 0
-    highlight.ZIndex = 999
-    highlight.Parent = element
-    
-    local highlightCorner = Instance.new("UICorner")
-    highlightCorner.CornerRadius = UDim.new(0, 4)
-    highlightCorner.Parent = highlight
-    
-    highlight.BackgroundTransparency = 1
-    TweenService:Create(highlight, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {
-        BackgroundTransparency = 0.85
-    }):Play()
-    
-    task.wait(1)
-    TweenService:Create(highlight, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {
-        BackgroundTransparency = 1
-    }):Play()
-    task.wait(0.15)
-    highlight:Destroy()
-end
-
--- ===== ПОИСК =====
-local function SearchInMenu(query)
-    query = string.lower(query)
-    if not ContentPages then return end
-    
-    local foundElements = {}
-    local foundTabName = nil
-    
-    for tabName, page in pairs(ContentPages) do
-        if page then
-            local function scanChildren(parent)
-                for _, child in ipairs(parent:GetChildren()) do
-                    if child:IsA("TextLabel") or child:IsA("TextButton") then
-                        local text = string.lower(child.Text)
-                        if string.find(text, query) then
-                            table.insert(foundElements, {element = child, tab = tabName})
-                            if not foundTabName then
-                                foundTabName = tabName
-                            end
-                        end
-                    end
-                    if child:IsA("Frame") then
-                        scanChildren(child)
-                    end
-                end
-            end
-            scanChildren(page)
-        end
-    end
-    
-    if #foundElements > 0 and foundTabName then
-        for i, btn in ipairs(TabButtons) do
-            if btn.Text == foundTabName then
-                for _, b in ipairs(TabButtons) do
-                    b.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
-                    b.BackgroundTransparency = 0.2
-                    b.TextColor3 = Color3.fromRGB(156, 163, 175)
-                    TweenService:Create(b, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-                        Size = UDim2.new(0.12, 0, 0, 32)
-                    }):Play()
-                end
-                
-                btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
-                btn.BackgroundTransparency = 0
-                btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-                TweenService:Create(btn, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-                    Size = UDim2.new(0.14, 0, 0, 36)
-                }):Play()
-                
-                for _, page in pairs(ContentPages) do
-                    page.Visible = false
-                end
-                local targetPage = ContentPages[foundTabName]
-                if targetPage then targetPage.Visible = true end
-                activeIndex = i
-                
-                UpdateIndicatorPosition(i)
-                break
-            end
-        end
-        
-        for _, data in ipairs(foundElements) do
-            HighlightElement(data.element)
-        end
-    end
-end
-
-SearchInput.FocusLost:Connect(function(enterPressed)
-    if enterPressed and SearchInput.Text ~= "" and SearchInput.Text ~= "Search..." then
-        SearchInMenu(SearchInput.Text)
-        PlayClickSound()
-        SearchInput.Text = "Search..."
-    end
-end)
-
-SearchInput.Focused:Connect(function()
-    if SearchInput.Text == "Search..." then
-        SearchInput.Text = ""
-    end
-    PlayClickSound()
-end)
-
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.F and UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
-        SearchInput:CaptureFocus()
-        SearchInput.Text = ""
-        PlayClickSound()
-    end
-    if input.KeyCode == Enum.KeyCode.Escape then
-        if SearchInput:IsFocused() then
-            SearchInput.Text = "Search..."
-            SearchInput:ReleaseFocus()
-            PlayClickSound()
-        end
-    end
-end)
-
--- ===== СОЗДАНИЕ ВКЛАДОК =====
+-- ===== ФУНКЦИИ ОБНОВЛЕНИЯ ВКЛАДОК =====
 local function UpdateTabsLanguage()
     local lang = GetLang()
     for i, btn in ipairs(TabButtons) do
@@ -645,45 +241,12 @@ local function UpdateAllTexts()
     end
 end
 
-local function SwitchToTab(tabName)
-    for i, btn in ipairs(TabButtons) do
-        if btn.Text == tabName then
-            for _, b in ipairs(TabButtons) do
-                b.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
-                b.BackgroundTransparency = 0.2
-                b.TextColor3 = Color3.fromRGB(156, 163, 175)
-                TweenService:Create(b, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-                    Size = UDim2.new(0.12, 0, 0, 32)
-                }):Play()
-            end
-            
-            btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
-            btn.BackgroundTransparency = 0
-            btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-            TweenService:Create(btn, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-                Size = UDim2.new(0.14, 0, 0, 36)
-            }):Play()
-            
-            for _, page in pairs(ContentPages) do
-                page.Visible = false
-            end
-            local targetPage = ContentPages[tabName]
-            if targetPage then targetPage.Visible = true end
-            activeIndex = i
-            
-            UpdateIndicatorPosition(i)
-            break
-        end
-    end
-end
-
 for i, name in ipairs(TabNames) do
     local btn = Instance.new("TextButton")
     local width = 0.12
     btn.Size = UDim2.new(width, 0, 0, 32)
     btn.Position = UDim2.new(0.02 + (i-1) * (width + 0.03), 0, 0.15, 0)
     btn.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
-    btn.BackgroundTransparency = 0.2
     btn.Text = name
     btn.TextColor3 = Color3.fromRGB(156, 163, 175)
     btn.TextSize = 14
@@ -697,7 +260,6 @@ for i, name in ipairs(TabNames) do
 
     if i == 1 then
         btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
-        btn.BackgroundTransparency = 0
         btn.TextColor3 = Color3.fromRGB(255, 255, 255)
         btn.Size = UDim2.new(width + 0.02, 0, 0, 36)
     end
@@ -705,7 +267,6 @@ for i, name in ipairs(TabNames) do
     btn.MouseEnter:Connect(function()
         if activeIndex ~= i then
             btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
-            btn.BackgroundTransparency = 0.1
             btn.TextColor3 = Color3.fromRGB(255, 255, 255)
         end
     end)
@@ -713,14 +274,35 @@ for i, name in ipairs(TabNames) do
     btn.MouseLeave:Connect(function()
         if activeIndex ~= i then
             btn.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
-            btn.BackgroundTransparency = 0.2
             btn.TextColor3 = Color3.fromRGB(156, 163, 175)
         end
     end)
 
     btn.MouseButton1Click:Connect(function()
         PlayTabSound()
-        SwitchToTab(name)
+        
+        for _, b in ipairs(TabButtons) do
+            b.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
+            b.TextColor3 = Color3.fromRGB(156, 163, 175)
+            TweenService:Create(b, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                Size = UDim2.new(width, 0, 0, 32)
+            }):Play()
+        end
+        
+        btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
+        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        TweenService:Create(btn, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = UDim2.new(width + 0.02, 0, 0, 36)
+        }):Play()
+        
+        for _, page in pairs(ContentPages) do
+            page.Visible = false
+        end
+        local targetPage = ContentPages[name]
+        if targetPage then targetPage.Visible = true end
+        activeIndex = i
+        
+        UpdateIndicatorPosition(i)
     end)
 
     table.insert(TabButtons, btn)
@@ -750,111 +332,9 @@ end
 
 local visualsPage = ContentPages["Visuals"]
 if visualsPage then
-    visualsPage.CanvasSize = UDim2.new(0, 0, 0, 200)
-    
-    local visualsContainer = Instance.new("Frame")
-    visualsContainer.Size = UDim2.new(1, 0, 0, 500)
-    visualsContainer.Position = UDim2.new(0, 0, 0, 55)
-    visualsContainer.BackgroundTransparency = 1
-    visualsContainer.ClipsDescendants = true
-    visualsContainer.Parent = visualsPage
-    
-    -- ===== CHAMS (ВИЗУАЛЬНЫЙ ТОГГЛ) =====
-    local chamsFrame = Instance.new("Frame")
-    chamsFrame.Size = UDim2.new(1, 0, 0, 45)
-    chamsFrame.Position = UDim2.new(0, 0, 0, 10)
-    chamsFrame.BackgroundTransparency = 1
-    chamsFrame.Parent = visualsPage
-    
-    local chamsLabel = Instance.new("TextLabel")
-    chamsLabel.Size = UDim2.new(0.6, 0, 0, 20)
-    chamsLabel.Position = UDim2.new(0, 0, 0, 0)
-    chamsLabel.BackgroundTransparency = 1
-    chamsLabel.Text = "Chams"
-    chamsLabel.TextColor3 = Color3.fromRGB(209, 213, 219)
-    chamsLabel.TextSize = 13
-    chamsLabel.Font = Enum.Font.GothamBold
-    chamsLabel.TextXAlignment = Enum.TextXAlignment.Left
-    chamsLabel.Parent = chamsFrame
-    
-    local chamsDesc = Instance.new("TextLabel")
-    chamsDesc.Size = UDim2.new(0.7, 0, 0, 16)
-    chamsDesc.Position = UDim2.new(0, 0, 0, 22)
-    chamsDesc.BackgroundTransparency = 1
-    chamsDesc.Text = "Highlight enemies"
-    chamsDesc.TextColor3 = Color3.fromRGB(113, 113, 122)
-    chamsDesc.TextSize = 11
-    chamsDesc.Font = Enum.Font.Gotham
-    chamsDesc.TextXAlignment = Enum.TextXAlignment.Left
-    chamsDesc.Parent = chamsFrame
-    
-    local chamsToggleBg = Instance.new("Frame")
-    chamsToggleBg.Size = UDim2.new(0, 44, 0, 24)
-    chamsToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
-    chamsToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
-    chamsToggleBg.BorderSizePixel = 0
-    chamsToggleBg.Parent = chamsFrame
-    
-    local chamsToggleCorner = Instance.new("UICorner")
-    chamsToggleCorner.CornerRadius = UDim.new(1, 0)
-    chamsToggleCorner.Parent = chamsToggleBg
-    
-    local chamsHandle = Instance.new("Frame")
-    chamsHandle.Size = UDim2.new(0, 18, 0, 18)
-    chamsHandle.Position = UDim2.new(0, 3, 0.5, -9)
-    chamsHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    chamsHandle.BorderSizePixel = 0
-    chamsHandle.Parent = chamsToggleBg
-    
-    local chamsHandleCorner = Instance.new("UICorner")
-    chamsHandleCorner.CornerRadius = UDim.new(1, 0)
-    chamsHandleCorner.Parent = chamsHandle
-    
-    local chamsClickArea = Instance.new("TextButton")
-    chamsClickArea.Size = UDim2.new(0, 44, 0, 24)
-    chamsClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
-    chamsClickArea.BackgroundTransparency = 1
-    chamsClickArea.Text = ""
-    chamsClickArea.ZIndex = 10
-    chamsClickArea.Parent = chamsFrame
-    
-    local function SetChamsToggleState(value)
-        if value then
-            TweenService:Create(chamsToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                BackgroundColor3 = Color3.fromRGB(59, 130, 246)
-            }):Play()
-            TweenService:Create(chamsHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                Position = UDim2.new(0, 23, 0.5, -9)
-            }):Play()
-            ApplyChams()
-        else
-            TweenService:Create(chamsToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                BackgroundColor3 = Color3.fromRGB(42, 47, 58)
-            }):Play()
-            TweenService:Create(chamsHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                Position = UDim2.new(0, 3, 0.5, -9)
-            }):Play()
-            RemoveChams()
-        end
-        _G.ChamsEnabled = value
-    end
-    
-    SetChamsToggleState(_G.ChamsEnabled)
-    
-    chamsClickArea.MouseButton1Click:Connect(function()
-        PlayClickSound()
-        SetChamsToggleState(not _G.ChamsEnabled)
-    end)
-    
-    local function UpdateChamsText()
-        local lang = GetLang()
-        chamsLabel.Text = lang.Toggles.Chams[1]
-        chamsDesc.Text = lang.Toggles.Chams[2]
-    end
-    table.insert(langUpdateCallbacks, UpdateChamsText)
+    visualsPage.CanvasSize = UDim2.new(0, 0, 0, 10)
 end
 
--- ===== НАСТРОЙКИ (UI Color, Opacity, Rainbow, Scale, Flying Dots, Reset) =====
 local settingsPage = ContentPages["Settings"]
 if settingsPage then
     settingsPage.CanvasSize = UDim2.new(0, 0, 0, 600)
@@ -866,7 +346,7 @@ if settingsPage then
     settingsContainer.ClipsDescendants = true
     settingsContainer.Parent = settingsPage
 
-    -- ===== UI Color =====
+    -- ===== Чекбокс UI Color =====
     local toggleFrame = Instance.new("Frame")
     toggleFrame.Size = UDim2.new(1, 0, 0, 45)
     toggleFrame.Position = UDim2.new(0, 0, 0, 10)
@@ -995,7 +475,6 @@ if settingsPage then
         if not _G.RainbowEnabled then
             MainStroke.Color = pickedColor
             UpdateIndicatorColor(pickedColor)
-            SearchStroke.Color = pickedColor
         end
         _G.MenuThemeColor = pickedColor
     end
@@ -1064,7 +543,6 @@ if settingsPage then
         if not value and not _G.RainbowEnabled then
             MainStroke.Color = _G.MenuThemeColor
             UpdateIndicatorColor(_G.MenuThemeColor)
-            SearchStroke.Color = _G.MenuThemeColor
         end
     end
 
@@ -1082,12 +560,14 @@ if settingsPage then
         SetToggleState(not _G.CustomThemeEnabled)
     end)
 
-    -- ===== ЯЗЫКОВЫЕ ПАНЕЛИ =====
+    -- ===== БЛОК ПЕРЕКЛЮЧАТЕЛЯ ЯЗЫКА =====
     local langFrame = Instance.new("Frame")
     langFrame.Size = UDim2.new(1, -20, 0, 42)
     langFrame.Position = UDim2.new(0, 10, 0, 10)
     langFrame.BackgroundTransparency = 1
     langFrame.Parent = settingsContainer
+
+    local langButtons = {}
 
     local function CreateLangButton(text, langCode, xPos)
         local bg = Instance.new("Frame")
@@ -1100,10 +580,6 @@ if settingsPage then
         local bgCorner = Instance.new("UICorner")
         bgCorner.CornerRadius = UDim.new(0, 6)
         bgCorner.Parent = bg
-
-        local uiScale = Instance.new("UIScale")
-        uiScale.Scale = 1
-        uiScale.Parent = bg
 
         local txt = Instance.new("TextLabel")
         txt.Size = UDim2.new(1, 0, 1, 0)
@@ -1123,46 +599,33 @@ if settingsPage then
         clickBtn.ZIndex = 10
         clickBtn.Parent = bg
 
-        local function UpdateLangButton(animate)
-            local isActive = (_G.CurrentLang == langCode)
-            local targetScale = isActive and 1.1 or 1
-            local targetBg = isActive and Color3.fromRGB(35, 40, 50) or Color3.fromRGB(26, 30, 38)
-            local targetTransp = isActive and 0 or 0.5
-            local targetTextColor = isActive and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(156, 163, 175)
-            
-            if animate then
-                TweenService:Create(uiScale, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-                    Scale = targetScale
-                }):Play()
-                TweenService:Create(bg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                    BackgroundColor3 = targetBg,
-                    BackgroundTransparency = targetTransp
-                }):Play()
-                TweenService:Create(txt, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                    TextColor3 = targetTextColor
-                }):Play()
+        local function UpdateLangButton()
+            if _G.CurrentLang == langCode then
+                bg.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
+                bg.BackgroundTransparency = 0
+                txt.TextColor3 = Color3.fromRGB(255, 255, 255)
             else
-                uiScale.Scale = targetScale
-                bg.BackgroundColor3 = targetBg
-                bg.BackgroundTransparency = targetTransp
-                txt.TextColor3 = targetTextColor
+                bg.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
+                bg.BackgroundTransparency = 0.5
+                txt.TextColor3 = Color3.fromRGB(156, 163, 175)
             end
         end
 
-        UpdateLangButton(false)
+        UpdateLangButton()
 
         clickBtn.MouseButton1Click:Connect(function()
             PlayClickSound()
             if _G.CurrentLang == langCode then return end
             _G.CurrentLang = langCode
-            for _, btn in ipairs(langButtonData) do
-                pcall(btn.Update, true)
+            for _, btn in ipairs(langButtons) do
+                pcall(btn.Update)
             end
             UpdateAllTexts()
+            print("[LANG] Switched to: " .. langCode)
         end)
 
         local btnData = {Update = UpdateLangButton}
-        table.insert(langButtonData, btnData)
+        table.insert(langButtons, btnData)
         return btnData
     end
 
@@ -1375,7 +838,6 @@ if settingsPage then
                 local color = Color3.fromHSV(hue, 1, 1)
                 MainStroke.Color = color
                 UpdateIndicatorColor(color)
-                SearchStroke.Color = color
             end)
         else
             if rainbowConnection then
@@ -1383,7 +845,6 @@ if settingsPage then
                 rainbowConnection = nil
                 MainStroke.Color = _G.MenuThemeColor
                 UpdateIndicatorColor(_G.MenuThemeColor)
-                SearchStroke.Color = _G.MenuThemeColor
             end
         end
     end
@@ -1831,18 +1292,13 @@ if settingsPage then
         _G.RainbowEnabled = false
         _G.MenuScale = 45
         _G.FlyingDots = false
-        _G.ChamsEnabled = false
         
         MainFrame.BackgroundTransparency = 0.12
         MainStroke.Color = _G.MenuThemeColor
         UpdateIndicatorColor(_G.MenuThemeColor)
-        SearchStroke.Color = _G.MenuThemeColor
         
-        RemoveChams()
-        SetChamsToggleState(false)
-        
-        for _, btn in ipairs(langButtonData) do
-            pcall(btn.Update, false)
+        for _, btn in ipairs(langButtons) do
+            pcall(btn.Update)
         end
         
         UpdateAllTexts()
@@ -1884,6 +1340,9 @@ if settingsPage then
         
         pickerDot.Position = UDim2.new(0.5, -5, 0.5, -5)
         
+        print("[RESET] All settings restored to default")
+        PlayClickSound()
+        
         UpdateResetToggle(false)
     end
 
@@ -1912,14 +1371,12 @@ UpdateAllTexts()
 if TabButtons[1] then
     local btn = TabButtons[1]
     btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
-    btn.BackgroundTransparency = 0
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.Size = UDim2.new(0.14, 0, 0, 36)
     local firstPage = ContentPages["Aimbot"]
     if firstPage then firstPage.Visible = true end
 end
 
--- ===== ВКЛЮЧЕНИЕ/ВЫКЛЮЧЕНИЕ ПО INSERT =====
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.KeyCode == Enum.KeyCode.Insert then
@@ -1927,6 +1384,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- ===== ЧИСТКА (БЕЗ АВТОМАТИЧЕСКОГО УДАЛЕНИЯ) =====
--- Удаляем только если скрипт явно выгружен через _G.UnloadChams
--- Никаких Heartbeat для удаления меню!
+print("[META] META v7.0 - Fade in animation added")
+print("[META] Press Insert to toggle 
