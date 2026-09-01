@@ -1,4 +1,4 @@
-
+loadstring([[
 -- ROCKET::META_UI_V7_ANIMATION
 -- ПЛАВНОЕ ПОЯВЛЕНИЕ МЕНЮ ПРИ ЗАПУСКЕ
 
@@ -1385,4 +1385,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 print("[META] META v7.0 - Fade in animation added")
-print("[META] Press Insert to toggle 
+print("[META] Press Insert to toggle menu")
+]])()
