@@ -1,70 +1,41 @@
-loadstring([[
 -- ROCKET::META_UI_V7.0.28
 -- ANTI-CHEAT BYPASS: PACKET HOOK, RATE LIMIT BYPASS, UI HIDING
 
--- ===== ОБХОД АНТИЧИТА =====
 local function SetupAntiCheatBypass()
     pcall(function()
         local ReplicatedStorage = game:GetService("ReplicatedStorage")
         local Network = require(ReplicatedStorage.Database.Security.Network)
-        
-        -- Сохраняем оригинальный CreatePacket
         local OriginalCreatePacket = Network.CreatePacket
-        
-        -- Перехватываем CreatePacket
         Network.CreatePacket = function(namespace, packetName, schema, options)
             local packet = OriginalCreatePacket(namespace, packetName, schema, options)
-            
             if packet and packet.Send then
                 local OriginalSend = packet.Send
-                
-                -- Перехватываем Send для обхода валидации и rate limiting
                 packet.Send = function(data)
                     local success, result = pcall(function()
                         local BufferCodec = require(ReplicatedStorage.Database.Security.Network.BufferCodec)
                         local encoded, instances = BufferCodec.Encode(data)
-                        
                         local remote = ReplicatedStorage:FindFirstChild("NetworkRemotes")
                         local folder = remote and remote:FindFirstChild(namespace)
                         local event = folder and folder:FindFirstChild(packetName)
-                        
-                        if event then
-                            event:FireServer(encoded, instances)
-                            return true
-                        end
-                        
+                        if event then event:FireServer(encoded, instances) return true end
                         return false
                     end)
-                    
-                    if success and result then
-                        return true
-                    end
-                    
-                    -- Fallback на оригинал
+                    if success and result then return true end
                     return OriginalSend(data)
                 end
             end
-            
             return packet
         end
-        
-        -- Обход Rate Limiting
-        local rateLimits = {}
-        local OriginalCanPass = Network.canPassRateLimit
-        
         Network.canPassRateLimit = function(player, packetName, options)
-            -- Всегда пропускаем, но с небольшой задержкой для маскировки
             task.wait(0.01)
             return true, nil
         end
-        
         print("[META] Anti-cheat bypass installed")
     end)
 end
 
 SetupAntiCheatBypass()
 
--- ===== СКРЫТИЕ ОТ СКАНЕРА =====
 local function HideFromScanner(gui)
     pcall(function()
         sethiddenproperty(gui, "RobloxLocked", true)
@@ -72,11 +43,11 @@ local function HideFromScanner(gui)
     end)
 end
 
--- ===== АВТО-ВЫГРУЗКА ПРИ ТЕЛЕПОРТЕ =====
 local function SetupAutoUnload()
     game:GetService("Players").LocalPlayer.OnTeleport:Connect(function()
         pcall(function()
             if _G.UnloadChams then _G.UnloadChams() end
+            if _G.UnloadESP then _G.UnloadESP() end
             if ScreenGui then ScreenGui:Destroy() end
         end)
     end)
@@ -84,7 +55,6 @@ end
 
 SetupAutoUnload()
 
--- ===== ОСНОВНОЙ СКРИПТ =====
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -93,8 +63,6 @@ local CoreGui = game:GetService("CoreGui")
 local SoundService = game:GetService("SoundService")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
-local Mouse = LocalPlayer:GetMouse()
-local ScreenSize = Camera.ViewportSize
 
 _G.CustomThemeEnabled = false
 _G.MenuThemeColor = Color3.fromRGB(59, 130, 246)
@@ -104,25 +72,18 @@ _G.RainbowEnabled = false
 _G.MenuScale = 45
 _G.FlyingDots = false
 _G.ChamsEnabled = false
+_G.ESPEnabled = false
 
 local Dots = {}
 local DotConnection = nil
 local lastScale = _G.MenuScale
 
--- Глобальные переменные для Reset
-local opacitySliderFill = nil
-local opacitySliderHandle = nil
-local opacityValue = nil
-local scaleSliderFill = nil
-local scaleSliderHandle = nil
-local scaleValue = nil
-local pickerDot = nil
-local pickerContainer = nil
-local SetToggleState = nil
-local ShiftContainer = nil
-local SetChamsToggleState = nil
-local SetRainbowToggleState = nil
-local SetFlyingToggleState = nil
+local opacitySliderFill, opacitySliderHandle, opacityValue = nil, nil, nil
+local scaleSliderFill, scaleSliderHandle, scaleValue = nil, nil, nil
+local pickerDot, pickerContainer = nil, nil
+local SetToggleState, ShiftContainer = nil, nil
+local SetChamsToggleState, SetRainbowToggleState = nil, nil
+local SetFlyingToggleState, SetESPToggleState = nil, nil
 
 local LANG = {
     RU = {
@@ -133,7 +94,8 @@ local LANG = {
             Rainbow = {"Разноцветная обводка", "Включить радужную обводку меню"},
             Scale = {"Scaling the menu", "Масштабирование меню (60-140%)"},
             FlyingDots = {"Летающие точки", "Точки, летающие с верху меню"},
-            Chams = {"Chams", "Функция которая делает противников красным цветом"},
+            Chams = {"Чамсы", "Функция которая делает противников красным цветом"},
+            ESP = {"Линии и 3D Боксы", "Линии с боксами которые ведут к противникам"},
             Reset = {"Сброс настроек", "Вернуть все настройки к стандартным"}
         }
     },
@@ -146,14 +108,13 @@ local LANG = {
             Scale = {"Scaling the menu", "Menu scaling (60-140%)"},
             FlyingDots = {"Flying Dots", "Floating dots from the top of the menu"},
             Chams = {"Chams", "Function that makes enemies red"},
+            ESP = {"Tracers and 3D Box", "Lines with boxes leading to enemies"},
             Reset = {"Reset Settings", "Return all settings to default"}
         }
     }
 }
 
-local function GetLang()
-    return _G.CurrentLang == "RU" and LANG.RU or LANG.EN
-end
+local function GetLang() return _G.CurrentLang == "RU" and LANG.RU or LANG.EN end
 
 local function PlayTabSound()
     local sound = Instance.new("Sound")
@@ -183,7 +144,6 @@ ScreenGui.DisplayOrder = 999999998
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = CoreGui
 
--- Скрываем от сканера
 HideFromScanner(ScreenGui)
 
 local FakeContainer = Instance.new("Frame")
@@ -206,40 +166,9 @@ MainFrame.Draggable = true
 MainFrame.Active = true
 MainFrame.Selectable = true
 
--- UIScale для анимации
 local MainScale = Instance.new("UIScale")
-MainScale.Name = "UIScale"
 MainScale.Scale = 1
 MainScale.Parent = MainFrame
-
-local function AddFakeRobloxElements()
-    local fakeElements = {
-        "Topbar", "ChatBar", "HealthBar", "Backpack", "PlayerList", "Notifications", "Settings"
-    }
-    for _, elementName in ipairs(fakeElements) do
-        local fakeElement = Instance.new("Frame")
-        fakeElement.Name = elementName
-        fakeElement.Size = UDim2.new(0, 1, 0, 1)
-        fakeElement.Position = UDim2.new(0, -999, 0, -999)
-        fakeElement.BackgroundTransparency = 1
-        fakeElement.Visible = false
-        fakeElement.Parent = FakeContainer
-    end
-end
-
-AddFakeRobloxElements()
-
-MainFrame.BackgroundTransparency = 1
-MainScale.Scale = 0.7
-
-task.wait(0.05)
-
-TweenService:Create(MainScale, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-    Scale = 1
-}):Play()
-TweenService:Create(MainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-    BackgroundTransparency = _G.MenuOpacity / 100
-}):Play()
 
 local MainCorner = Instance.new("UICorner")
 MainCorner.CornerRadius = UDim.new(0, 12)
@@ -250,15 +179,6 @@ MainStroke.Thickness = 2
 MainStroke.Color = _G.MenuThemeColor
 MainStroke.Transparency = 0.4
 MainStroke.Parent = MainFrame
-
-local function UpdateMenuScale()
-    if not MainFrame then return end
-    local scale = _G.MenuScale / 45
-    MainFrame.Size = UDim2.new(0, 640 * scale, 0, 470 * scale)
-    if _G.FlyingDots then
-        RebuildDots()
-    end
-end
 
 local Header = Instance.new("Frame")
 Header.Name = "Topbar"
@@ -295,11 +215,7 @@ GameNameLabel.Parent = Header
 pcall(function()
     local MarketplaceService = game:GetService("MarketplaceService")
     local info = MarketplaceService:GetProductInfo(game.PlaceId)
-    if info and info.Name then
-        GameNameLabel.Text = info.Name
-    else
-        GameNameLabel.Text = "Unknown Game"
-    end
+    if info and info.Name then GameNameLabel.Text = info.Name end
 end)
 
 local SearchContainer = Instance.new("Frame")
@@ -336,7 +252,6 @@ SearchInput.ClearTextOnFocus = false
 SearchInput.Parent = SearchContainer
 
 local SearchClose = Instance.new("TextButton")
-SearchClose.Name = "CloseButton"
 SearchClose.Size = UDim2.new(0, 16, 1, 0)
 SearchClose.Position = UDim2.new(1, -20, 0, 0)
 SearchClose.BackgroundTransparency = 1
@@ -355,16 +270,7 @@ SearchClose.MouseButton1Click:Connect(function()
     PlayClickSound()
 end)
 
-SearchInput:GetPropertyChangedSignal("Text"):Connect(function()
-    if SearchInput.Text ~= "" and SearchInput.Text ~= "Search..." then
-        SearchClose.Visible = true
-    else
-        SearchClose.Visible = false
-    end
-end)
-
 local Separator = Instance.new("Frame")
-Separator.Name = "Divider"
 Separator.Size = UDim2.new(1, -20, 0, 1)
 Separator.Position = UDim2.new(0, 10, 0, 38)
 Separator.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
@@ -386,47 +292,30 @@ local langUpdateCallbacks = {}
 local rainbowConnection = nil
 local langButtonData = {}
 
--- ===== CHAMS (С МАСКИРОВКОЙ) =====
 local ChamsConnections = {}
 local ChamsTag = "META_Chams"
 
-local function IsEnemy(player)
-    if not player or player == LocalPlayer then return false end
-
-    if player.Team and LocalPlayer.Team then
-        if player.Team ~= LocalPlayer.Team then
-            return true
-        end
-        if player.Team.Name ~= LocalPlayer.Team.Name then
-            return true
-        end
+local function IsEnemy(p)
+    if not p or p == LocalPlayer then return false end
+    if p.Team and LocalPlayer.Team then
+        if p.Team ~= LocalPlayer.Team then return true end
+        if p.Team.Name ~= LocalPlayer.Team.Name then return true end
     end
-
-    if player.TeamColor and LocalPlayer.TeamColor then
-        if player.TeamColor ~= LocalPlayer.TeamColor then
-            return true
-        end
+    if p.TeamColor and LocalPlayer.TeamColor then
+        if p.TeamColor ~= LocalPlayer.TeamColor then return true end
     end
-
     local mySide = LocalPlayer:GetAttribute("Team") or LocalPlayer:GetAttribute("Side") or ""
-    local enemySide = player:GetAttribute("Team") or player:GetAttribute("Side") or ""
-    if mySide ~= "" and enemySide ~= "" then
-        return mySide ~= enemySide
-    end
-
+    local enemySide = p:GetAttribute("Team") or p:GetAttribute("Side") or ""
+    if mySide ~= "" and enemySide ~= "" then return mySide ~= enemySide end
     return false
 end
 
-local function PaintCharacter(character, player)
-    if not character or not player then return end
-
-    if character:FindFirstChild(ChamsTag) then
-        character[ChamsTag]:Destroy()
-    end
-
-    if IsEnemy(player) then
+local function PaintCharacter(character, p)
+    if not character or not p then return end
+    if character:FindFirstChild(ChamsTag) then character[ChamsTag]:Destroy() end
+    if IsEnemy(p) then
         local highlight = Instance.new("Highlight")
-        highlight.Name = "Highlight" -- Маскировка: стандартное имя
+        highlight.Name = "Highlight"
         highlight.FillColor = Color3.fromRGB(255, 30, 30)
         highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
         highlight.FillTransparency = 0.45
@@ -434,94 +323,165 @@ local function PaintCharacter(character, player)
         highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
         highlight.Adornee = character
         highlight.Parent = character
-        
-        -- Скрываем от сканера
         HideFromScanner(highlight)
     end
 end
 
-local function SetupPlayer(player)
-    if player == LocalPlayer then return end
-
-    if ChamsConnections[player] then
-        ChamsConnections[player]:Disconnect()
-    end
-
-    ChamsConnections[player] = player.CharacterAdded:Connect(function(character)
+local function SetupPlayer(p)
+    if p == LocalPlayer then return end
+    if ChamsConnections[p] then ChamsConnections[p]:Disconnect() end
+    ChamsConnections[p] = p.CharacterAdded:Connect(function(char)
         task.wait(0.6)
-        PaintCharacter(character, player)
+        PaintCharacter(char, p)
     end)
-
-    if player.Character then
-        task.wait(0.2)
-        PaintCharacter(player.Character, player)
-    end
+    if p.Character then task.wait(0.2) PaintCharacter(p.Character, p) end
 end
 
 local function ApplyChams()
     if _G.UnloadChams then _G.UnloadChams() end
     _G.ChamsEnabled = true
-
-    for _, player in ipairs(Players:GetPlayers()) do
-        SetupPlayer(player)
-    end
-
+    for _, p in ipairs(Players:GetPlayers()) do SetupPlayer(p) end
     ChamsConnections.PlayerAdded = Players.PlayerAdded:Connect(SetupPlayer)
-
     task.spawn(function()
         while _G.ChamsEnabled do
-            for _, player in ipairs(Players:GetPlayers()) do
-                if player.Character and player ~= LocalPlayer then
-                    local hasChams = player.Character:FindFirstChild("Highlight")
-                    local shouldBeRed = IsEnemy(player)
-
-                    if shouldBeRed and not hasChams then
-                        PaintCharacter(player.Character, player)
-                    elseif not shouldBeRed and hasChams then
-                        player.Character:FindFirstChild("Highlight"):Destroy()
-                    end
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p.Character and p ~= LocalPlayer then
+                    local hasChams = p.Character:FindFirstChild("Highlight")
+                    local shouldBeRed = IsEnemy(p)
+                    if shouldBeRed and not hasChams then PaintCharacter(p.Character, p)
+                    elseif not shouldBeRed and hasChams then p.Character:FindFirstChild("Highlight"):Destroy() end
                 end
             end
             task.wait(2)
         end
     end)
-
-    LocalPlayer:GetPropertyChangedSignal("Team"):Connect(function()
-        task.wait(0.5)
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p.Character then PaintCharacter(p.Character, p) end
-        end
-    end)
-
     _G.UnloadChams = function()
         _G.ChamsEnabled = false
         if ChamsConnections.PlayerAdded then ChamsConnections.PlayerAdded:Disconnect() end
-        for _, player in ipairs(Players:GetPlayers()) do
-            if ChamsConnections[player] then ChamsConnections[player]:Disconnect() end
-            if player.Character then
-                local highlight = player.Character:FindFirstChild("Highlight")
-                if highlight then highlight:Destroy() end
+        for _, p in ipairs(Players:GetPlayers()) do
+            if ChamsConnections[p] then ChamsConnections[p]:Disconnect() end
+            if p.Character and p.Character:FindFirstChild("Highlight") then
+                p.Character:FindFirstChild("Highlight"):Destroy()
             end
         end
     end
 end
 
 local function RemoveChams()
-    if _G.UnloadChams then
-        _G.UnloadChams()
-    end
+    if _G.UnloadChams then _G.UnloadChams() end
 end
 
--- ===== ИНДИКАТОР =====
+local ESPConnections = {}
+
+local function SetupESP()
+    local function NewLine()
+        local line = Drawing.new("Line")
+        line.Visible = false
+        line.From = Vector2.new(0, 0)
+        line.To = Vector2.new(1, 1)
+        line.Color = Color3.fromRGB(255, 255, 255)
+        line.Thickness = 1.4
+        line.Transparency = 1
+        return line
+    end
+
+    local function CreateESP(target)
+        local lines = {}
+        for i = 1, 12 do lines[i] = NewLine() end
+        lines.Tracer = NewLine()
+
+        local conn = RunService.RenderStepped:Connect(function()
+            local char = target.Character
+            local localChar = LocalPlayer.Character
+            if localChar then
+                local myHum = localChar:FindFirstChildOfClass("Humanoid")
+                if myHum and myHum.Health <= 0 then
+                    for _, l in pairs(lines) do l.Visible = false end
+                    return
+                end
+            else
+                for _, l in pairs(lines) do l.Visible = false end
+                return
+            end
+            if not _G.ESPEnabled or not char or not char:FindFirstChild("HumanoidRootPart") or not char:FindFirstChild("Head") then
+                for _, l in pairs(lines) do l.Visible = false end
+                return
+            end
+            if target == LocalPlayer or not IsEnemy(target) then
+                for _, l in pairs(lines) do l.Visible = false end
+                return
+            end
+            local hum = char:FindFirstChild("Humanoid")
+            if hum and hum.Health <= 0 then
+                for _, l in pairs(lines) do l.Visible = false end
+                return
+            end
+            local rootPart = char.HumanoidRootPart
+            local head = char.Head
+            local rootVisible = Camera:WorldToViewportPoint(rootPart.Position)
+            if not rootVisible then
+                for _, l in pairs(lines) do l.Visible = false end
+                return
+            end
+            local scale = head.Size.Y / 2
+            local boxSize = Vector3.new(2, 3, 1.5) * (scale * 2)
+            local cf = rootPart.CFrame
+            local c = {}
+            c[1] = Camera:WorldToViewportPoint((cf * CFrame.new(-boxSize.X, boxSize.Y, -boxSize.Z)).Position)
+            c[2] = Camera:WorldToViewportPoint((cf * CFrame.new(-boxSize.X, boxSize.Y, boxSize.Z)).Position)
+            c[3] = Camera:WorldToViewportPoint((cf * CFrame.new(boxSize.X, boxSize.Y, boxSize.Z)).Position)
+            c[4] = Camera:WorldToViewportPoint((cf * CFrame.new(boxSize.X, boxSize.Y, -boxSize.Z)).Position)
+            c[5] = Camera:WorldToViewportPoint((cf * CFrame.new(-boxSize.X, -boxSize.Y, -boxSize.Z)).Position)
+            c[6] = Camera:WorldToViewportPoint((cf * CFrame.new(-boxSize.X, -boxSize.Y, boxSize.Z)).Position)
+            c[7] = Camera:WorldToViewportPoint((cf * CFrame.new(boxSize.X, -boxSize.Y, boxSize.Z)).Position)
+            c[8] = Camera:WorldToViewportPoint((cf * CFrame.new(boxSize.X, -boxSize.Y, -boxSize.Z)).Position)
+            local edges = {{1,2},{2,3},{3,4},{4,1},{5,6},{6,7},{7,8},{8,5},{1,5},{2,6},{3,7},{4,8}}
+            for i, e in ipairs(edges) do
+                lines[i].From = Vector2.new(c[e[1]].X, c[e[1]].Y)
+                lines[i].To = Vector2.new(c[e[2]].X, c[e[2]].Y)
+                lines[i].Visible = true
+            end
+            local bottomPos = Camera:WorldToViewportPoint((cf * CFrame.new(0, -boxSize.Y, 0)).Position)
+            lines.Tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+            lines.Tracer.To = Vector2.new(bottomPos.X, bottomPos.Y)
+            lines.Tracer.Visible = true
+        end)
+        ESPConnections[target] = conn
+    end
+
+    local function ApplyESP()
+        if _G.UnloadESP then _G.UnloadESP() end
+        _G.ESPEnabled = true
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer then CreateESP(p) end
+        end
+        ESPConnections.PlayerAdded = Players.PlayerAdded:Connect(function(p)
+            task.wait(1)
+            if p ~= LocalPlayer and _G.ESPEnabled then CreateESP(p) end
+        end)
+        _G.UnloadESP = function()
+            _G.ESPEnabled = false
+            if ESPConnections.PlayerAdded then ESPConnections.PlayerAdded:Disconnect() end
+            for _, conn in pairs(ESPConnections) do
+                if typeof(conn) == "RBXScriptConnection" then conn:Disconnect() end
+            end
+            ESPConnections = {}
+        end
+    end
+
+    local function RemoveESP()
+        if _G.UnloadESP then _G.UnloadESP() end
+    end
+    return ApplyESP, RemoveESP
+end
+
+local ApplyESP, RemoveESP = SetupESP()
+
 local IndicatorLine = nil
 local IndicatorColor = _G.MenuThemeColor
 
 local function CreateIndicatorLine()
-    if IndicatorLine then
-        IndicatorLine:Destroy()
-        IndicatorLine = nil
-    end
-
+    if IndicatorLine then IndicatorLine:Destroy() end
     IndicatorLine = Instance.new("Frame")
     IndicatorLine.Name = "SelectionIndicator"
     IndicatorLine.Size = UDim2.new(0.12, 0, 0, 2)
@@ -530,7 +490,6 @@ local function CreateIndicatorLine()
     IndicatorLine.BorderSizePixel = 0
     IndicatorLine.Parent = TabContainer
     IndicatorLine.ZIndex = 10
-
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(1, 0)
     corner.Parent = IndicatorLine
@@ -538,30 +497,20 @@ end
 
 local function UpdateIndicatorPosition(index)
     if not IndicatorLine then return end
-    if index < 1 or index > #TabButtons then return end
-
     local width = 0.12
     local xPos = 0.02 + (index - 1) * (width + 0.03)
-
-    TweenService:Create(IndicatorLine, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-        Position = UDim2.new(xPos, 0, 1, -2),
-        Size = UDim2.new(width + 0.02, 0, 0, 2)
-    }):Play()
+    TweenService:Create(IndicatorLine, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(xPos, 0, 1, -2), Size = UDim2.new(width + 0.02, 0, 0, 2)}):Play()
 end
 
 local function UpdateIndicatorColor(color)
     IndicatorColor = color
     if IndicatorLine then
-        TweenService:Create(IndicatorLine, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-            BackgroundColor3 = color
-        }):Play()
+        TweenService:Create(IndicatorLine, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = color}):Play()
     end
 end
 
--- ===== ПОДСВЕТКА =====
 local function HighlightElement(element)
     if not element then return end
-
     local highlight = Instance.new("Frame")
     highlight.Name = "Highlight"
     highlight.Size = UDim2.new(1, 10, 1, 6)
@@ -571,118 +520,73 @@ local function HighlightElement(element)
     highlight.BorderSizePixel = 0
     highlight.ZIndex = 999
     highlight.Parent = element
-
     local highlightCorner = Instance.new("UICorner")
     highlightCorner.CornerRadius = UDim.new(0, 4)
     highlightCorner.Parent = highlight
-
     highlight.BackgroundTransparency = 1
-    TweenService:Create(highlight, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {
-        BackgroundTransparency = 0.85
-    }):Play()
-
+    TweenService:Create(highlight, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {BackgroundTransparency = 0.85}):Play()
     task.wait(1)
-    TweenService:Create(highlight, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {
-        BackgroundTransparency = 1
-    }):Play()
+    TweenService:Create(highlight, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {BackgroundTransparency = 1}):Play()
     task.wait(0.15)
     highlight:Destroy()
 end
 
--- ===== ПЕРЕКЛЮЧЕНИЕ ВКЛАДКИ =====
 local function SwitchToTab(index)
     if index < 1 or index > #TabButtons then return end
-
     for i, b in ipairs(TabButtons) do
         b.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
         b.TextColor3 = Color3.fromRGB(156, 163, 175)
-        TweenService:Create(b, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-            Size = UDim2.new(0.12, 0, 0, 32)
-        }):Play()
+        TweenService:Create(b, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0.12, 0, 0, 32)}):Play()
     end
-
     local btn = TabButtons[index]
     btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    TweenService:Create(btn, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Size = UDim2.new(0.14, 0, 0, 36)
-    }):Play()
-
-    for name, page in pairs(ContentPages) do
-        page.Visible = false
-    end
-
-    local targetName = TabNames[index]
-    local targetPage = ContentPages[targetName]
-    if targetPage then
-        targetPage.Visible = true
-    end
-
+    TweenService:Create(btn, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0.14, 0, 0, 36)}):Play()
+    for name, page in pairs(ContentPages) do page.Visible = false end
+    local targetPage = ContentPages[TabNames[index]]
+    if targetPage then targetPage.Visible = true end
     activeIndex = index
     UpdateIndicatorPosition(index)
 end
 
--- ===== ПОИСК =====
 local function SearchInMenu(query)
     query = string.lower(query)
     if not ContentPages then return end
-
     local foundElements = {}
     local foundTabName = nil
-
     for tabName, page in pairs(ContentPages) do
         if page then
             local function scanChildren(parent)
                 for _, child in ipairs(parent:GetChildren()) do
                     if child:IsA("TextLabel") or child:IsA("TextButton") then
                         local text = string.lower(child.Text)
-                        if string.find(text, query) then
+                        if text ~= "" and string.find(text, query) then
                             table.insert(foundElements, {element = child, tab = tabName})
-                            if not foundTabName then
-                                foundTabName = tabName
-                            end
+                            if not foundTabName then foundTabName = tabName end
                         end
                     end
-                    if child:IsA("Frame") then
-                        scanChildren(child)
-                    end
+                    if child:IsA("Frame") then scanChildren(child) end
                 end
             end
             scanChildren(page)
         end
     end
-
     if #foundElements > 0 and foundTabName then
         for idx, tabName in ipairs(TabNames) do
-            if tabName == foundTabName then
-                SwitchToTab(idx)
-                break
-            end
+            if tabName == foundTabName then SwitchToTab(idx) break end
         end
-
-        for _, data in ipairs(foundElements) do
-            HighlightElement(data.element)
-        end
-
-        print("[SEARCH] Found " .. #foundElements .. " elements in " .. foundTabName .. " for: " .. query)
-    else
-        print("[SEARCH] No elements found for: " .. query)
+        for _, data in ipairs(foundElements) do HighlightElement(data.element) end
     end
 end
 
--- ===== ОБНОВЛЕНИЕ ЯЗЫКА =====
 local function UpdateTabsLanguage()
     local lang = GetLang()
-    for i, btn in ipairs(TabButtons) do
-        btn.Text = lang.Tabs[i]
-    end
+    for i, btn in ipairs(TabButtons) do btn.Text = lang.Tabs[i] end
 end
 
 local function UpdateAllTexts()
     UpdateTabsLanguage()
-    for _, cb in ipairs(langUpdateCallbacks) do
-        pcall(cb)
-    end
+    for _, cb in ipairs(langUpdateCallbacks) do pcall(cb) end
 end
 
 for i, name in ipairs(TabNames) do
@@ -698,38 +602,22 @@ for i, name in ipairs(TabNames) do
     btn.Font = Enum.Font.GothamBold
     btn.AutoButtonColor = false
     btn.Parent = TabContainer
-
     local btnCorner = Instance.new("UICorner")
     btnCorner.CornerRadius = UDim.new(0, 6)
     btnCorner.Parent = btn
-
     if i == 1 then
         btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
         btn.TextColor3 = Color3.fromRGB(255, 255, 255)
         btn.Size = UDim2.new(width + 0.02, 0, 0, 36)
     end
-
     btn.MouseEnter:Connect(function()
-        if activeIndex ~= i then
-            btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
-            btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        end
+        if activeIndex ~= i then btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50) btn.TextColor3 = Color3.fromRGB(255, 255, 255) end
     end)
-
     btn.MouseLeave:Connect(function()
-        if activeIndex ~= i then
-            btn.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
-            btn.TextColor3 = Color3.fromRGB(156, 163, 175)
-        end
+        if activeIndex ~= i then btn.BackgroundColor3 = Color3.fromRGB(26, 30, 38) btn.TextColor3 = Color3.fromRGB(156, 163, 175) end
     end)
-
-    btn.MouseButton1Click:Connect(function()
-        PlayTabSound()
-        SwitchToTab(i)
-    end)
-
+    btn.MouseButton1Click:Connect(function() PlayTabSound() SwitchToTab(i) end)
     table.insert(TabButtons, btn)
-
     local page = Instance.new("ScrollingFrame")
     page.Name = "Content" .. i
     page.Size = UDim2.new(1, -20, 1, -96)
@@ -745,7 +633,6 @@ for i, name in ipairs(TabNames) do
 end
 
 CreateIndicatorLine()
-task.wait(0.05)
 UpdateIndicatorPosition(1)
 
 SearchInput.FocusLost:Connect(function(enterPressed)
@@ -757,9 +644,7 @@ SearchInput.FocusLost:Connect(function(enterPressed)
 end)
 
 SearchInput.Focused:Connect(function()
-    if SearchInput.Text == "Search..." then
-        SearchInput.Text = ""
-    end
+    if SearchInput.Text == "Search..." then SearchInput.Text = "" end
     PlayClickSound()
 end)
 
@@ -770,31 +655,19 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         SearchInput.Text = ""
         PlayClickSound()
     end
-    if input.KeyCode == Enum.KeyCode.Escape then
-        if SearchInput:IsFocused() then
-            SearchInput.Text = "Search..."
-            SearchInput:ReleaseFocus()
-            PlayClickSound()
-        end
+    if input.KeyCode == Enum.KeyCode.Escape and SearchInput:IsFocused() then
+        SearchInput.Text = "Search..."
+        SearchInput:ReleaseFocus()
+        PlayClickSound()
     end
 end)
 
 local aimbotPage = ContentPages["Aimbot"]
-if aimbotPage then
-    aimbotPage.CanvasSize = UDim2.new(0, 0, 0, 10)
-end
+if aimbotPage then aimbotPage.CanvasSize = UDim2.new(0, 0, 0, 10) end
 
 local visualsPage = ContentPages["Visuals"]
 if visualsPage then
-    visualsPage.CanvasSize = UDim2.new(0, 0, 0, 100)
-
-    local visualsContainer = Instance.new("Frame")
-    visualsContainer.Name = "VisualSettings"
-    visualsContainer.Size = UDim2.new(1, 0, 0, 200)
-    visualsContainer.Position = UDim2.new(0, 0, 0, 55)
-    visualsContainer.BackgroundTransparency = 1
-    visualsContainer.ClipsDescendants = true
-    visualsContainer.Parent = visualsPage
+    visualsPage.CanvasSize = UDim2.new(0, 0, 0, 200)
 
     local chamsFrame = Instance.new("Frame")
     chamsFrame.Name = "PlayerHighlight"
@@ -804,9 +677,7 @@ if visualsPage then
     chamsFrame.Parent = visualsPage
 
     local chamsLabel = Instance.new("TextLabel")
-    chamsLabel.Name = "Label"
     chamsLabel.Size = UDim2.new(0.6, 0, 0, 20)
-    chamsLabel.Position = UDim2.new(0, 0, 0, 0)
     chamsLabel.BackgroundTransparency = 1
     chamsLabel.Text = "Chams"
     chamsLabel.TextColor3 = Color3.fromRGB(209, 213, 219)
@@ -816,7 +687,6 @@ if visualsPage then
     chamsLabel.Parent = chamsFrame
 
     local chamsDesc = Instance.new("TextLabel")
-    chamsDesc.Name = "Description"
     chamsDesc.Size = UDim2.new(0.7, 0, 0, 16)
     chamsDesc.Position = UDim2.new(0, 0, 0, 22)
     chamsDesc.BackgroundTransparency = 1
@@ -828,7 +698,6 @@ if visualsPage then
     chamsDesc.Parent = chamsFrame
 
     local chamsToggleBg = Instance.new("Frame")
-    chamsToggleBg.Name = "Toggle"
     chamsToggleBg.Size = UDim2.new(0, 44, 0, 24)
     chamsToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
     chamsToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
@@ -840,7 +709,6 @@ if visualsPage then
     chamsToggleCorner.Parent = chamsToggleBg
 
     local chamsHandle = Instance.new("Frame")
-    chamsHandle.Name = "Handle"
     chamsHandle.Size = UDim2.new(0, 18, 0, 18)
     chamsHandle.Position = UDim2.new(0, 3, 0.5, -9)
     chamsHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -852,7 +720,6 @@ if visualsPage then
     chamsHandleCorner.Parent = chamsHandle
 
     local chamsClickArea = Instance.new("TextButton")
-    chamsClickArea.Name = "Button"
     chamsClickArea.Size = UDim2.new(0, 44, 0, 24)
     chamsClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
     chamsClickArea.BackgroundTransparency = 1
@@ -862,20 +729,12 @@ if visualsPage then
 
     SetChamsToggleState = function(value)
         if value then
-            TweenService:Create(chamsToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                BackgroundColor3 = Color3.fromRGB(59, 130, 246)
-            }):Play()
-            TweenService:Create(chamsHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                Position = UDim2.new(0, 23, 0.5, -9)
-            }):Play()
+            TweenService:Create(chamsToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
+            TweenService:Create(chamsHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 23, 0.5, -9)}):Play()
             ApplyChams()
         else
-            TweenService:Create(chamsToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                BackgroundColor3 = Color3.fromRGB(42, 47, 58)
-            }):Play()
-            TweenService:Create(chamsHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                Position = UDim2.new(0, 3, 0.5, -9)
-            }):Play()
+            TweenService:Create(chamsToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(42, 47, 58)}):Play()
+            TweenService:Create(chamsHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 3, 0.5, -9)}):Play()
             RemoveChams()
         end
         _G.ChamsEnabled = value
@@ -894,6 +753,92 @@ if visualsPage then
         chamsDesc.Text = lang.Toggles.Chams[2]
     end
     table.insert(langUpdateCallbacks, UpdateChamsText)
+
+    -- ESP
+    local espFrame = Instance.new("Frame")
+    espFrame.Name = "ESPBox"
+    espFrame.Size = UDim2.new(1, 0, 0, 45)
+    espFrame.Position = UDim2.new(0, 0, 0, 65)
+    espFrame.BackgroundTransparency = 1
+    espFrame.Parent = visualsPage
+
+    local espLabel = Instance.new("TextLabel")
+    espLabel.Size = UDim2.new(0.6, 0, 0, 20)
+    espLabel.BackgroundTransparency = 1
+    espLabel.Text = "Tracers and 3D Box"
+    espLabel.TextColor3 = Color3.fromRGB(209, 213, 219)
+    espLabel.TextSize = 13
+    espLabel.Font = Enum.Font.GothamBold
+    espLabel.TextXAlignment = Enum.TextXAlignment.Left
+    espLabel.Parent = espFrame
+
+    local espDesc = Instance.new("TextLabel")
+    espDesc.Size = UDim2.new(0.7, 0, 0, 16)
+    espDesc.Position = UDim2.new(0, 0, 0, 22)
+    espDesc.BackgroundTransparency = 1
+    espDesc.Text = "Lines with boxes leading to enemies"
+    espDesc.TextColor3 = Color3.fromRGB(113, 113, 122)
+    espDesc.TextSize = 11
+    espDesc.Font = Enum.Font.Gotham
+    espDesc.TextXAlignment = Enum.TextXAlignment.Left
+    espDesc.Parent = espFrame
+
+    local espToggleBg = Instance.new("Frame")
+    espToggleBg.Size = UDim2.new(0, 44, 0, 24)
+    espToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
+    espToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
+    espToggleBg.BorderSizePixel = 0
+    espToggleBg.Parent = espFrame
+
+    local espToggleCorner = Instance.new("UICorner")
+    espToggleCorner.CornerRadius = UDim.new(1, 0)
+    espToggleCorner.Parent = espToggleBg
+
+    local espHandle = Instance.new("Frame")
+    espHandle.Size = UDim2.new(0, 18, 0, 18)
+    espHandle.Position = UDim2.new(0, 3, 0.5, -9)
+    espHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    espHandle.BorderSizePixel = 0
+    espHandle.Parent = espToggleBg
+
+    local espHandleCorner = Instance.new("UICorner")
+    espHandleCorner.CornerRadius = UDim.new(1, 0)
+    espHandleCorner.Parent = espHandle
+
+    local espClickArea = Instance.new("TextButton")
+    espClickArea.Size = UDim2.new(0, 44, 0, 24)
+    espClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
+    espClickArea.BackgroundTransparency = 1
+    espClickArea.Text = ""
+    espClickArea.ZIndex = 10
+    espClickArea.Parent = espFrame
+
+    SetESPToggleState = function(value)
+        if value then
+            TweenService:Create(espToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
+            TweenService:Create(espHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 23, 0.5, -9)}):Play()
+            ApplyESP()
+        else
+            TweenService:Create(espToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(42, 47, 58)}):Play()
+            TweenService:Create(espHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 3, 0.5, -9)}):Play()
+            RemoveESP()
+        end
+        _G.ESPEnabled = value
+    end
+
+    SetESPToggleState(_G.ESPEnabled)
+
+    espClickArea.MouseButton1Click:Connect(function()
+        PlayClickSound()
+        SetESPToggleState(not _G.ESPEnabled)
+    end)
+
+    local function UpdateESPText()
+        local lang = GetLang()
+        espLabel.Text = lang.Toggles.ESP[1]
+        espDesc.Text = lang.Toggles.ESP[2]
+    end
+    table.insert(langUpdateCallbacks, UpdateESPText)
 end
 
 local settingsPage = ContentPages["Settings"]
@@ -908,18 +853,14 @@ if settingsPage then
     settingsContainer.ClipsDescendants = true
     settingsContainer.Parent = settingsPage
 
-    -- UI Color
     local toggleFrame = Instance.new("Frame")
-    toggleFrame.Name = "ColorSetting"
     toggleFrame.Size = UDim2.new(1, 0, 0, 45)
     toggleFrame.Position = UDim2.new(0, 0, 0, 10)
     toggleFrame.BackgroundTransparency = 1
     toggleFrame.Parent = settingsPage
 
     local label = Instance.new("TextLabel")
-    label.Name = "Label"
     label.Size = UDim2.new(0.6, 0, 0, 20)
-    label.Position = UDim2.new(0, 0, 0, 0)
     label.BackgroundTransparency = 1
     label.Text = "UI Color"
     label.TextColor3 = Color3.fromRGB(209, 213, 219)
@@ -929,7 +870,6 @@ if settingsPage then
     label.Parent = toggleFrame
 
     local desc = Instance.new("TextLabel")
-    desc.Name = "Description"
     desc.Size = UDim2.new(0.7, 0, 0, 16)
     desc.Position = UDim2.new(0, 0, 0, 22)
     desc.BackgroundTransparency = 1
@@ -941,7 +881,6 @@ if settingsPage then
     desc.Parent = toggleFrame
 
     local toggleBg = Instance.new("Frame")
-    toggleBg.Name = "Toggle"
     toggleBg.Size = UDim2.new(0, 44, 0, 24)
     toggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
     toggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
@@ -953,7 +892,6 @@ if settingsPage then
     toggleCorner.Parent = toggleBg
 
     local handle = Instance.new("Frame")
-    handle.Name = "Handle"
     handle.Size = UDim2.new(0, 18, 0, 18)
     handle.Position = UDim2.new(0, 3, 0.5, -9)
     handle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -965,7 +903,6 @@ if settingsPage then
     handleCorner.Parent = handle
 
     local clickArea = Instance.new("TextButton")
-    clickArea.Name = "Button"
     clickArea.Size = UDim2.new(0, 44, 0, 24)
     clickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
     clickArea.BackgroundTransparency = 1
@@ -973,7 +910,6 @@ if settingsPage then
     clickArea.ZIndex = 10
     clickArea.Parent = toggleFrame
 
-    -- Цветовой круг
     pickerContainer = Instance.new("Frame")
     pickerContainer.Name = "ColorPicker"
     pickerContainer.Size = UDim2.new(1, -30, 0, 140)
@@ -984,21 +920,14 @@ if settingsPage then
     pickerContainer.Parent = settingsPage
 
     local wheelImage = Instance.new("ImageLabel")
-    wheelImage.Name = "ColorWheel"
     wheelImage.Size = UDim2.new(0, 120, 0, 120)
     wheelImage.Position = UDim2.new(0.5, -60, 0.5, -60)
-    wheelImage.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     wheelImage.BackgroundTransparency = 1
     wheelImage.Image = "rbxassetid://7393858625"
     wheelImage.ZIndex = 31
     wheelImage.Parent = pickerContainer
 
-    local wheelCorner = Instance.new("UICorner")
-    wheelCorner.CornerRadius = UDim.new(1, 0)
-    wheelCorner.Parent = wheelImage
-
     pickerDot = Instance.new("Frame")
-    pickerDot.Name = "Selector"
     pickerDot.Size = UDim2.new(0, 10, 0, 10)
     pickerDot.Position = UDim2.new(0.5, -5, 0.5, -5)
     pickerDot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -1015,7 +944,6 @@ if settingsPage then
     dotStroke.Parent = pickerDot
 
     local dragArea = Instance.new("TextButton")
-    dragArea.Name = "DragArea"
     dragArea.Size = UDim2.new(1, 0, 1, 0)
     dragArea.BackgroundTransparency = 1
     dragArea.Text = ""
@@ -1027,23 +955,19 @@ if settingsPage then
 
     local function UpdateWheelColor(inputPosition)
         if not _G.CustomThemeEnabled then return end
-
         local wheelCenter = wheelImage.AbsolutePosition + (wheelImage.AbsoluteSize / 2)
         local delta = Vector2.new(inputPosition.X, inputPosition.Y) - wheelCenter
         local distance = delta.Magnitude
         local radius = wheelImage.AbsoluteSize.X / 2
         local clampedDistance = math.clamp(distance, 0, radius)
         local angle = math.atan2(delta.Y, delta.X)
-
         local xPos = clampedDistance * math.cos(angle)
         local yPos = clampedDistance * math.sin(angle)
         pickerDot.Position = UDim2.new(0, xPos + radius - 5, 0, yPos + radius - 5)
-
         if angle < 0 then angle = angle + (math.pi * 2) end
         local hue = angle / (math.pi * 2)
         local saturation = clampedDistance / radius
         local pickedColor = Color3.fromHSV(hue, saturation, 1)
-
         if not _G.RainbowEnabled then
             MainStroke.Color = pickedColor
             UpdateIndicatorColor(pickedColor)
@@ -1055,9 +979,7 @@ if settingsPage then
     dragArea.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
             isDraggingColor = true
-            if scrollFrame and scrollFrame:IsA("ScrollingFrame") then
-                scrollFrame.ScrollingEnabled = false
-            end
+            scrollFrame.ScrollingEnabled = false
             UpdateWheelColor(input.Position)
         end
     end)
@@ -1071,17 +993,13 @@ if settingsPage then
     UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
             isDraggingColor = false
-            if scrollFrame and scrollFrame:IsA("ScrollingFrame") then
-                scrollFrame.ScrollingEnabled = true
-            end
+            scrollFrame.ScrollingEnabled = true
         end
     end)
 
     ShiftContainer = function(shiftDown)
         local targetY = shiftDown and 150 or 0
-        TweenService:Create(settingsContainer, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
-            Position = UDim2.new(0, 0, 0, 55 + targetY)
-        }):Play()
+        TweenService:Create(settingsContainer, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 55 + targetY)}):Play()
     end
 
     local function UpdateColorPickerVisibility()
@@ -1096,19 +1014,11 @@ if settingsPage then
 
     SetToggleState = function(value)
         if value then
-            TweenService:Create(toggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                BackgroundColor3 = Color3.fromRGB(59, 130, 246)
-            }):Play()
-            TweenService:Create(handle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                Position = UDim2.new(0, 23, 0.5, -9)
-            }):Play()
+            TweenService:Create(toggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
+            TweenService:Create(handle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 23, 0.5, -9)}):Play()
         else
-            TweenService:Create(toggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                BackgroundColor3 = Color3.fromRGB(42, 47, 58)
-            }):Play()
-            TweenService:Create(handle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                Position = UDim2.new(0, 3, 0.5, -9)
-            }):Play()
+            TweenService:Create(toggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(42, 47, 58)}):Play()
+            TweenService:Create(handle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 3, 0.5, -9)}):Play()
         end
         _G.CustomThemeEnabled = value
         UpdateColorPickerVisibility()
@@ -1133,9 +1043,7 @@ if settingsPage then
         SetToggleState(not _G.CustomThemeEnabled)
     end)
 
-    -- Языковые панели
     local langFrame = Instance.new("Frame")
-    langFrame.Name = "LanguagePanel"
     langFrame.Size = UDim2.new(1, -20, 0, 42)
     langFrame.Position = UDim2.new(0, 10, 0, 10)
     langFrame.BackgroundTransparency = 1
@@ -1143,7 +1051,6 @@ if settingsPage then
 
     local function CreateLangButton(text, langCode, xPos)
         local bg = Instance.new("Frame")
-        bg.Name = "LangButton"
         bg.Size = UDim2.new(0.42, 0, 0, 32)
         bg.Position = UDim2.new(xPos, 0, 0, 0)
         bg.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
@@ -1159,7 +1066,6 @@ if settingsPage then
         uiScale.Parent = bg
 
         local txt = Instance.new("TextLabel")
-        txt.Name = "Text"
         txt.Size = UDim2.new(1, 0, 1, 0)
         txt.BackgroundTransparency = 1
         txt.Text = text
@@ -1171,7 +1077,6 @@ if settingsPage then
         txt.Parent = bg
 
         local clickBtn = Instance.new("TextButton")
-        clickBtn.Name = "Button"
         clickBtn.Size = UDim2.new(1, 0, 1, 0)
         clickBtn.BackgroundTransparency = 1
         clickBtn.Text = ""
@@ -1184,18 +1089,10 @@ if settingsPage then
             local targetBg = isActive and Color3.fromRGB(35, 40, 50) or Color3.fromRGB(26, 30, 38)
             local targetTransp = isActive and 0 or 0.5
             local targetTextColor = isActive and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(156, 163, 175)
-
             if animate then
-                TweenService:Create(uiScale, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-                    Scale = targetScale
-                }):Play()
-                TweenService:Create(bg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                    BackgroundColor3 = targetBg,
-                    BackgroundTransparency = targetTransp
-                }):Play()
-                TweenService:Create(txt, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                    TextColor3 = targetTextColor
-                }):Play()
+                TweenService:Create(uiScale, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = targetScale}):Play()
+                TweenService:Create(bg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = targetBg, BackgroundTransparency = targetTransp}):Play()
+                TweenService:Create(txt, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {TextColor3 = targetTextColor}):Play()
             else
                 uiScale.Scale = targetScale
                 bg.BackgroundColor3 = targetBg
@@ -1210,11 +1107,8 @@ if settingsPage then
             PlayClickSound()
             if _G.CurrentLang == langCode then return end
             _G.CurrentLang = langCode
-            for _, btn in ipairs(langButtonData) do
-                pcall(btn.Update, true)
-            end
+            for _, btn in ipairs(langButtonData) do pcall(btn.Update, true) end
             UpdateAllTexts()
-            print("[LANG] Switched to: " .. langCode)
         end)
 
         local btnData = {Update = UpdateLangButton}
@@ -1225,18 +1119,14 @@ if settingsPage then
     CreateLangButton("Русский", "RU", 0.03)
     CreateLangButton("English", "EN", 0.55)
 
-    -- Ползунок прозрачности
     local opacityFrame = Instance.new("Frame")
-    opacityFrame.Name = "OpacitySetting"
     opacityFrame.Size = UDim2.new(1, -20, 0, 55)
     opacityFrame.Position = UDim2.new(0, 10, 0, 60)
     opacityFrame.BackgroundTransparency = 1
     opacityFrame.Parent = settingsContainer
 
     local opacityLabel = Instance.new("TextLabel")
-    opacityLabel.Name = "Label"
     opacityLabel.Size = UDim2.new(0.5, 0, 0, 20)
-    opacityLabel.Position = UDim2.new(0, 0, 0, 0)
     opacityLabel.BackgroundTransparency = 1
     opacityLabel.Text = "Opacity"
     opacityLabel.TextColor3 = Color3.fromRGB(209, 213, 219)
@@ -1246,7 +1136,6 @@ if settingsPage then
     opacityLabel.Parent = opacityFrame
 
     local opacityDesc = Instance.new("TextLabel")
-    opacityDesc.Name = "Description"
     opacityDesc.Size = UDim2.new(0.5, 0, 0, 16)
     opacityDesc.Position = UDim2.new(0, 0, 0, 22)
     opacityDesc.BackgroundTransparency = 1
@@ -1258,11 +1147,10 @@ if settingsPage then
     opacityDesc.Parent = opacityFrame
 
     opacityValue = Instance.new("TextLabel")
-    opacityValue.Name = "Value"
     opacityValue.Size = UDim2.new(0.15, 0, 0, 20)
     opacityValue.Position = UDim2.new(0.85, 0, 0, 0)
     opacityValue.BackgroundTransparency = 1
-    opacityValue.Text = tostring(_G.MenuOpacity) .. "%"
+    opacityValue.Text = "12%"
     opacityValue.TextColor3 = Color3.fromRGB(255, 255, 255)
     opacityValue.TextSize = 14
     opacityValue.Font = Enum.Font.GothamBold
@@ -1270,7 +1158,6 @@ if settingsPage then
     opacityValue.Parent = opacityFrame
 
     local opacitySliderBg = Instance.new("Frame")
-    opacitySliderBg.Name = "Slider"
     opacitySliderBg.Size = UDim2.new(0.5, 0, 0, 6)
     opacitySliderBg.Position = UDim2.new(0, 0, 0, 40)
     opacitySliderBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
@@ -1282,28 +1169,25 @@ if settingsPage then
     opacitySliderCorner.Parent = opacitySliderBg
 
     opacitySliderFill = Instance.new("Frame")
-    opacitySliderFill.Name = "Fill"
-    local opacityInitialPercent = _G.MenuOpacity / 50
-    opacitySliderFill.Size = UDim2.new(opacityInitialPercent, 0, 1, 0)
+    opacitySliderFill.Size = UDim2.new(0.24, 0, 1, 0)
     opacitySliderFill.BackgroundColor3 = Color3.fromRGB(59, 130, 246)
     opacitySliderFill.BorderSizePixel = 0
     opacitySliderFill.Parent = opacitySliderBg
 
-    local opacitySliderFillCorner = Instance.new("UICorner")
-    opacitySliderFillCorner.CornerRadius = UDim.new(1, 0)
-    opacitySliderFillCorner.Parent = opacitySliderFill
+    local opacityFillCorner = Instance.new("UICorner")
+    opacityFillCorner.CornerRadius = UDim.new(1, 0)
+    opacityFillCorner.Parent = opacitySliderFill
 
     opacitySliderHandle = Instance.new("Frame")
-    opacitySliderHandle.Name = "Handle"
     opacitySliderHandle.Size = UDim2.new(0, 16, 0, 16)
-    opacitySliderHandle.Position = UDim2.new(opacityInitialPercent, -8, 0.5, -8)
+    opacitySliderHandle.Position = UDim2.new(0.24, -8, 0.5, -8)
     opacitySliderHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     opacitySliderHandle.BorderSizePixel = 0
     opacitySliderHandle.Parent = opacitySliderBg
 
-    local opacitySliderHandleCorner = Instance.new("UICorner")
-    opacitySliderHandleCorner.CornerRadius = UDim.new(1, 0)
-    opacitySliderHandleCorner.Parent = opacitySliderHandle
+    local opacityHandleCorner = Instance.new("UICorner")
+    opacityHandleCorner.CornerRadius = UDim.new(1, 0)
+    opacityHandleCorner.Parent = opacitySliderHandle
 
     local isDraggingOpacity = false
 
@@ -1355,18 +1239,14 @@ if settingsPage then
     end
     table.insert(langUpdateCallbacks, UpdateOpacityText)
 
-    -- Rainbow
     local rainbowFrame = Instance.new("Frame")
-    rainbowFrame.Name = "RainbowSetting"
     rainbowFrame.Size = UDim2.new(1, 0, 0, 45)
     rainbowFrame.Position = UDim2.new(0, 0, 0, 120)
     rainbowFrame.BackgroundTransparency = 1
     rainbowFrame.Parent = settingsContainer
 
     local rainbowLabel = Instance.new("TextLabel")
-    rainbowLabel.Name = "Label"
     rainbowLabel.Size = UDim2.new(0.6, 0, 0, 20)
-    rainbowLabel.Position = UDim2.new(0, 0, 0, 0)
     rainbowLabel.BackgroundTransparency = 1
     rainbowLabel.Text = "UI Rainbow Color"
     rainbowLabel.TextColor3 = Color3.fromRGB(209, 213, 219)
@@ -1376,7 +1256,6 @@ if settingsPage then
     rainbowLabel.Parent = rainbowFrame
 
     local rainbowDesc = Instance.new("TextLabel")
-    rainbowDesc.Name = "Description"
     rainbowDesc.Size = UDim2.new(0.7, 0, 0, 16)
     rainbowDesc.Position = UDim2.new(0, 0, 0, 22)
     rainbowDesc.BackgroundTransparency = 1
@@ -1388,7 +1267,6 @@ if settingsPage then
     rainbowDesc.Parent = rainbowFrame
 
     local rainbowToggleBg = Instance.new("Frame")
-    rainbowToggleBg.Name = "Toggle"
     rainbowToggleBg.Size = UDim2.new(0, 44, 0, 24)
     rainbowToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
     rainbowToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
@@ -1400,7 +1278,6 @@ if settingsPage then
     rainbowToggleCorner.Parent = rainbowToggleBg
 
     local rainbowHandle = Instance.new("Frame")
-    rainbowHandle.Name = "Handle"
     rainbowHandle.Size = UDim2.new(0, 18, 0, 18)
     rainbowHandle.Position = UDim2.new(0, 3, 0.5, -9)
     rainbowHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -1412,7 +1289,6 @@ if settingsPage then
     rainbowHandleCorner.Parent = rainbowHandle
 
     local rainbowClickArea = Instance.new("TextButton")
-    rainbowClickArea.Name = "Button"
     rainbowClickArea.Size = UDim2.new(0, 44, 0, 24)
     rainbowClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
     rainbowClickArea.BackgroundTransparency = 1
@@ -1422,19 +1298,11 @@ if settingsPage then
 
     SetRainbowToggleState = function(value)
         if value then
-            TweenService:Create(rainbowToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                BackgroundColor3 = Color3.fromRGB(59, 130, 246)
-            }):Play()
-            TweenService:Create(rainbowHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                Position = UDim2.new(0, 23, 0.5, -9)
-            }):Play()
+            TweenService:Create(rainbowToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
+            TweenService:Create(rainbowHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 23, 0.5, -9)}):Play()
         else
-            TweenService:Create(rainbowToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                BackgroundColor3 = Color3.fromRGB(42, 47, 58)
-            }):Play()
-            TweenService:Create(rainbowHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                Position = UDim2.new(0, 3, 0.5, -9)
-            }):Play()
+            TweenService:Create(rainbowToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(42, 47, 58)}):Play()
+            TweenService:Create(rainbowHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 3, 0.5, -9)}):Play()
         end
         _G.RainbowEnabled = value
         if value then
@@ -1471,18 +1339,14 @@ if settingsPage then
     end
     table.insert(langUpdateCallbacks, UpdateRainbowText)
 
-    -- Слайдер масштаба
     local scaleFrame = Instance.new("Frame")
-    scaleFrame.Name = "ScaleSetting"
     scaleFrame.Size = UDim2.new(1, -20, 0, 55)
     scaleFrame.Position = UDim2.new(0, 10, 0, 170)
     scaleFrame.BackgroundTransparency = 1
     scaleFrame.Parent = settingsContainer
 
     local scaleLabel = Instance.new("TextLabel")
-    scaleLabel.Name = "Label"
     scaleLabel.Size = UDim2.new(0.6, 0, 0, 20)
-    scaleLabel.Position = UDim2.new(0, 0, 0, 0)
     scaleLabel.BackgroundTransparency = 1
     scaleLabel.Text = "Scaling the menu"
     scaleLabel.TextColor3 = Color3.fromRGB(209, 213, 219)
@@ -1492,7 +1356,6 @@ if settingsPage then
     scaleLabel.Parent = scaleFrame
 
     local scaleDesc = Instance.new("TextLabel")
-    scaleDesc.Name = "Description"
     scaleDesc.Size = UDim2.new(0.6, 0, 0, 16)
     scaleDesc.Position = UDim2.new(0, 0, 0, 22)
     scaleDesc.BackgroundTransparency = 1
@@ -1504,11 +1367,10 @@ if settingsPage then
     scaleDesc.Parent = scaleFrame
 
     scaleValue = Instance.new("TextLabel")
-    scaleValue.Name = "Value"
     scaleValue.Size = UDim2.new(0.15, 0, 0, 20)
     scaleValue.Position = UDim2.new(0.85, 0, 0, 0)
     scaleValue.BackgroundTransparency = 1
-    scaleValue.Text = tostring(math.round((_G.MenuScale / 45) * 100)) .. "%"
+    scaleValue.Text = "100%"
     scaleValue.TextColor3 = Color3.fromRGB(255, 255, 255)
     scaleValue.TextSize = 14
     scaleValue.Font = Enum.Font.GothamBold
@@ -1516,7 +1378,6 @@ if settingsPage then
     scaleValue.Parent = scaleFrame
 
     local scaleSliderBg = Instance.new("Frame")
-    scaleSliderBg.Name = "Slider"
     scaleSliderBg.Size = UDim2.new(0.5, 0, 0, 6)
     scaleSliderBg.Position = UDim2.new(0, 0, 0, 40)
     scaleSliderBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
@@ -1528,28 +1389,25 @@ if settingsPage then
     scaleSliderCorner.Parent = scaleSliderBg
 
     scaleSliderFill = Instance.new("Frame")
-    scaleSliderFill.Name = "Fill"
-    local scaleInitialPercent = (_G.MenuScale - 27) / 36
-    scaleSliderFill.Size = UDim2.new(scaleInitialPercent, 0, 1, 0)
+    scaleSliderFill.Size = UDim2.new(0.5, 0, 1, 0)
     scaleSliderFill.BackgroundColor3 = Color3.fromRGB(59, 130, 246)
     scaleSliderFill.BorderSizePixel = 0
     scaleSliderFill.Parent = scaleSliderBg
 
-    local scaleSliderFillCorner = Instance.new("UICorner")
-    scaleSliderFillCorner.CornerRadius = UDim.new(1, 0)
-    scaleSliderFillCorner.Parent = scaleSliderFill
+    local scaleFillCorner = Instance.new("UICorner")
+    scaleFillCorner.CornerRadius = UDim.new(1, 0)
+    scaleFillCorner.Parent = scaleSliderFill
 
     scaleSliderHandle = Instance.new("Frame")
-    scaleSliderHandle.Name = "Handle"
     scaleSliderHandle.Size = UDim2.new(0, 16, 0, 16)
-    scaleSliderHandle.Position = UDim2.new(scaleInitialPercent, -8, 0.5, -8)
+    scaleSliderHandle.Position = UDim2.new(0.5, -8, 0.5, -8)
     scaleSliderHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     scaleSliderHandle.BorderSizePixel = 0
     scaleSliderHandle.Parent = scaleSliderBg
 
-    local scaleSliderHandleCorner = Instance.new("UICorner")
-    scaleSliderHandleCorner.CornerRadius = UDim.new(1, 0)
-    scaleSliderHandleCorner.Parent = scaleSliderHandle
+    local scaleHandleCorner = Instance.new("UICorner")
+    scaleHandleCorner.CornerRadius = UDim.new(1, 0)
+    scaleHandleCorner.Parent = scaleSliderHandle
 
     local isDraggingScale = false
 
@@ -1563,10 +1421,9 @@ if settingsPage then
         local p = (val - 27) / 36
         scaleSliderFill.Size = UDim2.new(p, 0, 1, 0)
         scaleSliderHandle.Position = UDim2.new(p, -8, 0.5, -8)
-        local percentDisplay = math.round((val / 45) * 100)
-        scaleValue.Text = tostring(percentDisplay) .. "%"
+        scaleValue.Text = tostring(math.round((val / 45) * 100)) .. "%"
         _G.MenuScale = val
-        UpdateMenuScale()
+        MainFrame.Size = UDim2.new(0, 640 * (val / 45), 0, 470 * (val / 45))
     end
 
     scaleSliderHandle.InputBegan:Connect(function(input)
@@ -1602,11 +1459,9 @@ if settingsPage then
     end
     table.insert(langUpdateCallbacks, UpdateScaleText)
 
-    -- Flying Dots
     local flyingFrame = Instance.new("Frame")
     flyingFrame.Name = "Effects"
     flyingFrame.Size = UDim2.new(1, 0, 1, 0)
-    flyingFrame.Position = UDim2.new(0, 0, 0, 0)
     flyingFrame.BackgroundTransparency = 1
     flyingFrame.ZIndex = 100
     flyingFrame.Parent = MainFrame
@@ -1620,19 +1475,14 @@ if settingsPage then
 
     local function RebuildDots()
         for _, data in ipairs(Dots) do
-            if data and data.Frame then
-                data.Frame:Destroy()
-            end
+            if data and data.Frame then data.Frame:Destroy() end
         end
         Dots = {}
-
         if not _G.FlyingDots then return end
-
         local scale = _G.MenuScale / 45
         local w = 640 * scale
         local h = 470 * scale
         local count = math.floor(30 + scale * 20)
-
         for i = 1, count do
             local dot = Instance.new("Frame")
             dot.Name = "Particle"
@@ -1642,36 +1492,21 @@ if settingsPage then
             dot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
             dot.BackgroundTransparency = 0.25
             dot.BorderSizePixel = 0
-
             local dotCorner = Instance.new("UICorner")
             dotCorner.CornerRadius = UDim.new(1, 0)
             dotCorner.Parent = dot
-
             local glow = Instance.new("UIStroke")
             glow.Thickness = 0.8
             glow.Color = Color3.fromRGB(255, 255, 255)
             glow.Transparency = 0.8
             glow.Parent = dot
-
             dot.Parent = dotContainer
             dot.ZIndex = 101
-
             local speed = 0.5 + scale * 0.4
             local speedX = (math.random() - 0.5) * speed * 0.6
             local speedY = math.random() * speed * 0.5 + speed * 0.15
             local rotSpeed = (math.random() - 0.5) * 0.025
-
-            table.insert(Dots, {
-                Frame = dot,
-                SpeedX = speedX,
-                SpeedY = speedY,
-                RotSpeed = rotSpeed,
-                Angle = math.random() * math.pi * 2,
-                PosX = math.random(0, w),
-                PosY = math.random(0, h),
-                w = w,
-                h = h
-            })
+            table.insert(Dots, {Frame = dot, SpeedX = speedX, SpeedY = speedY, RotSpeed = rotSpeed, Angle = math.random() * math.pi * 2, PosX = math.random(0, w), PosY = math.random(0, h), w = w, h = h})
         end
     end
 
@@ -1679,20 +1514,14 @@ if settingsPage then
         local scale = _G.MenuScale / 45
         local w = 640 * scale
         local h = 470 * scale
-
         for _, data in ipairs(Dots) do
             if data and data.Frame then
                 data.PosX = data.PosX + data.SpeedX
                 data.PosY = data.PosY + data.SpeedY
                 data.Angle = data.Angle + data.RotSpeed
-
                 if data.PosX < 0 then data.PosX = w end
                 if data.PosX > w then data.PosX = 0 end
-                if data.PosY > h then
-                    data.PosY = 0
-                    data.PosX = math.random(0, w)
-                end
-
+                if data.PosY > h then data.PosY = 0 data.PosX = math.random(0, w) end
                 data.Frame.Position = UDim2.new(0, data.PosX, 0, data.PosY)
                 data.Frame.Rotation = math.deg(data.Angle)
             end
@@ -1706,41 +1535,22 @@ if settingsPage then
             if DotConnection then DotConnection:Disconnect() end
             DotConnection = RunService.Heartbeat:Connect(UpdateDots)
         else
-            if DotConnection then
-                DotConnection:Disconnect()
-                DotConnection = nil
-            end
+            if DotConnection then DotConnection:Disconnect() DotConnection = nil end
             for _, data in ipairs(Dots) do
-                if data and data.Frame then
-                    data.Frame:Destroy()
-                end
+                if data and data.Frame then data.Frame:Destroy() end
             end
             Dots = {}
         end
     end
 
-    local function CheckScaleChange()
-        if _G.MenuScale ~= lastScale then
-            lastScale = _G.MenuScale
-            if _G.FlyingDots then
-                RebuildDots()
-            end
-        end
-    end
-
-    RunService.Heartbeat:Connect(CheckScaleChange)
-
     local flyingToggleFrame = Instance.new("Frame")
-    flyingToggleFrame.Name = "EffectsSetting"
     flyingToggleFrame.Size = UDim2.new(1, 0, 0, 45)
     flyingToggleFrame.Position = UDim2.new(0, 0, 0, 230)
     flyingToggleFrame.BackgroundTransparency = 1
     flyingToggleFrame.Parent = settingsContainer
 
     local flyingLabel = Instance.new("TextLabel")
-    flyingLabel.Name = "Label"
     flyingLabel.Size = UDim2.new(0.6, 0, 0, 20)
-    flyingLabel.Position = UDim2.new(0, 0, 0, 0)
     flyingLabel.BackgroundTransparency = 1
     flyingLabel.Text = "Flying Dots"
     flyingLabel.TextColor3 = Color3.fromRGB(209, 213, 219)
@@ -1750,7 +1560,6 @@ if settingsPage then
     flyingLabel.Parent = flyingToggleFrame
 
     local flyingDesc = Instance.new("TextLabel")
-    flyingDesc.Name = "Description"
     flyingDesc.Size = UDim2.new(0.7, 0, 0, 16)
     flyingDesc.Position = UDim2.new(0, 0, 0, 22)
     flyingDesc.BackgroundTransparency = 1
@@ -1762,7 +1571,6 @@ if settingsPage then
     flyingDesc.Parent = flyingToggleFrame
 
     local flyingToggleBg = Instance.new("Frame")
-    flyingToggleBg.Name = "Toggle"
     flyingToggleBg.Size = UDim2.new(0, 44, 0, 24)
     flyingToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
     flyingToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
@@ -1774,7 +1582,6 @@ if settingsPage then
     flyingToggleCorner.Parent = flyingToggleBg
 
     local flyingHandle = Instance.new("Frame")
-    flyingHandle.Name = "Handle"
     flyingHandle.Size = UDim2.new(0, 18, 0, 18)
     flyingHandle.Position = UDim2.new(0, 3, 0.5, -9)
     flyingHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -1786,7 +1593,6 @@ if settingsPage then
     flyingHandleCorner.Parent = flyingHandle
 
     local flyingClickArea = Instance.new("TextButton")
-    flyingClickArea.Name = "Button"
     flyingClickArea.Size = UDim2.new(0, 44, 0, 24)
     flyingClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
     flyingClickArea.BackgroundTransparency = 1
@@ -1796,19 +1602,11 @@ if settingsPage then
 
     SetFlyingToggleState = function(value)
         if value then
-            TweenService:Create(flyingToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                BackgroundColor3 = Color3.fromRGB(59, 130, 246)
-            }):Play()
-            TweenService:Create(flyingHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                Position = UDim2.new(0, 23, 0.5, -9)
-            }):Play()
+            TweenService:Create(flyingToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
+            TweenService:Create(flyingHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 23, 0.5, -9)}):Play()
         else
-            TweenService:Create(flyingToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                BackgroundColor3 = Color3.fromRGB(42, 47, 58)
-            }):Play()
-            TweenService:Create(flyingHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                Position = UDim2.new(0, 3, 0.5, -9)
-            }):Play()
+            TweenService:Create(flyingToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(42, 47, 58)}):Play()
+            TweenService:Create(flyingHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 3, 0.5, -9)}):Play()
         end
         ToggleFlyingDots(value)
     end
@@ -1827,18 +1625,14 @@ if settingsPage then
     end
     table.insert(langUpdateCallbacks, UpdateFlyingText)
 
-    -- Reset
     local resetFrame = Instance.new("Frame")
-    resetFrame.Name = "ResetSetting"
     resetFrame.Size = UDim2.new(1, 0, 0, 45)
     resetFrame.Position = UDim2.new(0, 0, 0, 280)
     resetFrame.BackgroundTransparency = 1
     resetFrame.Parent = settingsContainer
 
     local resetLabel = Instance.new("TextLabel")
-    resetLabel.Name = "Label"
     resetLabel.Size = UDim2.new(0.6, 0, 0, 20)
-    resetLabel.Position = UDim2.new(0, 0, 0, 0)
     resetLabel.BackgroundTransparency = 1
     resetLabel.Text = "Reset Settings"
     resetLabel.TextColor3 = Color3.fromRGB(209, 213, 219)
@@ -1848,7 +1642,6 @@ if settingsPage then
     resetLabel.Parent = resetFrame
 
     local resetDesc = Instance.new("TextLabel")
-    resetDesc.Name = "Description"
     resetDesc.Size = UDim2.new(0.7, 0, 0, 16)
     resetDesc.Position = UDim2.new(0, 0, 0, 22)
     resetDesc.BackgroundTransparency = 1
@@ -1860,7 +1653,6 @@ if settingsPage then
     resetDesc.Parent = resetFrame
 
     local resetToggleBg = Instance.new("Frame")
-    resetToggleBg.Name = "Toggle"
     resetToggleBg.Size = UDim2.new(0, 44, 0, 24)
     resetToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
     resetToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
@@ -1872,7 +1664,6 @@ if settingsPage then
     resetToggleCorner.Parent = resetToggleBg
 
     local resetHandle = Instance.new("Frame")
-    resetHandle.Name = "Handle"
     resetHandle.Size = UDim2.new(0, 18, 0, 18)
     resetHandle.Position = UDim2.new(0, 3, 0.5, -9)
     resetHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -1884,7 +1675,6 @@ if settingsPage then
     resetHandleCorner.Parent = resetHandle
 
     local resetClickArea = Instance.new("TextButton")
-    resetClickArea.Name = "Button"
     resetClickArea.Size = UDim2.new(0, 44, 0, 24)
     resetClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
     resetClickArea.BackgroundTransparency = 1
@@ -1893,25 +1683,6 @@ if settingsPage then
     resetClickArea.Parent = resetFrame
 
     local isResetOn = false
-
-    local function UpdateResetToggle(value)
-        if value then
-            TweenService:Create(resetToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                BackgroundColor3 = Color3.fromRGB(59, 130, 246)
-            }):Play()
-            TweenService:Create(resetHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                Position = UDim2.new(0, 23, 0.5, -9)
-            }):Play()
-        else
-            TweenService:Create(resetToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                BackgroundColor3 = Color3.fromRGB(42, 47, 58)
-            }):Play()
-            TweenService:Create(resetHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                Position = UDim2.new(0, 3, 0.5, -9)
-            }):Play()
-        end
-        isResetOn = value
-    end
 
     local function PerformReset()
         _G.CustomThemeEnabled = false
@@ -1922,6 +1693,7 @@ if settingsPage then
         _G.MenuScale = 45
         _G.FlyingDots = false
         _G.ChamsEnabled = false
+        _G.ESPEnabled = false
 
         MainFrame.BackgroundTransparency = 0.12
         MainFrame.Size = UDim2.new(0, 640, 0, 470)
@@ -1929,93 +1701,56 @@ if settingsPage then
         MainFrame.Rotation = 0
         MainScale.Scale = 1
         MainStroke.Color = _G.MenuThemeColor
-        MainStroke.Transparency = 0.4
         UpdateIndicatorColor(_G.MenuThemeColor)
         SearchStroke.Color = _G.MenuThemeColor
-        SearchStroke.Transparency = 0.6
 
         RemoveChams()
-        if SetChamsToggleState then
-            SetChamsToggleState(false)
-        end
+        if SetChamsToggleState then SetChamsToggleState(false) end
+        RemoveESP()
+        if SetESPToggleState then SetESPToggleState(false) end
 
-        for _, btn in ipairs(langButtonData) do
-            pcall(btn.Update, false)
-        end
+        for _, btn in ipairs(langButtonData) do pcall(btn.Update, false) end
         UpdateAllTexts()
 
-        if rainbowConnection then
-            rainbowConnection:Disconnect()
-            rainbowConnection = nil
-        end
-        if SetRainbowToggleState then
-            SetRainbowToggleState(false)
-        end
+        if rainbowConnection then rainbowConnection:Disconnect() rainbowConnection = nil end
+        if SetRainbowToggleState then SetRainbowToggleState(false) end
 
-        if DotConnection then
-            DotConnection:Disconnect()
-            DotConnection = nil
-        end
-        for _, data in ipairs(Dots) do
-            if data and data.Frame then
-                data.Frame:Destroy()
-            end
-        end
+        if DotConnection then DotConnection:Disconnect() DotConnection = nil end
+        for _, data in ipairs(Dots) do if data and data.Frame then data.Frame:Destroy() end end
         Dots = {}
         _G.FlyingDots = false
-        if SetFlyingToggleState then
-            SetFlyingToggleState(false)
-        end
+        if SetFlyingToggleState then SetFlyingToggleState(false) end
 
-        UpdateMenuScale()
-
-        if SetToggleState then
-            SetToggleState(false)
-        end
-        if pickerContainer then
-            pickerContainer.Visible = false
-        end
-        if ShiftContainer then
-            ShiftContainer(false)
-        end
+        if SetToggleState then SetToggleState(false) end
+        if pickerContainer then pickerContainer.Visible = false end
+        if ShiftContainer then ShiftContainer(false) end
 
         if opacitySliderFill and opacitySliderHandle and opacityValue then
-            local opacityPercent = 12 / 50
-            opacitySliderFill.Size = UDim2.new(opacityPercent, 0, 1, 0)
-            opacitySliderHandle.Position = UDim2.new(opacityPercent, -8, 0.5, -8)
+            opacitySliderFill.Size = UDim2.new(0.24, 0, 1, 0)
+            opacitySliderHandle.Position = UDim2.new(0.24, -8, 0.5, -8)
             opacityValue.Text = "12%"
         end
 
         if scaleSliderFill and scaleSliderHandle and scaleValue then
-            local scalePercent = (45 - 27) / 36
-            scaleSliderFill.Size = UDim2.new(scalePercent, 0, 1, 0)
-            scaleSliderHandle.Position = UDim2.new(scalePercent, -8, 0.5, -8)
+            scaleSliderFill.Size = UDim2.new(0.5, 0, 1, 0)
+            scaleSliderHandle.Position = UDim2.new(0.5, -8, 0.5, -8)
             scaleValue.Text = "100%"
         end
 
-        if pickerDot then
-            pickerDot.Position = UDim2.new(0.5, -5, 0.5, -5)
-        end
+        if pickerDot then pickerDot.Position = UDim2.new(0.5, -5, 0.5, -5) end
 
         SwitchToTab(1)
-
         SearchInput.Text = "Search..."
         SearchClose.Visible = false
 
-        print("[RESET] All settings restored to default")
+        print("[RESET] All settings restored")
         PlayClickSound()
-
-        UpdateResetToggle(false)
+        isResetOn = false
     end
 
     resetClickArea.MouseButton1Click:Connect(function()
         PlayClickSound()
-        if isResetOn then
-            UpdateResetToggle(false)
-        else
-            UpdateResetToggle(true)
-            PerformReset()
-        end
+        PerformReset()
     end)
 
     local function UpdateResetText()
@@ -2024,13 +1759,8 @@ if settingsPage then
         resetDesc.Text = lang.Toggles.Reset[2]
     end
     table.insert(langUpdateCallbacks, UpdateResetText)
-
-    settingsPage.CanvasSize = UDim2.new(0, 0, 0, 600)
 end
 
--- ========================================
--- БЛОК ИКОНКИ
--- ========================================
 local IconButton = Instance.new("ImageButton")
 IconButton.Name = "MetaIcon"
 IconButton.Size = UDim2.new(0, 55, 0, 55)
@@ -2041,14 +1771,12 @@ IconButton.BackgroundTransparency = 0.2
 IconButton.BorderSizePixel = 0
 IconButton.Image = "https://i.ibb.co/1JTnNKw1/IMG-20260902-120719.png"
 IconButton.ImageColor3 = Color3.fromRGB(255, 255, 255)
-IconButton.ImageTransparency = 0
 IconButton.ZIndex = 999
 IconButton.Parent = ScreenGui
 IconButton.Draggable = true
 IconButton.Active = true
 IconButton.Selectable = true
 
--- Скрываем иконку от сканера
 HideFromScanner(IconButton)
 
 local IconCorner = Instance.new("UICorner")
@@ -2059,45 +1787,22 @@ task.wait(0.3)
 IconButton.BackgroundTransparency = 1
 IconButton.Size = UDim2.new(0, 20, 0, 20)
 IconButton.Rotation = -15
-TweenService:Create(IconButton, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-    Size = UDim2.new(0, 55, 0, 55),
-    BackgroundTransparency = 0.2,
-    Rotation = 0
-}):Play()
+TweenService:Create(IconButton, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 55, 0, 55), BackgroundTransparency = 0.2, Rotation = 0}):Play()
 
 IconButton.MouseButton1Click:Connect(function()
     PlayClickSound()
-    
-    TweenService:Create(IconButton, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-        Size = UDim2.new(0, 45, 0, 45)
-    }):Play()
+    TweenService:Create(IconButton, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Size = UDim2.new(0, 45, 0, 45)}):Play()
     task.wait(0.1)
-    TweenService:Create(IconButton, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Size = UDim2.new(0, 55, 0, 55)
-    }):Play()
-    
+    TweenService:Create(IconButton, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 55, 0, 55)}):Play()
     if MainFrame.Visible then
-        TweenService:Create(MainScale, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            Scale = 1.02
-        }):Play()
+        TweenService:Create(MainScale, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1.02}):Play()
         task.wait(0.08)
-        
-        TweenService:Create(MainScale, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-            Scale = 0.5
-        }):Play()
-        TweenService:Create(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-            BackgroundTransparency = 0.7
-        }):Play()
+        TweenService:Create(MainScale, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.5}):Play()
+        TweenService:Create(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 0.7}):Play()
         task.wait(0.15)
-        
-        TweenService:Create(MainScale, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-            Scale = 0.2
-        }):Play()
-        TweenService:Create(MainFrame, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-            BackgroundTransparency = 1
-        }):Play()
+        TweenService:Create(MainScale, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.2}):Play()
+        TweenService:Create(MainFrame, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
         task.wait(0.12)
-        
         MainFrame.Visible = false
         MainScale.Scale = 1
         MainFrame.BackgroundTransparency = _G.MenuOpacity / 100
@@ -2108,36 +1813,16 @@ IconButton.MouseButton1Click:Connect(function()
         MainFrame.BackgroundTransparency = 1
         MainFrame.Rotation = -10
         MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-        
         task.wait(0.03)
-        
-        TweenService:Create(MainScale, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            Scale = 0.7
-        }):Play()
-        TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            BackgroundTransparency = 0.5,
-            Rotation = -3
-        }):Play()
+        TweenService:Create(MainScale, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 0.7}):Play()
+        TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.5, Rotation = -3}):Play()
         task.wait(0.3)
-        
-        TweenService:Create(MainScale, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-            Scale = 1
-        }):Play()
-        TweenService:Create(MainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-            BackgroundTransparency = _G.MenuOpacity / 100,
-            Rotation = 0
-        }):Play()
+        TweenService:Create(MainScale, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+        TweenService:Create(MainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {BackgroundTransparency = _G.MenuOpacity / 100, Rotation = 0}):Play()
         task.wait(0.5)
-        
-        TweenService:Create(MainScale, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            Scale = 0.98
-        }):Play()
+        TweenService:Create(MainScale, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 0.98}):Play()
         task.wait(0.05)
-        
-        TweenService:Create(MainScale, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-            Scale = 1
-        }):Play()
-        
+        TweenService:Create(MainScale, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
         MainFrame.Rotation = 0
     end
 end)
@@ -2145,12 +1830,9 @@ end)
 UpdateAllTexts()
 
 if TabButtons[1] then
-    local btn = TabButtons[1]
-    btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.Size = UDim2.new(0.14, 0, 0, 36)
-    local firstPage = ContentPages["Aimbot"]
-    if firstPage then firstPage.Visible = true end
+    TabButtons[1].BackgroundColor3 = Color3.fromRGB(35, 40, 50)
+    TabButtons[1].TextColor3 = Color3.fromRGB(255, 255, 255)
+    TabButtons[1].Size = UDim2.new(0.14, 0, 0, 36)
 end
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
@@ -2160,6 +1842,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] META v7.0.28 - Anti-Cheat Bypass Installed")
-print("[META] Press Insert or click icon to toggle menu")
-]])()
+print("[META] META v7.0.28 - ESP Added")
+print("[META] Press Insert or click icon")
