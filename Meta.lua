@@ -1,6 +1,6 @@
 loadstring([[
--- ROCKET::META_UI_V7.0.26
--- IMPROVED ANIMATION, FIXED ICON IMAGE, NO ICON STROKE
+-- ROCKET::META_UI_V7.0.27
+-- UISCALE ANIMATION: CONTENT SCALES WITH MENU
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -120,6 +120,12 @@ MainFrame.Draggable = true
 MainFrame.Active = true
 MainFrame.Selectable = true
 
+-- ===== UIScale для анимации (масштабирует всё содержимое) =====
+local MainScale = Instance.new("UIScale")
+MainScale.Name = "UIScale"
+MainScale.Scale = 1
+MainScale.Parent = MainFrame
+
 local function AddFakeRobloxElements()
     local fakeElements = {
         "Topbar", "ChatBar", "HealthBar", "Backpack", "PlayerList", "Notifications", "Settings"
@@ -137,13 +143,16 @@ end
 
 AddFakeRobloxElements()
 
+-- Начальная анимация при запуске (через UIScale)
 MainFrame.BackgroundTransparency = 1
-MainFrame.Size = UDim2.new(0, 640 * (_G.MenuScale / 45) * 0.7, 0, 470 * (_G.MenuScale / 45) * 0.7)
+MainScale.Scale = 0.7
 
 task.wait(0.05)
 
+TweenService:Create(MainScale, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+    Scale = 1
+}):Play()
 TweenService:Create(MainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-    Size = UDim2.new(0, 640 * (_G.MenuScale / 45), 0, 470 * (_G.MenuScale / 45)),
     BackgroundTransparency = _G.MenuOpacity / 100
 }):Play()
 
@@ -1829,6 +1838,7 @@ if settingsPage then
         MainFrame.Size = UDim2.new(0, 640, 0, 470)
         MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
         MainFrame.Rotation = 0
+        MainScale.Scale = 1
         MainStroke.Color = _G.MenuThemeColor
         MainStroke.Transparency = 0.4
         UpdateIndicatorColor(_G.MenuThemeColor)
@@ -1953,7 +1963,7 @@ local IconCorner = Instance.new("UICorner")
 IconCorner.CornerRadius = UDim.new(0, 12)
 IconCorner.Parent = IconButton
 
--- Обводка убрана (UIStroke не создаётся)
+-- Обводка убрана
 
 task.wait(0.3)
 IconButton.BackgroundTransparency = 1
@@ -1978,59 +1988,67 @@ IconButton.MouseButton1Click:Connect(function()
     }):Play()
     
     if MainFrame.Visible then
-        -- ===== ЗАКРЫТИЕ =====
-        TweenService:Create(MainFrame, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            Size = UDim2.new(0, 640 * (_G.MenuScale / 45) * 1.02, 0, 470 * (_G.MenuScale / 45) * 1.02)
+        -- ===== ЗАКРЫТИЕ (через UIScale) =====
+        TweenService:Create(MainScale, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Scale = 1.02
         }):Play()
         task.wait(0.08)
         
+        TweenService:Create(MainScale, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+            Scale = 0.5
+        }):Play()
         TweenService:Create(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-            Size = UDim2.new(0, 640 * (_G.MenuScale / 45) * 0.5, 0, 470 * (_G.MenuScale / 45) * 0.5),
             BackgroundTransparency = 0.7
         }):Play()
         task.wait(0.15)
         
+        TweenService:Create(MainScale, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+            Scale = 0.2
+        }):Play()
         TweenService:Create(MainFrame, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-            Size = UDim2.new(0, 640 * (_G.MenuScale / 45) * 0.2, 0, 470 * (_G.MenuScale / 45) * 0.2),
             BackgroundTransparency = 1
         }):Play()
         task.wait(0.12)
         
         MainFrame.Visible = false
-        MainFrame.Size = UDim2.new(0, 640 * (_G.MenuScale / 45), 0, 470 * (_G.MenuScale / 45))
+        MainScale.Scale = 1
         MainFrame.BackgroundTransparency = _G.MenuOpacity / 100
         MainFrame.Rotation = 0
     else
-        -- ===== ОТКРЫТИЕ (ДЕТАЛИЗИРОВАННОЕ) =====
+        -- ===== ОТКРЫТИЕ (через UIScale) =====
         MainFrame.Visible = true
-        MainFrame.Size = UDim2.new(0, 50, 0, 50)
+        MainScale.Scale = 0.1
         MainFrame.BackgroundTransparency = 1
         MainFrame.Rotation = -10
         MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
         
         task.wait(0.03)
         
+        TweenService:Create(MainScale, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Scale = 0.7
+        }):Play()
         TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            Size = UDim2.new(0, 640 * (_G.MenuScale / 45) * 0.7, 0, 470 * (_G.MenuScale / 45) * 0.7),
             BackgroundTransparency = 0.5,
             Rotation = -3
         }):Play()
         task.wait(0.3)
         
+        TweenService:Create(MainScale, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Scale = 1
+        }):Play()
         TweenService:Create(MainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-            Size = UDim2.new(0, 640 * (_G.MenuScale / 45), 0, 470 * (_G.MenuScale / 45)),
             BackgroundTransparency = _G.MenuOpacity / 100,
             Rotation = 0
         }):Play()
         task.wait(0.5)
         
-        TweenService:Create(MainFrame, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            Size = UDim2.new(0, 640 * (_G.MenuScale / 45) * 0.98, 0, 470 * (_G.MenuScale / 45) * 0.98)
+        TweenService:Create(MainScale, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Scale = 0.98
         }):Play()
         task.wait(0.05)
         
-        TweenService:Create(MainFrame, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-            Size = UDim2.new(0, 640 * (_G.MenuScale / 45), 0, 470 * (_G.MenuScale / 45))
+        TweenService:Create(MainScale, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Scale = 1
         }):Play()
         
         MainFrame.Rotation = 0
@@ -2055,6 +2073,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] META v7.0.26 - Improved Animation, Fixed Icon")
+print("[META] META v7.0.27 - UIScale Animation, Content Scales Correctly")
 print("[META] Press Insert or click icon to toggle menu")
 ]])()
