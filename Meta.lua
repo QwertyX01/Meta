@@ -1,6 +1,6 @@
 loadstring([[
--- ROCKET::META_UI_V7.0.24
--- FIXED: RESET FUNCTION NOW WORKS CORRECTLY
+-- ROCKET::META_UI_V7.0.25
+-- ADDED: META ICON BUTTON WITH OPEN/CLOSE ANIMATION
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -1816,7 +1816,6 @@ if settingsPage then
     end
 
     local function PerformReset()
-        -- Сброс всех глобальных переменных
         _G.CustomThemeEnabled = false
         _G.MenuThemeColor = Color3.fromRGB(59, 130, 246)
         _G.CurrentLang = "EN"
@@ -1826,7 +1825,6 @@ if settingsPage then
         _G.FlyingDots = false
         _G.ChamsEnabled = false
 
-        -- Сброс UI
         MainFrame.BackgroundTransparency = 0.12
         MainFrame.Size = UDim2.new(0, 640, 0, 470)
         MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
@@ -1836,19 +1834,16 @@ if settingsPage then
         SearchStroke.Color = _G.MenuThemeColor
         SearchStroke.Transparency = 0.6
 
-        -- Сброс Chams
         RemoveChams()
         if SetChamsToggleState then
             SetChamsToggleState(false)
         end
 
-        -- Сброс языка
         for _, btn in ipairs(langButtonData) do
             pcall(btn.Update, false)
         end
         UpdateAllTexts()
 
-        -- Сброс Rainbow
         if rainbowConnection then
             rainbowConnection:Disconnect()
             rainbowConnection = nil
@@ -1857,7 +1852,6 @@ if settingsPage then
             SetRainbowToggleState(false)
         end
 
-        -- Сброс Flying Dots
         if DotConnection then
             DotConnection:Disconnect()
             DotConnection = nil
@@ -1873,10 +1867,8 @@ if settingsPage then
             SetFlyingToggleState(false)
         end
 
-        -- Сброс масштаба
         UpdateMenuScale()
 
-        -- Сброс UI Color
         if SetToggleState then
             SetToggleState(false)
         end
@@ -1887,7 +1879,6 @@ if settingsPage then
             ShiftContainer(false)
         end
 
-        -- Сброс слайдера прозрачности
         if opacitySliderFill and opacitySliderHandle and opacityValue then
             local opacityPercent = 12 / 50
             opacitySliderFill.Size = UDim2.new(opacityPercent, 0, 1, 0)
@@ -1895,7 +1886,6 @@ if settingsPage then
             opacityValue.Text = "12%"
         end
 
-        -- Сброс слайдера масштаба
         if scaleSliderFill and scaleSliderHandle and scaleValue then
             local scalePercent = (45 - 27) / 36
             scaleSliderFill.Size = UDim2.new(scalePercent, 0, 1, 0)
@@ -1903,15 +1893,12 @@ if settingsPage then
             scaleValue.Text = "100%"
         end
 
-        -- Сброс цветового круга
         if pickerDot then
             pickerDot.Position = UDim2.new(0.5, -5, 0.5, -5)
         end
 
-        -- Сброс вкладки на первую
         SwitchToTab(1)
 
-        -- Сброс поиска
         SearchInput.Text = "Search..."
         SearchClose.Visible = false
 
@@ -1941,6 +1928,65 @@ if settingsPage then
     settingsPage.CanvasSize = UDim2.new(0, 0, 0, 600)
 end
 
+-- ========================================
+-- БЛОК ИКОНКИ (В ЛЕВОМ НИЖНЕМ УГЛУ)
+-- ========================================
+local IconButton = Instance.new("ImageButton")
+IconButton.Name = "MetaIcon"
+IconButton.Size = UDim2.new(0, 55, 0, 55)
+IconButton.Position = UDim2.new(0.01, 0, 0.92, 0)
+IconButton.AnchorPoint = Vector2.new(0, 1)
+IconButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+IconButton.BackgroundTransparency = 0.2
+IconButton.BorderSizePixel = 0
+IconButton.Image = "https://i.ibb.co/1JTnNKw1/IMG-20260902-120719.png"
+IconButton.ImageColor3 = Color3.fromRGB(255, 255, 255)
+IconButton.ImageTransparency = 0
+IconButton.ZIndex = 999
+IconButton.Parent = ScreenGui
+IconButton.Draggable = true
+IconButton.Active = true
+IconButton.Selectable = true
+
+local IconCorner = Instance.new("UICorner")
+IconCorner.CornerRadius = UDim.new(0, 12)
+IconCorner.Parent = IconButton
+
+local IconStroke = Instance.new("UIStroke")
+IconStroke.Thickness = 2
+IconStroke.Color = _G.MenuThemeColor or Color3.fromRGB(59, 130, 246)
+IconStroke.Transparency = 0.4
+IconStroke.Parent = IconButton
+
+task.wait(0.3)
+IconButton.BackgroundTransparency = 1
+IconButton.Size = UDim2.new(0, 30, 0, 30)
+TweenService:Create(IconButton, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+    Size = UDim2.new(0, 55, 0, 55),
+    BackgroundTransparency = 0.2
+}):Play()
+
+IconButton.MouseButton1Click:Connect(function()
+    PlayClickSound()
+    if MainFrame.Visible then
+        TweenService:Create(MainFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+            Size = UDim2.new(0, 640 * (_G.MenuScale / 45) * 0.7, 0, 470 * (_G.MenuScale / 45) * 0.7),
+            BackgroundTransparency = 1
+        }):Play()
+        task.wait(0.2)
+        MainFrame.Visible = false
+    else
+        MainFrame.Visible = true
+        MainFrame.BackgroundTransparency = 1
+        MainFrame.Size = UDim2.new(0, 640 * (_G.MenuScale / 45) * 0.7, 0, 470 * (_G.MenuScale / 45) * 0.7)
+        task.wait(0.05)
+        TweenService:Create(MainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, 640 * (_G.MenuScale / 45), 0, 470 * (_G.MenuScale / 45)),
+            BackgroundTransparency = _G.MenuOpacity / 100
+        }):Play()
+    end
+end)
+
 UpdateAllTexts()
 
 if TabButtons[1] then
@@ -1959,6 +2005,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] META v7.0.24 - Reset Fixed")
-print("[META] Press Insert to toggle menu")
+print("[META] META v7.0.25 - Icon Button Added")
+print("[META] Press Insert or click icon to toggle menu")
 ]])()
