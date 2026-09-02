@@ -1,4 +1,5 @@
--- ROCKET::META_UI_V7.0.30
+-- ROCKET::META_UI_V7.0.31
+
 local function SetupAntiCheatBypass()
     pcall(function()
         local RS = game:GetService("ReplicatedStorage")
@@ -25,7 +26,6 @@ local function SetupAntiCheatBypass()
             return packet
         end
         Network.canPassRateLimit = function() task.wait(0.01) return true, nil end
-        print("[META] Bypass installed")
     end)
 end
 SetupAntiCheatBypass()
@@ -496,6 +496,28 @@ local function UpdateIndicatorColor(color)
     end
 end
 
+local function HighlightElement(element)
+    if not element then return end
+    local highlight = Instance.new("Frame")
+    highlight.Name = "Highlight"
+    highlight.Size = UDim2.new(1, 10, 1, 6)
+    highlight.Position = UDim2.new(0, -5, 0, -3)
+    highlight.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    highlight.BackgroundTransparency = 0.85
+    highlight.BorderSizePixel = 0
+    highlight.ZIndex = 999
+    highlight.Parent = element
+    local highlightCorner = Instance.new("UICorner")
+    highlightCorner.CornerRadius = UDim.new(0, 4)
+    highlightCorner.Parent = highlight
+    highlight.BackgroundTransparency = 1
+    TweenService:Create(highlight, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {BackgroundTransparency = 0.85}):Play()
+    task.wait(1)
+    TweenService:Create(highlight, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {BackgroundTransparency = 1}):Play()
+    task.wait(0.15)
+    highlight:Destroy()
+end
+
 local function SwitchToTab(index)
     if index < 1 or index > #TabButtons then return end
     for i, b in ipairs(TabButtons) do
@@ -512,6 +534,36 @@ local function SwitchToTab(index)
     if targetPage then targetPage.Visible = true end
     activeIndex = index
     UpdateIndicatorPosition(index)
+end
+
+local function SearchInMenu(query)
+    query = string.lower(query)
+    if not ContentPages then return end
+    local foundElements = {}
+    local foundTabName = nil
+    for tabName, page in pairs(ContentPages) do
+        if page then
+            local function scanChildren(parent)
+                for _, child in ipairs(parent:GetChildren()) do
+                    if child:IsA("TextLabel") or child:IsA("TextButton") then
+                        local text = string.lower(child.Text)
+                        if text ~= "" and string.find(text, query) then
+                            table.insert(foundElements, {element = child, tab = tabName})
+                            if not foundTabName then foundTabName = tabName end
+                        end
+                    end
+                    if child:IsA("Frame") then scanChildren(child) end
+                end
+            end
+            scanChildren(page)
+        end
+    end
+    if #foundElements > 0 and foundTabName then
+        for idx, tabName in ipairs(TabNames) do
+            if tabName == foundTabName then SwitchToTab(idx) break end
+        end
+        for _, data in ipairs(foundElements) do HighlightElement(data.element) end
+    end
 end
 
 local function UpdateTabsLanguage()
@@ -578,6 +630,14 @@ end
 
 CreateIndicatorLine()
 UpdateIndicatorPosition(1)
+
+SearchInput.FocusLost:Connect(function(enterPressed)
+    if enterPressed and SearchInput.Text ~= "" and SearchInput.Text ~= "Search..." then
+        SearchInMenu(SearchInput.Text)
+        PlayClickSound()
+        SearchInput.Text = "Search..."
+    end
+end)
 
 local aimbotPage = ContentPages["Aimbot"]
 if aimbotPage then aimbotPage.CanvasSize = UDim2.new(0, 0, 0, 10) end
@@ -1751,5 +1811,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] META v7.0.30 - Sliders Rounded, Rotation Animation")
+print("[META] META v7.0.31 - Fixed")
 print("[META] Press Insert or click icon")
