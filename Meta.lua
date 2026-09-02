@@ -1,6 +1,6 @@
 loadstring([[
--- ROCKET::META_UI_V7.0.23
--- FULL RESET FUNCTION: RETURNS TO INITIAL STATE
+-- ROCKET::META_UI_V7.0.24
+-- FIXED: RESET FUNCTION NOW WORKS CORRECTLY
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -25,6 +25,21 @@ _G.ChamsEnabled = false
 local Dots = {}
 local DotConnection = nil
 local lastScale = _G.MenuScale
+
+-- Глобальные переменные для Reset
+local opacitySliderFill = nil
+local opacitySliderHandle = nil
+local opacityValue = nil
+local scaleSliderFill = nil
+local scaleSliderHandle = nil
+local scaleValue = nil
+local pickerDot = nil
+local pickerContainer = nil
+local SetToggleState = nil
+local ShiftContainer = nil
+local SetChamsToggleState = nil
+local SetRainbowToggleState = nil
+local SetFlyingToggleState = nil
 
 local LANG = {
     RU = {
@@ -747,7 +762,7 @@ if visualsPage then
     chamsClickArea.ZIndex = 10
     chamsClickArea.Parent = chamsFrame
 
-    local function SetChamsToggleState(value)
+    SetChamsToggleState = function(value)
         if value then
             TweenService:Create(chamsToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
                 BackgroundColor3 = Color3.fromRGB(59, 130, 246)
@@ -861,7 +876,7 @@ if settingsPage then
     clickArea.Parent = toggleFrame
 
     -- Цветовой круг
-    local pickerContainer = Instance.new("Frame")
+    pickerContainer = Instance.new("Frame")
     pickerContainer.Name = "ColorPicker"
     pickerContainer.Size = UDim2.new(1, -30, 0, 140)
     pickerContainer.Position = UDim2.new(0, 15, 0, 55)
@@ -884,7 +899,7 @@ if settingsPage then
     wheelCorner.CornerRadius = UDim.new(1, 0)
     wheelCorner.Parent = wheelImage
 
-    local pickerDot = Instance.new("Frame")
+    pickerDot = Instance.new("Frame")
     pickerDot.Name = "Selector"
     pickerDot.Size = UDim2.new(0, 10, 0, 10)
     pickerDot.Position = UDim2.new(0.5, -5, 0.5, -5)
@@ -964,7 +979,7 @@ if settingsPage then
         end
     end)
 
-    local function ShiftContainer(shiftDown)
+    ShiftContainer = function(shiftDown)
         local targetY = shiftDown and 150 or 0
         TweenService:Create(settingsContainer, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
             Position = UDim2.new(0, 0, 0, 55 + targetY)
@@ -981,7 +996,7 @@ if settingsPage then
         end
     end
 
-    local function SetToggleState(value)
+    SetToggleState = function(value)
         if value then
             TweenService:Create(toggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
                 BackgroundColor3 = Color3.fromRGB(59, 130, 246)
@@ -1144,7 +1159,7 @@ if settingsPage then
     opacityDesc.TextXAlignment = Enum.TextXAlignment.Left
     opacityDesc.Parent = opacityFrame
 
-    local opacityValue = Instance.new("TextLabel")
+    opacityValue = Instance.new("TextLabel")
     opacityValue.Name = "Value"
     opacityValue.Size = UDim2.new(0.15, 0, 0, 20)
     opacityValue.Position = UDim2.new(0.85, 0, 0, 0)
@@ -1168,7 +1183,7 @@ if settingsPage then
     opacitySliderCorner.CornerRadius = UDim.new(1, 0)
     opacitySliderCorner.Parent = opacitySliderBg
 
-    local opacitySliderFill = Instance.new("Frame")
+    opacitySliderFill = Instance.new("Frame")
     opacitySliderFill.Name = "Fill"
     local opacityInitialPercent = _G.MenuOpacity / 50
     opacitySliderFill.Size = UDim2.new(opacityInitialPercent, 0, 1, 0)
@@ -1180,7 +1195,7 @@ if settingsPage then
     opacitySliderFillCorner.CornerRadius = UDim.new(1, 0)
     opacitySliderFillCorner.Parent = opacitySliderFill
 
-    local opacitySliderHandle = Instance.new("Frame")
+    opacitySliderHandle = Instance.new("Frame")
     opacitySliderHandle.Name = "Handle"
     opacitySliderHandle.Size = UDim2.new(0, 16, 0, 16)
     opacitySliderHandle.Position = UDim2.new(opacityInitialPercent, -8, 0.5, -8)
@@ -1307,7 +1322,7 @@ if settingsPage then
     rainbowClickArea.ZIndex = 10
     rainbowClickArea.Parent = rainbowFrame
 
-    local function SetRainbowToggleState(value)
+    SetRainbowToggleState = function(value)
         if value then
             TweenService:Create(rainbowToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
                 BackgroundColor3 = Color3.fromRGB(59, 130, 246)
@@ -1390,7 +1405,7 @@ if settingsPage then
     scaleDesc.TextXAlignment = Enum.TextXAlignment.Left
     scaleDesc.Parent = scaleFrame
 
-    local scaleValue = Instance.new("TextLabel")
+    scaleValue = Instance.new("TextLabel")
     scaleValue.Name = "Value"
     scaleValue.Size = UDim2.new(0.15, 0, 0, 20)
     scaleValue.Position = UDim2.new(0.85, 0, 0, 0)
@@ -1414,7 +1429,7 @@ if settingsPage then
     scaleSliderCorner.CornerRadius = UDim.new(1, 0)
     scaleSliderCorner.Parent = scaleSliderBg
 
-    local scaleSliderFill = Instance.new("Frame")
+    scaleSliderFill = Instance.new("Frame")
     scaleSliderFill.Name = "Fill"
     local scaleInitialPercent = (_G.MenuScale - 27) / 36
     scaleSliderFill.Size = UDim2.new(scaleInitialPercent, 0, 1, 0)
@@ -1426,7 +1441,7 @@ if settingsPage then
     scaleSliderFillCorner.CornerRadius = UDim.new(1, 0)
     scaleSliderFillCorner.Parent = scaleSliderFill
 
-    local scaleSliderHandle = Instance.new("Frame")
+    scaleSliderHandle = Instance.new("Frame")
     scaleSliderHandle.Name = "Handle"
     scaleSliderHandle.Size = UDim2.new(0, 16, 0, 16)
     scaleSliderHandle.Position = UDim2.new(scaleInitialPercent, -8, 0.5, -8)
@@ -1681,7 +1696,7 @@ if settingsPage then
     flyingClickArea.ZIndex = 10
     flyingClickArea.Parent = flyingToggleFrame
 
-    local function SetFlyingToggleState(value)
+    SetFlyingToggleState = function(value)
         if value then
             TweenService:Create(flyingToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
                 BackgroundColor3 = Color3.fromRGB(59, 130, 246)
@@ -1823,7 +1838,9 @@ if settingsPage then
 
         -- Сброс Chams
         RemoveChams()
-        SetChamsToggleState(false)
+        if SetChamsToggleState then
+            SetChamsToggleState(false)
+        end
 
         -- Сброс языка
         for _, btn in ipairs(langButtonData) do
@@ -1836,7 +1853,9 @@ if settingsPage then
             rainbowConnection:Disconnect()
             rainbowConnection = nil
         end
-        SetRainbowToggleState(false)
+        if SetRainbowToggleState then
+            SetRainbowToggleState(false)
+        end
 
         -- Сброс Flying Dots
         if DotConnection then
@@ -1850,30 +1869,44 @@ if settingsPage then
         end
         Dots = {}
         _G.FlyingDots = false
-        SetFlyingToggleState(false)
+        if SetFlyingToggleState then
+            SetFlyingToggleState(false)
+        end
 
         -- Сброс масштаба
         UpdateMenuScale()
 
         -- Сброс UI Color
-        SetToggleState(false)
-        pickerContainer.Visible = false
-        ShiftContainer(false)
+        if SetToggleState then
+            SetToggleState(false)
+        end
+        if pickerContainer then
+            pickerContainer.Visible = false
+        end
+        if ShiftContainer then
+            ShiftContainer(false)
+        end
 
         -- Сброс слайдера прозрачности
-        local opacityPercent = 12 / 50
-        opacitySliderFill.Size = UDim2.new(opacityPercent, 0, 1, 0)
-        opacitySliderHandle.Position = UDim2.new(opacityPercent, -8, 0.5, -8)
-        opacityValue.Text = "12%"
+        if opacitySliderFill and opacitySliderHandle and opacityValue then
+            local opacityPercent = 12 / 50
+            opacitySliderFill.Size = UDim2.new(opacityPercent, 0, 1, 0)
+            opacitySliderHandle.Position = UDim2.new(opacityPercent, -8, 0.5, -8)
+            opacityValue.Text = "12%"
+        end
 
         -- Сброс слайдера масштаба
-        local scalePercent = (45 - 27) / 36
-        scaleSliderFill.Size = UDim2.new(scalePercent, 0, 1, 0)
-        scaleSliderHandle.Position = UDim2.new(scalePercent, -8, 0.5, -8)
-        scaleValue.Text = "100%"
+        if scaleSliderFill and scaleSliderHandle and scaleValue then
+            local scalePercent = (45 - 27) / 36
+            scaleSliderFill.Size = UDim2.new(scalePercent, 0, 1, 0)
+            scaleSliderHandle.Position = UDim2.new(scalePercent, -8, 0.5, -8)
+            scaleValue.Text = "100%"
+        end
 
         -- Сброс цветового круга
-        pickerDot.Position = UDim2.new(0.5, -5, 0.5, -5)
+        if pickerDot then
+            pickerDot.Position = UDim2.new(0.5, -5, 0.5, -5)
+        end
 
         -- Сброс вкладки на первую
         SwitchToTab(1)
@@ -1926,6 +1959,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] META v7.0.23 - Full Reset Function")
+print("[META] META v7.0.24 - Reset Fixed")
 print("[META] Press Insert to toggle menu")
 ]])()
