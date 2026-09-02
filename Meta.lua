@@ -1,5 +1,4 @@
 -- ROCKET::META_UI_V7.0.28
--- ANTI-CHEAT BYPASS: PACKET HOOK, RATE LIMIT BYPASS, UI HIDING
 
 local function SetupAntiCheatBypass()
     pcall(function()
@@ -26,21 +25,13 @@ local function SetupAntiCheatBypass()
             end
             return packet
         end
-        Network.canPassRateLimit = function(player, packetName, options)
-            task.wait(0.01)
-            return true, nil
-        end
-        print("[META] Anti-cheat bypass installed")
+        Network.canPassRateLimit = function() task.wait(0.01) return true, nil end
     end)
 end
-
 SetupAntiCheatBypass()
 
 local function HideFromScanner(gui)
-    pcall(function()
-        sethiddenproperty(gui, "RobloxLocked", true)
-        sethiddenproperty(gui, "Archivable", false)
-    end)
+    pcall(function() sethiddenproperty(gui, "RobloxLocked", true) sethiddenproperty(gui, "Archivable", false) end)
 end
 
 local function SetupAutoUnload()
@@ -52,7 +43,6 @@ local function SetupAutoUnload()
         end)
     end)
 end
-
 SetupAutoUnload()
 
 local Players = game:GetService("Players")
@@ -76,8 +66,6 @@ _G.ESPEnabled = false
 
 local Dots = {}
 local DotConnection = nil
-local lastScale = _G.MenuScale
-
 local opacitySliderFill, opacitySliderHandle, opacityValue = nil, nil, nil
 local scaleSliderFill, scaleSliderHandle, scaleValue = nil, nil, nil
 local pickerDot, pickerContainer = nil, nil
@@ -143,7 +131,6 @@ ScreenGui.IgnoreGuiInset = true
 ScreenGui.DisplayOrder = 999999998
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = CoreGui
-
 HideFromScanner(ScreenGui)
 
 local FakeContainer = Instance.new("Frame")
@@ -187,7 +174,6 @@ Header.BackgroundTransparency = 1
 Header.Parent = MainFrame
 
 local MetaLabel = Instance.new("TextLabel")
-MetaLabel.Name = "GameTitle"
 MetaLabel.Size = UDim2.new(0.1, 0, 1, 0)
 MetaLabel.Position = UDim2.new(0, 15, 0, 0)
 MetaLabel.BackgroundTransparency = 1
@@ -200,7 +186,6 @@ MetaLabel.TextYAlignment = Enum.TextYAlignment.Center
 MetaLabel.Parent = Header
 
 local GameNameLabel = Instance.new("TextLabel")
-GameNameLabel.Name = "GameName"
 GameNameLabel.Size = UDim2.new(0.35, 0, 1, 0)
 GameNameLabel.Position = UDim2.new(0.32, 0, 0, 0)
 GameNameLabel.BackgroundTransparency = 1
@@ -238,7 +223,6 @@ SearchStroke.Transparency = 0.6
 SearchStroke.Parent = SearchContainer
 
 local SearchInput = Instance.new("TextBox")
-SearchInput.Name = "SearchInput"
 SearchInput.Size = UDim2.new(1, -12, 1, 0)
 SearchInput.Position = UDim2.new(0, 8, 0, 0)
 SearchInput.BackgroundTransparency = 1
@@ -278,7 +262,6 @@ Separator.BorderSizePixel = 0
 Separator.Parent = MainFrame
 
 local TabContainer = Instance.new("Frame")
-TabContainer.Name = "TabBar"
 TabContainer.Size = UDim2.new(1, 0, 0, 48)
 TabContainer.Position = UDim2.new(0, 0, 0, 39)
 TabContainer.BackgroundTransparency = 1
@@ -312,10 +295,15 @@ end
 
 local function PaintCharacter(character, p)
     if not character or not p then return end
-    if character:FindFirstChild(ChamsTag) then character[ChamsTag]:Destroy() end
+    for _, child in ipairs(character:GetChildren()) do
+        if child:IsA("Highlight") and child:GetAttribute("META_Chams") then
+            child:Destroy()
+        end
+    end
     if IsEnemy(p) then
         local highlight = Instance.new("Highlight")
         highlight.Name = "Highlight"
+        highlight:SetAttribute("META_Chams", true)
         highlight.FillColor = Color3.fromRGB(255, 30, 30)
         highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
         highlight.FillTransparency = 0.45
@@ -323,7 +311,6 @@ local function PaintCharacter(character, p)
         highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
         highlight.Adornee = character
         highlight.Parent = character
-        HideFromScanner(highlight)
     end
 end
 
@@ -346,10 +333,23 @@ local function ApplyChams()
         while _G.ChamsEnabled do
             for _, p in ipairs(Players:GetPlayers()) do
                 if p.Character and p ~= LocalPlayer then
-                    local hasChams = p.Character:FindFirstChild("Highlight")
+                    local hasChams = false
+                    for _, child in ipairs(p.Character:GetChildren()) do
+                        if child:IsA("Highlight") and child:GetAttribute("META_Chams") then
+                            hasChams = true
+                            break
+                        end
+                    end
                     local shouldBeRed = IsEnemy(p)
-                    if shouldBeRed and not hasChams then PaintCharacter(p.Character, p)
-                    elseif not shouldBeRed and hasChams then p.Character:FindFirstChild("Highlight"):Destroy() end
+                    if shouldBeRed and not hasChams then
+                        PaintCharacter(p.Character, p)
+                    elseif not shouldBeRed and hasChams then
+                        for _, child in ipairs(p.Character:GetChildren()) do
+                            if child:IsA("Highlight") and child:GetAttribute("META_Chams") then
+                                child:Destroy()
+                            end
+                        end
+                    end
                 end
             end
             task.wait(2)
@@ -360,8 +360,12 @@ local function ApplyChams()
         if ChamsConnections.PlayerAdded then ChamsConnections.PlayerAdded:Disconnect() end
         for _, p in ipairs(Players:GetPlayers()) do
             if ChamsConnections[p] then ChamsConnections[p]:Disconnect() end
-            if p.Character and p.Character:FindFirstChild("Highlight") then
-                p.Character:FindFirstChild("Highlight"):Destroy()
+            if p.Character then
+                for _, child in ipairs(p.Character:GetChildren()) do
+                    if child:IsA("Highlight") and child:GetAttribute("META_Chams") then
+                        child:Destroy()
+                    end
+                end
             end
         end
     end
@@ -754,7 +758,6 @@ if visualsPage then
     end
     table.insert(langUpdateCallbacks, UpdateChamsText)
 
-    -- ESP
     local espFrame = Instance.new("Frame")
     espFrame.Name = "ESPBox"
     espFrame.Size = UDim2.new(1, 0, 0, 45)
@@ -1424,6 +1427,7 @@ if settingsPage then
         scaleValue.Text = tostring(math.round((val / 45) * 100)) .. "%"
         _G.MenuScale = val
         MainFrame.Size = UDim2.new(0, 640 * (val / 45), 0, 470 * (val / 45))
+        if _G.FlyingDots then RebuildDots() end
     end
 
     scaleSliderHandle.InputBegan:Connect(function(input)
@@ -1479,9 +1483,11 @@ if settingsPage then
         end
         Dots = {}
         if not _G.FlyingDots then return end
+        local w = MainFrame.AbsoluteSize.X
+        local h = MainFrame.AbsoluteSize.Y
+        if w <= 0 then w = 640 end
+        if h <= 0 then h = 470 end
         local scale = _G.MenuScale / 45
-        local w = 640 * scale
-        local h = 470 * scale
         local count = math.floor(30 + scale * 20)
         for i = 1, count do
             local dot = Instance.new("Frame")
@@ -1506,14 +1512,14 @@ if settingsPage then
             local speedX = (math.random() - 0.5) * speed * 0.6
             local speedY = math.random() * speed * 0.5 + speed * 0.15
             local rotSpeed = (math.random() - 0.5) * 0.025
-            table.insert(Dots, {Frame = dot, SpeedX = speedX, SpeedY = speedY, RotSpeed = rotSpeed, Angle = math.random() * math.pi * 2, PosX = math.random(0, w), PosY = math.random(0, h), w = w, h = h})
+            table.insert(Dots, {Frame = dot, SpeedX = speedX, SpeedY = speedY, RotSpeed = rotSpeed, Angle = math.random() * math.pi * 2, PosX = math.random(0, w), PosY = math.random(0, h)})
         end
     end
 
     local function UpdateDots()
-        local scale = _G.MenuScale / 45
-        local w = 640 * scale
-        local h = 470 * scale
+        local w = MainFrame.AbsoluteSize.X
+        local h = MainFrame.AbsoluteSize.Y
+        if w <= 0 or h <= 0 then return end
         for _, data in ipairs(Dots) do
             if data and data.Frame then
                 data.PosX = data.PosX + data.SpeedX
@@ -1527,6 +1533,10 @@ if settingsPage then
             end
         end
     end
+
+    MainFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+        if _G.FlyingDots then RebuildDots() end
+    end)
 
     local function ToggleFlyingDots(state)
         _G.FlyingDots = state
@@ -1842,5 +1852,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] META v7.0.28 - ESP Added")
+print("[META] META v7.0.28 - Fixed Chams + Dots")
 print("[META] Press Insert or click icon")
