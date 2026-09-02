@@ -1,5 +1,4 @@
-
-    loadstring([[
+loadstring)[[
 -- ROCKET::META_UI_V7.0.29
 local function SetupAntiCheatBypass()
     pcall(function()
@@ -772,7 +771,6 @@ if settingsPage then
     settingsContainer.ClipsDescendants = true
     settingsContainer.Parent = settingsPage
 
-    -- UI Color toggle
     local toggleFrame = Instance.new("Frame")
     toggleFrame.Size = UDim2.new(1, 0, 0, 45)
     toggleFrame.Position = UDim2.new(0, 0, 0, 10)
@@ -830,7 +828,6 @@ if settingsPage then
     clickArea.ZIndex = 10
     clickArea.Parent = toggleFrame
 
-    -- Color picker
     pickerContainer = Instance.new("Frame")
     pickerContainer.Name = "ColorPicker"
     pickerContainer.Size = UDim2.new(1, -30, 0, 140)
@@ -967,7 +964,6 @@ if settingsPage then
         SetToggleState(not _G.CustomThemeEnabled)
     end)
 
-    -- Language buttons
     local langFrame = Instance.new("Frame")
     langFrame.Name = "LanguagePanel"
     langFrame.Size = UDim2.new(1, -20, 0, 42)
@@ -1048,7 +1044,6 @@ if settingsPage then
     CreateLangButton("Русский", "RU", 0.03)
     CreateLangButton("English", "EN", 0.55)
 
-    -- Opacity slider
     local opacityFrame = Instance.new("Frame")
     opacityFrame.Name = "OpacitySetting"
     opacityFrame.Size = UDim2.new(1, -20, 0, 55)
@@ -1159,7 +1154,6 @@ if settingsPage then
     end
     table.insert(langUpdateCallbacks, UpdateOpacityText)
 
-    -- Rainbow
     local rainbowFrame = Instance.new("Frame")
     rainbowFrame.Size = UDim2.new(1, 0, 0, 45)
     rainbowFrame.Position = UDim2.new(0, 0, 0, 120)
@@ -1260,7 +1254,6 @@ if settingsPage then
     end
     table.insert(langUpdateCallbacks, UpdateRainbowText)
 
-    -- Scale slider
     local scaleFrame = Instance.new("Frame")
     scaleFrame.Size = UDim2.new(1, -20, 0, 55)
     scaleFrame.Position = UDim2.new(0, 10, 0, 170)
@@ -1369,7 +1362,6 @@ if settingsPage then
     end
     table.insert(langUpdateCallbacks, UpdateScaleText)
 
-    -- Flying Dots
     local flyingFrame = Instance.new("Frame")
     flyingFrame.Name = "Effects"
     flyingFrame.Size = UDim2.new(1, 0, 1, 0)
@@ -1417,17 +1409,7 @@ if settingsPage then
             local speedX = (math.random() - 0.5) * speed * 0.6
             local speedY = math.random() * speed * 0.5 + speed * 0.15
             local rotSpeed = (math.random() - 0.5) * 0.025
-            table.insert(Dots, {
-                Frame = dot,
-                SpeedX = speedX,
-                SpeedY = speedY,
-                RotSpeed = rotSpeed,
-                Angle = math.random() * math.pi * 2,
-                PosX = math.random(0, w),
-                PosY = math.random(0, h),
-                w = w,
-                h = h
-            })
+            table.insert(Dots, {Frame = dot, SpeedX = speedX, SpeedY = speedY, RotSpeed = rotSpeed, Angle = math.random() * math.pi * 2, PosX = math.random(0, w), PosY = math.random(0, h), w = w, h = h})
         end
     end
 
@@ -1442,10 +1424,7 @@ if settingsPage then
                 data.Angle = data.Angle + data.RotSpeed
                 if data.PosX < 0 then data.PosX = w end
                 if data.PosX > w then data.PosX = 0 end
-                if data.PosY > h then
-                    data.PosY = 0
-                    data.PosX = math.random(0, w)
-                end
+                if data.PosY > h then data.PosY = 0 data.PosX = math.random(0, w) end
                 data.Frame.Position = UDim2.new(0, data.PosX, 0, data.PosY)
                 data.Frame.Rotation = math.deg(data.Angle)
             end
@@ -1549,7 +1528,6 @@ if settingsPage then
     end
     table.insert(langUpdateCallbacks, UpdateFlyingText)
 
-    -- Reset
     local resetFrame = Instance.new("Frame")
     resetFrame.Size = UDim2.new(1, 0, 0, 45)
     resetFrame.Position = UDim2.new(0, 0, 0, 280)
@@ -1685,7 +1663,6 @@ if settingsPage then
     table.insert(langUpdateCallbacks, UpdateResetText)
 end
 
--- Иконка
 local IconButton = Instance.new("ImageButton")
 IconButton.Name = "MetaIcon"
 IconButton.Size = UDim2.new(0, 55, 0, 55)
@@ -1745,4 +1722,4 @@ end)
 
 print("[META] META v7.0.29 - ESP Added")
 print("[META] Press Insert or click icon")
-]])()
+[[()
