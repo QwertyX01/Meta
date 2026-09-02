@@ -1,7 +1,90 @@
 loadstring([[
--- ROCKET::META_UI_V7.0.27
--- UISCALE ANIMATION: CONTENT SCALES WITH MENU
+-- ROCKET::META_UI_V7.0.28
+-- ANTI-CHEAT BYPASS: PACKET HOOK, RATE LIMIT BYPASS, UI HIDING
 
+-- ===== ОБХОД АНТИЧИТА =====
+local function SetupAntiCheatBypass()
+    pcall(function()
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        local Network = require(ReplicatedStorage.Database.Security.Network)
+        
+        -- Сохраняем оригинальный CreatePacket
+        local OriginalCreatePacket = Network.CreatePacket
+        
+        -- Перехватываем CreatePacket
+        Network.CreatePacket = function(namespace, packetName, schema, options)
+            local packet = OriginalCreatePacket(namespace, packetName, schema, options)
+            
+            if packet and packet.Send then
+                local OriginalSend = packet.Send
+                
+                -- Перехватываем Send для обхода валидации и rate limiting
+                packet.Send = function(data)
+                    local success, result = pcall(function()
+                        local BufferCodec = require(ReplicatedStorage.Database.Security.Network.BufferCodec)
+                        local encoded, instances = BufferCodec.Encode(data)
+                        
+                        local remote = ReplicatedStorage:FindFirstChild("NetworkRemotes")
+                        local folder = remote and remote:FindFirstChild(namespace)
+                        local event = folder and folder:FindFirstChild(packetName)
+                        
+                        if event then
+                            event:FireServer(encoded, instances)
+                            return true
+                        end
+                        
+                        return false
+                    end)
+                    
+                    if success and result then
+                        return true
+                    end
+                    
+                    -- Fallback на оригинал
+                    return OriginalSend(data)
+                end
+            end
+            
+            return packet
+        end
+        
+        -- Обход Rate Limiting
+        local rateLimits = {}
+        local OriginalCanPass = Network.canPassRateLimit
+        
+        Network.canPassRateLimit = function(player, packetName, options)
+            -- Всегда пропускаем, но с небольшой задержкой для маскировки
+            task.wait(0.01)
+            return true, nil
+        end
+        
+        print("[META] Anti-cheat bypass installed")
+    end)
+end
+
+SetupAntiCheatBypass()
+
+-- ===== СКРЫТИЕ ОТ СКАНЕРА =====
+local function HideFromScanner(gui)
+    pcall(function()
+        sethiddenproperty(gui, "RobloxLocked", true)
+        sethiddenproperty(gui, "Archivable", false)
+    end)
+end
+
+-- ===== АВТО-ВЫГРУЗКА ПРИ ТЕЛЕПОРТЕ =====
+local function SetupAutoUnload()
+    game:GetService("Players").LocalPlayer.OnTeleport:Connect(function()
+        pcall(function()
+            if _G.UnloadChams then _G.UnloadChams() end
+            if ScreenGui then ScreenGui:Destroy() end
+        end)
+    end)
+end
+
+SetupAutoUnload()
+
+-- ===== ОСНОВНОЙ СКРИПТ =====
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -100,6 +183,9 @@ ScreenGui.DisplayOrder = 999999998
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = CoreGui
 
+-- Скрываем от сканера
+HideFromScanner(ScreenGui)
+
 local FakeContainer = Instance.new("Frame")
 FakeContainer.Name = "GameUI"
 FakeContainer.Size = UDim2.new(1, 0, 1, 0)
@@ -120,7 +206,7 @@ MainFrame.Draggable = true
 MainFrame.Active = true
 MainFrame.Selectable = true
 
--- ===== UIScale для анимации (масштабирует всё содержимое) =====
+-- UIScale для анимации
 local MainScale = Instance.new("UIScale")
 MainScale.Name = "UIScale"
 MainScale.Scale = 1
@@ -143,7 +229,6 @@ end
 
 AddFakeRobloxElements()
 
--- Начальная анимация при запуске (через UIScale)
 MainFrame.BackgroundTransparency = 1
 MainScale.Scale = 0.7
 
@@ -301,7 +386,7 @@ local langUpdateCallbacks = {}
 local rainbowConnection = nil
 local langButtonData = {}
 
--- ===== CHAMS =====
+-- ===== CHAMS (С МАСКИРОВКОЙ) =====
 local ChamsConnections = {}
 local ChamsTag = "META_Chams"
 
@@ -341,7 +426,7 @@ local function PaintCharacter(character, player)
 
     if IsEnemy(player) then
         local highlight = Instance.new("Highlight")
-        highlight.Name = ChamsTag
+        highlight.Name = "Highlight" -- Маскировка: стандартное имя
         highlight.FillColor = Color3.fromRGB(255, 30, 30)
         highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
         highlight.FillTransparency = 0.45
@@ -349,6 +434,9 @@ local function PaintCharacter(character, player)
         highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
         highlight.Adornee = character
         highlight.Parent = character
+        
+        -- Скрываем от сканера
+        HideFromScanner(highlight)
     end
 end
 
@@ -384,13 +472,13 @@ local function ApplyChams()
         while _G.ChamsEnabled do
             for _, player in ipairs(Players:GetPlayers()) do
                 if player.Character and player ~= LocalPlayer then
-                    local hasChams = player.Character:FindFirstChild(ChamsTag)
+                    local hasChams = player.Character:FindFirstChild("Highlight")
                     local shouldBeRed = IsEnemy(player)
 
                     if shouldBeRed and not hasChams then
                         PaintCharacter(player.Character, player)
                     elseif not shouldBeRed and hasChams then
-                        player.Character[ChamsTag]:Destroy()
+                        player.Character:FindFirstChild("Highlight"):Destroy()
                     end
                 end
             end
@@ -410,8 +498,9 @@ local function ApplyChams()
         if ChamsConnections.PlayerAdded then ChamsConnections.PlayerAdded:Disconnect() end
         for _, player in ipairs(Players:GetPlayers()) do
             if ChamsConnections[player] then ChamsConnections[player]:Disconnect() end
-            if player.Character and player.Character:FindFirstChild(ChamsTag) then
-                player.Character[ChamsTag]:Destroy()
+            if player.Character then
+                local highlight = player.Character:FindFirstChild("Highlight")
+                if highlight then highlight:Destroy() end
             end
         end
     end
@@ -1940,7 +2029,7 @@ if settingsPage then
 end
 
 -- ========================================
--- БЛОК ИКОНКИ (БЕЗ ОБВОДКИ, С ФОТО)
+-- БЛОК ИКОНКИ
 -- ========================================
 local IconButton = Instance.new("ImageButton")
 IconButton.Name = "MetaIcon"
@@ -1959,11 +2048,12 @@ IconButton.Draggable = true
 IconButton.Active = true
 IconButton.Selectable = true
 
+-- Скрываем иконку от сканера
+HideFromScanner(IconButton)
+
 local IconCorner = Instance.new("UICorner")
 IconCorner.CornerRadius = UDim.new(0, 12)
 IconCorner.Parent = IconButton
-
--- Обводка убрана
 
 task.wait(0.3)
 IconButton.BackgroundTransparency = 1
@@ -1978,7 +2068,6 @@ TweenService:Create(IconButton, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.E
 IconButton.MouseButton1Click:Connect(function()
     PlayClickSound()
     
-    -- Анимация нажатия на иконку
     TweenService:Create(IconButton, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
         Size = UDim2.new(0, 45, 0, 45)
     }):Play()
@@ -1988,7 +2077,6 @@ IconButton.MouseButton1Click:Connect(function()
     }):Play()
     
     if MainFrame.Visible then
-        -- ===== ЗАКРЫТИЕ (через UIScale) =====
         TweenService:Create(MainScale, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
             Scale = 1.02
         }):Play()
@@ -2015,7 +2103,6 @@ IconButton.MouseButton1Click:Connect(function()
         MainFrame.BackgroundTransparency = _G.MenuOpacity / 100
         MainFrame.Rotation = 0
     else
-        -- ===== ОТКРЫТИЕ (через UIScale) =====
         MainFrame.Visible = true
         MainScale.Scale = 0.1
         MainFrame.BackgroundTransparency = 1
@@ -2073,6 +2160,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] META v7.0.27 - UIScale Animation, Content Scales Correctly")
+print("[META] META v7.0.28 - Anti-Cheat Bypass Installed")
 print("[META] Press Insert or click icon to toggle menu")
 ]])()
