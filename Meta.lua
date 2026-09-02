@@ -1,4 +1,4 @@
--- ROCKET::META_UI_V7.0.29
+-- ROCKET::META_UI_V7.0.30
 local function SetupAntiCheatBypass()
     pcall(function()
         local RS = game:GetService("ReplicatedStorage")
@@ -1089,11 +1089,19 @@ if settingsPage then
     opacitySliderBg.BorderSizePixel = 0
     opacitySliderBg.Parent = opacityFrame
 
+    local opacitySliderCorner = Instance.new("UICorner")
+    opacitySliderCorner.CornerRadius = UDim.new(1, 0)
+    opacitySliderCorner.Parent = opacitySliderBg
+
     opacitySliderFill = Instance.new("Frame")
     opacitySliderFill.Size = UDim2.new(0.24, 0, 1, 0)
     opacitySliderFill.BackgroundColor3 = Color3.fromRGB(59, 130, 246)
     opacitySliderFill.BorderSizePixel = 0
     opacitySliderFill.Parent = opacitySliderBg
+
+    local opacityFillCorner = Instance.new("UICorner")
+    opacityFillCorner.CornerRadius = UDim.new(1, 0)
+    opacityFillCorner.Parent = opacitySliderFill
 
     opacitySliderHandle = Instance.new("Frame")
     opacitySliderHandle.Size = UDim2.new(0, 16, 0, 16)
@@ -1101,6 +1109,10 @@ if settingsPage then
     opacitySliderHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     opacitySliderHandle.BorderSizePixel = 0
     opacitySliderHandle.Parent = opacitySliderBg
+
+    local opacityHandleCorner = Instance.new("UICorner")
+    opacityHandleCorner.CornerRadius = UDim.new(1, 0)
+    opacityHandleCorner.Parent = opacitySliderHandle
 
     local isDraggingOpacity = false
 
@@ -1297,11 +1309,19 @@ if settingsPage then
     scaleSliderBg.BorderSizePixel = 0
     scaleSliderBg.Parent = scaleFrame
 
+    local scaleSliderCorner = Instance.new("UICorner")
+    scaleSliderCorner.CornerRadius = UDim.new(1, 0)
+    scaleSliderCorner.Parent = scaleSliderBg
+
     scaleSliderFill = Instance.new("Frame")
     scaleSliderFill.Size = UDim2.new(0.5, 0, 1, 0)
     scaleSliderFill.BackgroundColor3 = Color3.fromRGB(59, 130, 246)
     scaleSliderFill.BorderSizePixel = 0
     scaleSliderFill.Parent = scaleSliderBg
+
+    local scaleFillCorner = Instance.new("UICorner")
+    scaleFillCorner.CornerRadius = UDim.new(1, 0)
+    scaleFillCorner.Parent = scaleSliderFill
 
     scaleSliderHandle = Instance.new("Frame")
     scaleSliderHandle.Size = UDim2.new(0, 16, 0, 16)
@@ -1309,6 +1329,10 @@ if settingsPage then
     scaleSliderHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     scaleSliderHandle.BorderSizePixel = 0
     scaleSliderHandle.Parent = scaleSliderBg
+
+    local scaleHandleCorner = Instance.new("UICorner")
+    scaleHandleCorner.CornerRadius = UDim.new(1, 0)
+    scaleHandleCorner.Parent = scaleSliderHandle
 
     local isDraggingScale = false
 
@@ -1599,6 +1623,7 @@ if settingsPage then
         MainFrame.BackgroundTransparency = 0.12
         MainFrame.Size = UDim2.new(0, 640, 0, 470)
         MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+        MainFrame.Rotation = 0
         MainScale.Scale = 1
         MainStroke.Color = _G.MenuThemeColor
         UpdateIndicatorColor(_G.MenuThemeColor)
@@ -1684,22 +1709,30 @@ IconCorner.Parent = IconButton
 IconButton.MouseButton1Click:Connect(function()
     PlayClickSound()
     if MainFrame.Visible then
-        TweenService:Create(MainScale, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.5}):Play()
-        TweenService:Create(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
-        task.wait(0.25)
+        TweenService:Create(MainScale, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.7}):Play()
+        TweenService:Create(MainFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Rotation = 10, BackgroundTransparency = 0.8}):Play()
+        task.wait(0.15)
+        TweenService:Create(MainScale, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.2}):Play()
+        TweenService:Create(MainFrame, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
+        task.wait(0.15)
         MainFrame.Visible = false
         MainScale.Scale = 1
+        MainFrame.Rotation = 0
         MainFrame.BackgroundTransparency = _G.MenuOpacity / 100
     else
         MainFrame.Visible = true
         MainScale.Scale = 0.1
+        MainFrame.Rotation = -15
         MainFrame.BackgroundTransparency = 1
+        MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
         task.wait(0.03)
-        TweenService:Create(MainScale, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 0.7}):Play()
-        TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.5}):Play()
-        task.wait(0.3)
-        TweenService:Create(MainScale, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
-        TweenService:Create(MainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {BackgroundTransparency = _G.MenuOpacity / 100}):Play()
+        TweenService:Create(MainScale, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 0.6}):Play()
+        TweenService:Create(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Rotation = -5, BackgroundTransparency = 0.4}):Play()
+        task.wait(0.25)
+        TweenService:Create(MainScale, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+        TweenService:Create(MainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Rotation = 0, BackgroundTransparency = _G.MenuOpacity / 100}):Play()
+        task.wait(0.4)
+        MainFrame.Rotation = 0
     end
 end)
 
@@ -1718,5 +1751,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] META v7.0.29 - ESP Added")
+print("[META] META v7.0.30 - Sliders Rounded, Rotation Animation")
 print("[META] Press Insert or click icon")
