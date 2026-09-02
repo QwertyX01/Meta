@@ -1,6 +1,6 @@
 loadstring([[
--- ROCKET::META_UI_V7.0.25
--- ADDED: META ICON BUTTON WITH OPEN/CLOSE ANIMATION
+-- ROCKET::META_UI_V7.0.26
+-- IMPROVED ANIMATION, FIXED ICON IMAGE, NO ICON STROKE
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -1828,6 +1828,7 @@ if settingsPage then
         MainFrame.BackgroundTransparency = 0.12
         MainFrame.Size = UDim2.new(0, 640, 0, 470)
         MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+        MainFrame.Rotation = 0
         MainStroke.Color = _G.MenuThemeColor
         MainStroke.Transparency = 0.4
         UpdateIndicatorColor(_G.MenuThemeColor)
@@ -1929,7 +1930,7 @@ if settingsPage then
 end
 
 -- ========================================
--- БЛОК ИКОНКИ (В ЛЕВОМ НИЖНЕМ УГЛУ)
+-- БЛОК ИКОНКИ (БЕЗ ОБВОДКИ, С ФОТО)
 -- ========================================
 local IconButton = Instance.new("ImageButton")
 IconButton.Name = "MetaIcon"
@@ -1952,38 +1953,87 @@ local IconCorner = Instance.new("UICorner")
 IconCorner.CornerRadius = UDim.new(0, 12)
 IconCorner.Parent = IconButton
 
-local IconStroke = Instance.new("UIStroke")
-IconStroke.Thickness = 2
-IconStroke.Color = _G.MenuThemeColor or Color3.fromRGB(59, 130, 246)
-IconStroke.Transparency = 0.4
-IconStroke.Parent = IconButton
+-- Обводка убрана (UIStroke не создаётся)
 
 task.wait(0.3)
 IconButton.BackgroundTransparency = 1
-IconButton.Size = UDim2.new(0, 30, 0, 30)
-TweenService:Create(IconButton, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+IconButton.Size = UDim2.new(0, 20, 0, 20)
+IconButton.Rotation = -15
+TweenService:Create(IconButton, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
     Size = UDim2.new(0, 55, 0, 55),
-    BackgroundTransparency = 0.2
+    BackgroundTransparency = 0.2,
+    Rotation = 0
 }):Play()
 
 IconButton.MouseButton1Click:Connect(function()
     PlayClickSound()
+    
+    -- Анимация нажатия на иконку
+    TweenService:Create(IconButton, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+        Size = UDim2.new(0, 45, 0, 45)
+    }):Play()
+    task.wait(0.1)
+    TweenService:Create(IconButton, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Size = UDim2.new(0, 55, 0, 55)
+    }):Play()
+    
     if MainFrame.Visible then
-        TweenService:Create(MainFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-            Size = UDim2.new(0, 640 * (_G.MenuScale / 45) * 0.7, 0, 470 * (_G.MenuScale / 45) * 0.7),
+        -- ===== ЗАКРЫТИЕ =====
+        TweenService:Create(MainFrame, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, 640 * (_G.MenuScale / 45) * 1.02, 0, 470 * (_G.MenuScale / 45) * 1.02)
+        }):Play()
+        task.wait(0.08)
+        
+        TweenService:Create(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+            Size = UDim2.new(0, 640 * (_G.MenuScale / 45) * 0.5, 0, 470 * (_G.MenuScale / 45) * 0.5),
+            BackgroundTransparency = 0.7
+        }):Play()
+        task.wait(0.15)
+        
+        TweenService:Create(MainFrame, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+            Size = UDim2.new(0, 640 * (_G.MenuScale / 45) * 0.2, 0, 470 * (_G.MenuScale / 45) * 0.2),
             BackgroundTransparency = 1
         }):Play()
-        task.wait(0.2)
+        task.wait(0.12)
+        
         MainFrame.Visible = false
+        MainFrame.Size = UDim2.new(0, 640 * (_G.MenuScale / 45), 0, 470 * (_G.MenuScale / 45))
+        MainFrame.BackgroundTransparency = _G.MenuOpacity / 100
+        MainFrame.Rotation = 0
     else
+        -- ===== ОТКРЫТИЕ (ДЕТАЛИЗИРОВАННОЕ) =====
         MainFrame.Visible = true
+        MainFrame.Size = UDim2.new(0, 50, 0, 50)
         MainFrame.BackgroundTransparency = 1
-        MainFrame.Size = UDim2.new(0, 640 * (_G.MenuScale / 45) * 0.7, 0, 470 * (_G.MenuScale / 45) * 0.7)
-        task.wait(0.05)
-        TweenService:Create(MainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-            Size = UDim2.new(0, 640 * (_G.MenuScale / 45), 0, 470 * (_G.MenuScale / 45)),
-            BackgroundTransparency = _G.MenuOpacity / 100
+        MainFrame.Rotation = -10
+        MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+        
+        task.wait(0.03)
+        
+        TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, 640 * (_G.MenuScale / 45) * 0.7, 0, 470 * (_G.MenuScale / 45) * 0.7),
+            BackgroundTransparency = 0.5,
+            Rotation = -3
         }):Play()
+        task.wait(0.3)
+        
+        TweenService:Create(MainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, 640 * (_G.MenuScale / 45), 0, 470 * (_G.MenuScale / 45)),
+            BackgroundTransparency = _G.MenuOpacity / 100,
+            Rotation = 0
+        }):Play()
+        task.wait(0.5)
+        
+        TweenService:Create(MainFrame, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, 640 * (_G.MenuScale / 45) * 0.98, 0, 470 * (_G.MenuScale / 45) * 0.98)
+        }):Play()
+        task.wait(0.05)
+        
+        TweenService:Create(MainFrame, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, 640 * (_G.MenuScale / 45), 0, 470 * (_G.MenuScale / 45))
+        }):Play()
+        
+        MainFrame.Rotation = 0
     end
 end)
 
@@ -2005,6 +2055,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] META v7.0.25 - Icon Button Added")
+print("[META] META v7.0.26 - Improved Animation, Fixed Icon")
 print("[META] Press Insert or click icon to toggle menu")
 ]])()
