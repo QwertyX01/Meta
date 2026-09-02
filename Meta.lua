@@ -1,4 +1,3 @@
-loadstring)[[
 -- ROCKET::META_UI_V7.0.29
 local function SetupAntiCheatBypass()
     pcall(function()
@@ -672,7 +671,6 @@ if visualsPage then
     end
     table.insert(langUpdateCallbacks, UpdateChamsText)
 
-    -- ESP UI
     local espFrame = Instance.new("Frame")
     espFrame.Name = "ESPBox"
     espFrame.Size = UDim2.new(1, 0, 0, 45)
@@ -1722,4 +1720,3 @@ end)
 
 print("[META] META v7.0.29 - ESP Added")
 print("[META] Press Insert or click icon")
-[[()
