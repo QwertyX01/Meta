@@ -39,6 +39,7 @@ local function SetupAutoUnload()
         pcall(function()
             if _G.UnloadChams then _G.UnloadChams() end
             if _G.UnloadESP then _G.UnloadESP() end
+            if _G.UnloadHealthBar then _G.UnloadHealthBar() end
             if ScreenGui then ScreenGui:Destroy() end
         end)
     end)
@@ -63,6 +64,7 @@ _G.MenuScale = 45
 _G.FlyingDots = false
 _G.ChamsEnabled = false
 _G.ESPEnabled = false
+_G.HealthBarEnabled = false
 
 local Dots = {}
 local DotConnection = nil
@@ -72,6 +74,7 @@ local pickerDot, pickerContainer = nil, nil
 local SetToggleState, ShiftContainer = nil, nil
 local SetChamsToggleState, SetRainbowToggleState = nil, nil
 local SetFlyingToggleState, SetESPToggleState = nil, nil
+local SetHealthBarToggleState = nil
 
 local LANG = {
     RU = {
@@ -84,6 +87,7 @@ local LANG = {
             FlyingDots = {"Летающие точки", "Точки, летающие с верху меню"},
             Chams = {"Чамсы", "Функция которая делает противников красным цветом"},
             ESP = {"Линии и 3D Боксы", "Линии с боксами которые ведут к противникам"},
+            HealthBar = {"Хп противников", "Полоска здоровья"},
             Reset = {"Сброс настроек", "Вернуть все настройки к стандартным"}
         }
     },
@@ -97,6 +101,7 @@ local LANG = {
             FlyingDots = {"Flying Dots", "Floating dots from the top of the menu"},
             Chams = {"Chams", "Function that makes enemies red"},
             ESP = {"Tracers and 3D Box", "Lines with boxes leading to enemies"},
+            HealthBar = {"Health Bar", "Health bar display"},
             Reset = {"Reset Settings", "Return all settings to default"}
         }
     }
@@ -296,9 +301,7 @@ end
 local function PaintCharacter(character, p)
     if not character or not p then return end
     for _, child in ipairs(character:GetChildren()) do
-        if child:IsA("Highlight") and child:GetAttribute("META_Chams") then
-            child:Destroy()
-        end
+        if child:IsA("Highlight") and child:GetAttribute("META_Chams") then child:Destroy() end
     end
     if IsEnemy(p) then
         local highlight = Instance.new("Highlight")
@@ -329,32 +332,6 @@ local function ApplyChams()
     _G.ChamsEnabled = true
     for _, p in ipairs(Players:GetPlayers()) do SetupPlayer(p) end
     ChamsConnections.PlayerAdded = Players.PlayerAdded:Connect(SetupPlayer)
-    task.spawn(function()
-        while _G.ChamsEnabled do
-            for _, p in ipairs(Players:GetPlayers()) do
-                if p.Character and p ~= LocalPlayer then
-                    local hasChams = false
-                    for _, child in ipairs(p.Character:GetChildren()) do
-                        if child:IsA("Highlight") and child:GetAttribute("META_Chams") then
-                            hasChams = true
-                            break
-                        end
-                    end
-                    local shouldBeRed = IsEnemy(p)
-                    if shouldBeRed and not hasChams then
-                        PaintCharacter(p.Character, p)
-                    elseif not shouldBeRed and hasChams then
-                        for _, child in ipairs(p.Character:GetChildren()) do
-                            if child:IsA("Highlight") and child:GetAttribute("META_Chams") then
-                                child:Destroy()
-                            end
-                        end
-                    end
-                end
-            end
-            task.wait(2)
-        end
-    end)
     _G.UnloadChams = function()
         _G.ChamsEnabled = false
         if ChamsConnections.PlayerAdded then ChamsConnections.PlayerAdded:Disconnect() end
@@ -362,9 +339,7 @@ local function ApplyChams()
             if ChamsConnections[p] then ChamsConnections[p]:Disconnect() end
             if p.Character then
                 for _, child in ipairs(p.Character:GetChildren()) do
-                    if child:IsA("Highlight") and child:GetAttribute("META_Chams") then
-                        child:Destroy()
-                    end
+                    if child:IsA("Highlight") and child:GetAttribute("META_Chams") then child:Destroy() end
                 end
             end
         end
@@ -480,6 +455,143 @@ local function SetupESP()
 end
 
 local ApplyESP, RemoveESP = SetupESP()
+
+-- ===== HEALTH BAR =====
+local healthBars = {}
+
+local function SetupHealthBar()
+    local function createBarPair()
+        local outline = Drawing.new("Square")
+        outline.Thickness = 1
+        outline.Filled = true
+        outline.Visible = false
+        outline.Color = Color3.fromRGB(0, 0, 0)
+        outline.Transparency = 1
+        
+        local bar = Drawing.new("Square")
+        bar.Thickness = 1
+        bar.Filled = true
+        bar.Visible = false
+        bar.Transparency = 1
+        
+        return {Outline = outline, Bar = bar}
+    end
+
+    local function removeHealthBar(player)
+        if healthBars[player] then
+            if healthBars[player].Outline then healthBars[player].Outline:Remove() end
+            if healthBars[player].Bar then healthBars[player].Bar:Remove() end
+            if healthBars[player].Connection then healthBars[player].Connection:Disconnect() end
+            healthBars[player] = nil
+        end
+    end
+
+    local function createForPlayer(player)
+        if player == LocalPlayer then return end
+        removeHealthBar(player)
+        if not player.Character then return end
+        
+        local character = player.Character
+        local hrp = character:FindFirstChild("HumanoidRootPart")
+        local head = character:FindFirstChild("Head")
+        local humanoid = character:FindFirstChild("Humanoid")
+        if not hrp or not head or not humanoid then return end
+
+        local barData = createBarPair()
+        healthBars[player] = barData
+
+        local connection = RunService.RenderStepped:Connect(function()
+            if not _G.HealthBarEnabled then
+                barData.Outline.Visible = false
+                barData.Bar.Visible = false
+                return
+            end
+            local currentChar = player.Character
+            if not currentChar then
+                barData.Outline.Visible = false
+                barData.Bar.Visible = false
+                return
+            end
+            local currentHrp = currentChar:FindFirstChild("HumanoidRootPart")
+            local currentHead = currentChar:FindFirstChild("Head")
+            local currentHumanoid = currentChar:FindFirstChild("Humanoid")
+            if not currentHrp or not currentHead or not currentHumanoid then
+                barData.Outline.Visible = false
+                barData.Bar.Visible = false
+                return
+            end
+            if currentHumanoid.Health <= 0 then
+                barData.Outline.Visible = false
+                barData.Bar.Visible = false
+                return
+            end
+            if not IsEnemy(player) then
+                barData.Outline.Visible = false
+                barData.Bar.Visible = false
+                return
+            end
+            local headPos, visible = Camera:WorldToViewportPoint(currentHead.Position + Vector3.new(0, 0.3, 0))
+            local distance = (Camera.CFrame.Position - currentHrp.Position).Magnitude
+            if visible and distance <= 1000 then
+                local scale = 1 / (headPos.Z * math.tan(math.rad(Camera.FieldOfView * 0.5)) * 2) * 100
+                local height = math.floor(62 * scale)
+                local width = math.floor(40 * scale)
+                local boxX = headPos.X - width / 2
+                local boxY = headPos.Y - height / 2
+                local barHeight = height * 0.95
+                local barWidth = 3
+                local barXPos = boxX - barWidth - 5
+                local barYPos = boxY + (height - barHeight) / 2
+                local hpPercent = currentHumanoid.Health / currentHumanoid.MaxHealth
+                local filledHeight = barHeight * hpPercent
+                barData.Outline.Size = Vector2.new(barWidth + 2, barHeight + 2)
+                barData.Outline.Position = Vector2.new(barXPos - 1, barYPos - 1)
+                barData.Outline.Visible = true
+                barData.Bar.Size = Vector2.new(barWidth, filledHeight)
+                barData.Bar.Position = Vector2.new(barXPos, barYPos + (barHeight - filledHeight))
+                if currentHumanoid.Health <= 20 then
+                    barData.Bar.Color = Color3.fromRGB(255, 0, 0)
+                elseif currentHumanoid.Health <= 65 then
+                    barData.Bar.Color = Color3.fromRGB(255, 255, 0)
+                else
+                    barData.Bar.Color = Color3.fromRGB(0, 255, 0)
+                end
+                barData.Bar.Visible = true
+            else
+                barData.Outline.Visible = false
+                barData.Bar.Visible = false
+            end
+        end)
+        healthBars[player].Connection = connection
+    end
+
+    local function ApplyHealthBar()
+        if _G.UnloadHealthBar then _G.UnloadHealthBar() end
+        _G.HealthBarEnabled = true
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer then createForPlayer(p) end
+        end
+        healthBars.PlayerAdded = Players.PlayerAdded:Connect(function(p)
+            task.wait(1)
+            if p ~= LocalPlayer and _G.HealthBarEnabled then createForPlayer(p) end
+        end)
+        _G.UnloadHealthBar = function()
+            _G.HealthBarEnabled = false
+            if healthBars.PlayerAdded then healthBars.PlayerAdded:Disconnect() end
+            for p, _ in pairs(healthBars) do
+                removeHealthBar(p)
+            end
+            healthBars = {}
+        end
+    end
+
+    local function RemoveHealthBar()
+        if _G.UnloadHealthBar then _G.UnloadHealthBar() end
+    end
+    return ApplyHealthBar, RemoveHealthBar
+end
+
+local ApplyHealthBar, RemoveHealthBar = SetupHealthBar()
 
 local IndicatorLine = nil
 local IndicatorColor = _G.MenuThemeColor
@@ -671,7 +783,7 @@ if aimbotPage then aimbotPage.CanvasSize = UDim2.new(0, 0, 0, 10) end
 
 local visualsPage = ContentPages["Visuals"]
 if visualsPage then
-    visualsPage.CanvasSize = UDim2.new(0, 0, 0, 200)
+    visualsPage.CanvasSize = UDim2.new(0, 0, 0, 300)
 
     local chamsFrame = Instance.new("Frame")
     chamsFrame.Name = "PlayerHighlight"
@@ -842,6 +954,92 @@ if visualsPage then
         espDesc.Text = lang.Toggles.ESP[2]
     end
     table.insert(langUpdateCallbacks, UpdateESPText)
+
+    -- Health Bar
+    local healthFrame = Instance.new("Frame")
+    healthFrame.Name = "HealthBar"
+    healthFrame.Size = UDim2.new(1, 0, 0, 45)
+    healthFrame.Position = UDim2.new(0, 0, 0, 120)
+    healthFrame.BackgroundTransparency = 1
+    healthFrame.Parent = visualsPage
+
+    local healthLabel = Instance.new("TextLabel")
+    healthLabel.Size = UDim2.new(0.6, 0, 0, 20)
+    healthLabel.BackgroundTransparency = 1
+    healthLabel.Text = "Health Bar"
+    healthLabel.TextColor3 = Color3.fromRGB(209, 213, 219)
+    healthLabel.TextSize = 13
+    healthLabel.Font = Enum.Font.GothamBold
+    healthLabel.TextXAlignment = Enum.TextXAlignment.Left
+    healthLabel.Parent = healthFrame
+
+    local healthDesc = Instance.new("TextLabel")
+    healthDesc.Size = UDim2.new(0.7, 0, 0, 16)
+    healthDesc.Position = UDim2.new(0, 0, 0, 22)
+    healthDesc.BackgroundTransparency = 1
+    healthDesc.Text = "Health bar display"
+    healthDesc.TextColor3 = Color3.fromRGB(113, 113, 122)
+    healthDesc.TextSize = 11
+    healthDesc.Font = Enum.Font.Gotham
+    healthDesc.TextXAlignment = Enum.TextXAlignment.Left
+    healthDesc.Parent = healthFrame
+
+    local healthToggleBg = Instance.new("Frame")
+    healthToggleBg.Size = UDim2.new(0, 44, 0, 24)
+    healthToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
+    healthToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
+    healthToggleBg.BorderSizePixel = 0
+    healthToggleBg.Parent = healthFrame
+
+    local healthToggleCorner = Instance.new("UICorner")
+    healthToggleCorner.CornerRadius = UDim.new(1, 0)
+    healthToggleCorner.Parent = healthToggleBg
+
+    local healthHandle = Instance.new("Frame")
+    healthHandle.Size = UDim2.new(0, 18, 0, 18)
+    healthHandle.Position = UDim2.new(0, 3, 0.5, -9)
+    healthHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    healthHandle.BorderSizePixel = 0
+    healthHandle.Parent = healthToggleBg
+
+    local healthHandleCorner = Instance.new("UICorner")
+    healthHandleCorner.CornerRadius = UDim.new(1, 0)
+    healthHandleCorner.Parent = healthHandle
+
+    local healthClickArea = Instance.new("TextButton")
+    healthClickArea.Size = UDim2.new(0, 44, 0, 24)
+    healthClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
+    healthClickArea.BackgroundTransparency = 1
+    healthClickArea.Text = ""
+    healthClickArea.ZIndex = 10
+    healthClickArea.Parent = healthFrame
+
+    SetHealthBarToggleState = function(value)
+        if value then
+            TweenService:Create(healthToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
+            TweenService:Create(healthHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 23, 0.5, -9)}):Play()
+            ApplyHealthBar()
+        else
+            TweenService:Create(healthToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(42, 47, 58)}):Play()
+            TweenService:Create(healthHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 3, 0.5, -9)}):Play()
+            RemoveHealthBar()
+        end
+        _G.HealthBarEnabled = value
+    end
+
+    SetHealthBarToggleState(_G.HealthBarEnabled)
+
+    healthClickArea.MouseButton1Click:Connect(function()
+        PlayClickSound()
+        SetHealthBarToggleState(not _G.HealthBarEnabled)
+    end)
+
+    local function UpdateHealthBarText()
+        local lang = GetLang()
+        healthLabel.Text = lang.Toggles.HealthBar[1]
+        healthDesc.Text = lang.Toggles.HealthBar[2]
+    end
+    table.insert(langUpdateCallbacks, UpdateHealthBarText)
 end
 
 local settingsPage = ContentPages["Settings"]
@@ -1704,6 +1902,7 @@ if settingsPage then
         _G.FlyingDots = false
         _G.ChamsEnabled = false
         _G.ESPEnabled = false
+        _G.HealthBarEnabled = false
 
         MainFrame.BackgroundTransparency = 0.12
         MainFrame.Size = UDim2.new(0, 640, 0, 470)
@@ -1718,6 +1917,8 @@ if settingsPage then
         if SetChamsToggleState then SetChamsToggleState(false) end
         RemoveESP()
         if SetESPToggleState then SetESPToggleState(false) end
+        RemoveHealthBar()
+        if SetHealthBarToggleState then SetHealthBarToggleState(false) end
 
         for _, btn in ipairs(langButtonData) do pcall(btn.Update, false) end
         UpdateAllTexts()
@@ -1852,5 +2053,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] META v7.0.28 - Fixed Chams + Dots")
+print("[META] META v7.0.28 - Health Bar Added")
 print("[META] Press Insert or click icon")
