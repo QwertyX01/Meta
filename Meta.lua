@@ -1,4 +1,4 @@
--- ROCKET::META_UI_V7.0.38
+-- ROCKET::META_UI_V7.0.39
 
 local function SetupAntiCheatBypass()
     pcall(function()
@@ -73,7 +73,7 @@ local LANG = {
             Rainbow = {"Разноцветная обводка", "Включить радужную обводку меню"},
             Scale = {"Scaling the menu", "Масштабирование меню (60-140%)"},
             FlyingDots = {"Летающие точки", "Точки, летающие с верху меню"},
-            Chams = {"Чамсы", "Функция которая делает противников красным цветом"},
+            Chams = {"Чамсы", "Функция которая делает противников фиолетовым"},
             ESP = {"Линии и 3D Боксы", "Линии с боксами которые ведут к противникам"},
             HealthBar = {"Хп противников", "Полоска здоровья"},
             Reset = {"Сброс настроек", "Вернуть все настройки к стандартным"}
@@ -87,7 +87,7 @@ local LANG = {
             Rainbow = {"UI Rainbow Color", "Enable rainbow menu outline"},
             Scale = {"Scaling the menu", "Menu scaling (60-140%)"},
             FlyingDots = {"Flying Dots", "Floating dots from the top of the menu"},
-            Chams = {"Chams", "Function that makes enemies red"},
+            Chams = {"Chams", "Makes enemies purple"},
             ESP = {"Tracers and 3D Box", "Lines with boxes leading to enemies"},
             HealthBar = {"Health Bar", "Health bar display"},
             Reset = {"Reset Settings", "Return all settings to default"}
@@ -286,7 +286,7 @@ local function IsEnemy(p)
     return false
 end
 
--- CHAMS
+-- CHAMS (мягкий фиолетовый, полупрозрачный)
 local ChamsConnections = {}
 local function PaintCharacter(character, p)
     if not character or not p then return end
@@ -297,10 +297,10 @@ local function PaintCharacter(character, p)
         local highlight = Instance.new("Highlight")
         highlight.Name = "Highlight"
         highlight:SetAttribute("META_Chams", true)
-        highlight.FillColor = Color3.fromRGB(255, 30, 30)
-        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-        highlight.FillTransparency = 0.45
-        highlight.OutlineTransparency = 0.1
+        highlight.FillColor = Color3.fromRGB(110, 60, 170)
+        highlight.OutlineColor = Color3.fromRGB(110, 60, 170)
+        highlight.FillTransparency = 0.65
+        highlight.OutlineTransparency = 0.5
         highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
         highlight.Adornee = character
         highlight.Parent = character
@@ -723,7 +723,7 @@ if visualsPage then
     chamsDesc.Size = UDim2.new(0.7, 0, 0, 16)
     chamsDesc.Position = UDim2.new(0, 0, 0, 22)
     chamsDesc.BackgroundTransparency = 1
-    chamsDesc.Text = "Function that makes enemies red"
+    chamsDesc.Text = "Makes enemies purple"
     chamsDesc.TextColor3 = Color3.fromRGB(113, 113, 122)
     chamsDesc.TextSize = 11
     chamsDesc.Font = Enum.Font.Gotham
@@ -1749,5 +1749,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         MainFrame.Visible = not MainFrame.Visible
     end
 end)
-print("[META] META v7.0.38 - UI Color Instant Hide")
+print("[META] META v7.0.39 - Purple Chams")
 print("[META] Press Insert or click icon")
