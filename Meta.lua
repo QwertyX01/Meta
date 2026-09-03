@@ -1,4 +1,4 @@
--- ROCKET::META_UI_V7.0.39
+-- ROCKET::META_UI_V7.0.40
 
 local function SetupAntiCheatBypass()
     pcall(function()
@@ -286,7 +286,7 @@ local function IsEnemy(p)
     return false
 end
 
--- CHAMS (мягкий фиолетовый, полупрозрачный)
+-- CHAMS
 local ChamsConnections = {}
 local function PaintCharacter(character, p)
     if not character or not p then return end
@@ -426,25 +426,41 @@ task.spawn(function()
     end
 end)
 
--- HEALTH BAR
+-- HEALTH BAR ESP (ВПРАВО К ПЛЕЧУ)
 local healthBars = {}
 local enemiesCache = {}
 local cacheTime = 0
+local healthHistory = {}
+
 local function SetupHealthBar()
     local function createBarPair()
-        local outline = Drawing.new("Square")
-        outline.Thickness = 1
-        outline.Filled = true
-        outline.Visible = false
-        outline.Color = Color3.fromRGB(0, 0, 0)
-        outline.Transparency = 1
+        local bg = Drawing.new("Square")
+        bg.Thickness = 1
+        bg.Filled = true
+        bg.Visible = false
+        bg.Color = Color3.fromRGB(15, 15, 20)
+        bg.Transparency = 0.35
+
         local bar = Drawing.new("Square")
         bar.Thickness = 1
         bar.Filled = true
         bar.Visible = false
         bar.Transparency = 1
-        return {Outline = outline, Bar = bar}
+
+        local dividers = {}
+        for i = 1, 8 do
+            local div = Drawing.new("Square")
+            div.Thickness = 1
+            div.Filled = true
+            div.Visible = false
+            div.Color = Color3.fromRGB(100, 100, 110)
+            div.Transparency = 0.5
+            table.insert(dividers, div)
+        end
+
+        return {Bg = bg, Bar = bar, Dividers = dividers}
     end
+
     local function getPlayerHealth(character)
         if not character then return nil, nil end
         local humanoid = character:FindFirstChild("Humanoid")
@@ -457,20 +473,38 @@ local function SetupHealthBar()
         if healthAttr and maxHealthAttr and healthAttr > 0 then return healthAttr, maxHealthAttr end
         return nil, nil
     end
+
+    local function getHealthColor(health, maxHealth, prevHealth)
+        local percent = health / maxHealth
+        local isDamaged = prevHealth and prevHealth > health and (prevHealth - health) > 5
+        if isDamaged then return Color3.fromRGB(255, 255, 255) end
+        if percent <= 0.20 then return Color3.fromRGB(255, 0, 0)
+        elseif percent <= 0.35 then return Color3.fromRGB(255, 100, 0)
+        elseif percent <= 0.55 then return Color3.fromRGB(255, 200, 0)
+        elseif percent <= 0.75 then return Color3.fromRGB(200, 255, 0)
+        else return Color3.fromRGB(0, 255, 100) end
+    end
+
     local function removeHealthBar(target)
         local data = healthBars[target]
         if data then
             pcall(function()
-                data.Outline.Visible = false
+                data.Bg.Visible = false
                 data.Bar.Visible = false
-                data.Outline:Remove()
+                data.Bg:Remove()
                 data.Bar:Remove()
+                for _, div in pairs(data.Dividers) do
+                    div.Visible = false
+                    div:Remove()
+                end
             end)
             healthBars[target] = nil
         end
+        healthHistory[target] = nil
     end
+
     local function updateEnemiesCache()
-        if tick() - cacheTime < 1 then return end
+        if tick() - cacheTime < 0.5 then return end
         cacheTime = tick()
         enemiesCache = {}
         for _, player in pairs(Players:GetPlayers()) do
@@ -490,62 +524,128 @@ local function SetupHealthBar()
             end
         end
     end
+
     local healthConnection = RunService.RenderStepped:Connect(function()
         if not _G.HealthBarEnabled then
-            for _, data in pairs(healthBars) do data.Outline.Visible = false data.Bar.Visible = false end
+            for _, data in pairs(healthBars) do
+                data.Bg.Visible = false
+                data.Bar.Visible = false
+                for _, div in pairs(data.Dividers) do div.Visible = false end
+            end
             return
         end
+
         updateEnemiesCache()
+
         for player, data in pairs(enemiesCache) do
-            if not player or not player.Character or not player.Character.Parent then removeHealthBar(player) continue end
+            if not player or not player.Character or not player.Character.Parent then
+                removeHealthBar(player)
+                continue
+            end
+
             local char = player.Character
             local health, maxHealth = getPlayerHealth(char)
-            if not health or health <= 0 then removeHealthBar(player) continue end
+            if not health or health <= 0 then
+                removeHealthBar(player)
+                continue
+            end
+
+            local prevHealth = healthHistory[player]
+            healthHistory[player] = health
+
             local head = char:FindFirstChild("Head")
             local hrp = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
-            if not head or not hrp then removeHealthBar(player) continue end
+
+            if not head or not hrp then
+                removeHealthBar(player)
+                continue
+            end
+
             local headPos, visible = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 0.5, 0))
+            local hrpPos, hrpVis = Camera:WorldToViewportPoint(hrp.Position)
             local distance = (Camera.CFrame.Position - hrp.Position).Magnitude
-            if visible and distance <= 1000 and headPos.Z > 0 then
+
+            if visible and distance <= 1000 and headPos.Z > 0 and hrpVis and hrpPos.Z > 0 then
                 local scale = 1 / (headPos.Z * math.tan(math.rad(Camera.FieldOfView * 0.5)) * 2) * 100
                 local height = math.floor(62 * scale)
                 local width = math.floor(40 * scale)
+
                 if height > 10 then
-                    if not healthBars[player] then healthBars[player] = createBarPair() end
+                    if not healthBars[player] then
+                        healthBars[player] = createBarPair()
+                    end
+
                     local barData = healthBars[player]
                     local boxX = headPos.X - width / 2
                     local boxY = headPos.Y - height / 2
+
                     local barHeight = height * 0.95
-                    local barWidth = 2
-                    local barXPos = boxX - barWidth - 5
-                    local barYPos = boxY + (height - barHeight) / 2
+                    local barWidth = 1.0
+
+                    local rightOffset = width * 0.55
+                    local barXPos = boxX + rightOffset
+                    local barYPos = boxY + (height - barHeight) / 2 + 4
+
                     local hpPercent = health / maxHealth
                     local filledHeight = barHeight * hpPercent
-                    barData.Outline.Size = Vector2.new(barWidth + 2, barHeight + 2)
-                    barData.Outline.Position = Vector2.new(barXPos - 1, barYPos - 1)
-                    barData.Outline.Visible = true
-                    barData.Bar.Size = Vector2.new(barWidth, math.max(filledHeight, 1))
+
+                    barData.Bg.Size = Vector2.new(barWidth, barHeight)
+                    barData.Bg.Position = Vector2.new(barXPos, barYPos)
+                    barData.Bg.Visible = true
+                    barData.Bg.Transparency = 0.35
+                    barData.Bg.Color = Color3.fromRGB(15, 15, 20)
+
+                    barData.Bar.Size = Vector2.new(barWidth, math.max(filledHeight, 0.5))
                     barData.Bar.Position = Vector2.new(barXPos, barYPos + (barHeight - filledHeight))
-                    if health <= 20 then barData.Bar.Color = Color3.fromRGB(255, 0, 0)
-                    elseif health <= 65 then barData.Bar.Color = Color3.fromRGB(255, 255, 0)
-                    else barData.Bar.Color = Color3.fromRGB(0, 255, 0) end
                     barData.Bar.Visible = true
+                    barData.Bar.Transparency = 1
+
+                    local barColor = getHealthColor(health, maxHealth, prevHealth)
+                    barData.Bar.Color = barColor
+
+                    if prevHealth and prevHealth > health and (prevHealth - health) > 5 then
+                        barData.Bar.Color = Color3.fromRGB(255, 255, 255)
+                    end
+
+                    local segmentHeight = barHeight / 9
+                    for i = 1, 8 do
+                        local div = barData.Dividers[i]
+                        local yPos = barYPos + (i * segmentHeight)
+                        div.Size = Vector2.new(barWidth + 0.5, 0.3)
+                        div.Position = Vector2.new(barXPos - 0.25, yPos)
+                        div.Visible = true
+                        div.Transparency = 0.5
+                        div.Color = Color3.fromRGB(100, 100, 110)
+                    end
                 else
-                    if healthBars[player] then healthBars[player].Outline.Visible = false healthBars[player].Bar.Visible = false end
+                    if healthBars[player] then
+                        healthBars[player].Bg.Visible = false
+                        healthBars[player].Bar.Visible = false
+                        for _, div in pairs(healthBars[player].Dividers) do div.Visible = false end
+                    end
                 end
             else
-                if healthBars[player] then healthBars[player].Outline.Visible = false healthBars[player].Bar.Visible = false end
+                if healthBars[player] then
+                    healthBars[player].Bg.Visible = false
+                    healthBars[player].Bar.Visible = false
+                    for _, div in pairs(healthBars[player].Dividers) do div.Visible = false end
+                end
             end
         end
+
         for player, barData in pairs(healthBars) do
-            if not enemiesCache[player] then removeHealthBar(player) end
+            if not enemiesCache[player] then
+                removeHealthBar(player)
+            end
         end
     end)
+
     local function ApplyHealthBar() _G.HealthBarEnabled = true end
     local function RemoveHealthBar()
         _G.HealthBarEnabled = false
         for player, _ in pairs(healthBars) do removeHealthBar(player) end
         enemiesCache = {}
+        healthHistory = {}
     end
     _G.UnloadHealthBar = function()
         if healthConnection then healthConnection:Disconnect() end
@@ -553,6 +653,7 @@ local function SetupHealthBar()
     end
     return ApplyHealthBar, RemoveHealthBar
 end
+
 local ApplyHealthBar, RemoveHealthBar = SetupHealthBar()
 
 local IndicatorLine = nil
@@ -1749,5 +1850,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         MainFrame.Visible = not MainFrame.Visible
     end
 end)
-print("[META] META v7.0.39 - Purple Chams")
+print("[META] META v7.0.40 - Health Bar Right Shoulder")
 print("[META] Press Insert or click icon")
