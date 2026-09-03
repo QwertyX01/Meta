@@ -1,4 +1,4 @@
--- ROCKET::META_UI_V7.0.30
+-- ROCKET::META_UI_V7.0.31
 
 local function SetupAntiCheatBypass()
     pcall(function()
@@ -370,30 +370,12 @@ local function SetupESP()
         lines.Tracer = NewLine()
 
         local conn = RunService.RenderStepped:Connect(function()
-            if not target or not target.Parent then
-                for _, l in pairs(lines) do l.Visible = false end
-                return
-            end
             local char = target.Character
-            local localChar = LocalPlayer.Character
             if not char then
                 for _, l in pairs(lines) do l.Visible = false end
                 return
             end
-            if not localChar then
-                for _, l in pairs(lines) do l.Visible = false end
-                return
-            end
-            local myHum = localChar:FindFirstChildOfClass("Humanoid")
-            if myHum and myHum.Health <= 0 then
-                for _, l in pairs(lines) do l.Visible = false end
-                return
-            end
             if not _G.ESPEnabled then
-                for _, l in pairs(lines) do l.Visible = false end
-                return
-            end
-            if char ~= target.Character then
                 for _, l in pairs(lines) do l.Visible = false end
                 return
             end
@@ -491,9 +473,11 @@ local function SetupHealthBar()
 
     local function removeHealthBar(player)
         if healthBars[player] then
-            if healthBars[player].Outline then healthBars[player].Outline:Remove() end
-            if healthBars[player].Bar then healthBars[player].Bar:Remove() end
-            if healthBars[player].Connection then healthBars[player].Connection:Disconnect() end
+            pcall(function()
+                if healthBars[player].Outline then healthBars[player].Outline:Remove() end
+                if healthBars[player].Bar then healthBars[player].Bar:Remove() end
+                if healthBars[player].Connection then healthBars[player].Connection:Disconnect() end
+            end)
             healthBars[player] = nil
         end
     end
@@ -502,14 +486,14 @@ local function SetupHealthBar()
         if player == LocalPlayer then return end
         removeHealthBar(player)
         if not player.Character then return end
-        local character = player.Character
-        local hrp = character:FindFirstChild("HumanoidRootPart")
-        local head = character:FindFirstChild("Head")
-        local humanoid = character:FindFirstChild("Humanoid")
-        if not hrp or not head or not humanoid then return end
+        local char = player.Character
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        local head = char:FindFirstChild("Head")
+        local hum = char:FindFirstChild("Humanoid")
+        if not hrp or not head or not hum then return end
         local barData = createBarPair()
         healthBars[player] = barData
-        local connection = RunService.RenderStepped:Connect(function()
+        local conn = RunService.RenderStepped:Connect(function()
             if not _G.HealthBarEnabled then
                 barData.Outline.Visible = false
                 barData.Bar.Visible = false
@@ -523,13 +507,13 @@ local function SetupHealthBar()
             end
             local currentHrp = currentChar:FindFirstChild("HumanoidRootPart")
             local currentHead = currentChar:FindFirstChild("Head")
-            local currentHumanoid = currentChar:FindFirstChild("Humanoid")
-            if not currentHrp or not currentHead or not currentHumanoid then
+            local currentHum = currentChar:FindFirstChild("Humanoid")
+            if not currentHrp or not currentHead or not currentHum then
                 barData.Outline.Visible = false
                 barData.Bar.Visible = false
                 return
             end
-            if currentHumanoid.Health <= 0 then
+            if currentHum.Health <= 0 then
                 barData.Outline.Visible = false
                 barData.Bar.Visible = false
                 return
@@ -540,38 +524,37 @@ local function SetupHealthBar()
                 return
             end
             local headPos, visible = Camera:WorldToViewportPoint(currentHead.Position + Vector3.new(0, 0.3, 0))
-            local distance = (Camera.CFrame.Position - currentHrp.Position).Magnitude
-            if visible and distance <= 1000 then
-                local scale = 1 / (headPos.Z * math.tan(math.rad(Camera.FieldOfView * 0.5)) * 2) * 100
-                local height = math.floor(62 * scale)
-                local width = math.floor(40 * scale)
-                local boxX = headPos.X - width / 2
-                local boxY = headPos.Y - height / 2
-                local barHeight = height * 0.95
-                local barWidth = 3
-                local barXPos = boxX - barWidth - 5
-                local barYPos = boxY + (height - barHeight) / 2
-                local hpPercent = currentHumanoid.Health / currentHumanoid.MaxHealth
-                local filledHeight = barHeight * hpPercent
-                barData.Outline.Size = Vector2.new(barWidth + 2, barHeight + 2)
-                barData.Outline.Position = Vector2.new(barXPos - 1, barYPos - 1)
-                barData.Outline.Visible = true
-                barData.Bar.Size = Vector2.new(barWidth, filledHeight)
-                barData.Bar.Position = Vector2.new(barXPos, barYPos + (barHeight - filledHeight))
-                if currentHumanoid.Health <= 20 then
-                    barData.Bar.Color = Color3.fromRGB(255, 0, 0)
-                elseif currentHumanoid.Health <= 65 then
-                    barData.Bar.Color = Color3.fromRGB(255, 255, 0)
-                else
-                    barData.Bar.Color = Color3.fromRGB(0, 255, 0)
-                end
-                barData.Bar.Visible = true
-            else
+            if not visible then
                 barData.Outline.Visible = false
                 barData.Bar.Visible = false
+                return
             end
+            local scale = 1 / (headPos.Z * math.tan(math.rad(Camera.FieldOfView * 0.5)) * 2) * 100
+            local height = math.floor(62 * scale)
+            local width = math.floor(40 * scale)
+            local boxX = headPos.X - width / 2
+            local boxY = headPos.Y - height / 2
+            local barHeight = height * 0.95
+            local barWidth = 3
+            local barXPos = boxX - barWidth - 5
+            local barYPos = boxY + (height - barHeight) / 2
+            local hpPercent = currentHum.Health / currentHum.MaxHealth
+            local filledHeight = barHeight * hpPercent
+            barData.Outline.Size = Vector2.new(barWidth + 2, barHeight + 2)
+            barData.Outline.Position = Vector2.new(barXPos - 1, barYPos - 1)
+            barData.Outline.Visible = true
+            barData.Bar.Size = Vector2.new(barWidth, filledHeight)
+            barData.Bar.Position = Vector2.new(barXPos, barYPos + (barHeight - filledHeight))
+            if currentHum.Health <= 20 then
+                barData.Bar.Color = Color3.fromRGB(255, 0, 0)
+            elseif currentHum.Health <= 65 then
+                barData.Bar.Color = Color3.fromRGB(255, 255, 0)
+            else
+                barData.Bar.Color = Color3.fromRGB(0, 255, 0)
+            end
+            barData.Bar.Visible = true
         end)
-        healthBars[player].Connection = connection
+        healthBars[player].Connection = conn
     end
 
     local function ApplyHealthBar()
@@ -862,9 +845,7 @@ if visualsPage then
         end
         _G.ChamsEnabled = value
     end
-
     SetChamsToggleState(_G.ChamsEnabled)
-
     chamsClickArea.MouseButton1Click:Connect(function()
         PlayClickSound()
         SetChamsToggleState(not _G.ChamsEnabled)
@@ -947,9 +928,7 @@ if visualsPage then
         end
         _G.ESPEnabled = value
     end
-
     SetESPToggleState(_G.ESPEnabled)
-
     espClickArea.MouseButton1Click:Connect(function()
         PlayClickSound()
         SetESPToggleState(not _G.ESPEnabled)
@@ -1032,9 +1011,7 @@ if visualsPage then
         end
         _G.HealthBarEnabled = value
     end
-
     SetHealthBarToggleState(_G.HealthBarEnabled)
-
     healthClickArea.MouseButton1Click:Connect(function()
         PlayClickSound()
         SetHealthBarToggleState(not _G.HealthBarEnabled)
@@ -1058,7 +1035,6 @@ if settingsPage then
     settingsContainer.BackgroundTransparency = 1
     settingsContainer.ClipsDescendants = true
     settingsContainer.Parent = settingsPage
-
     local toggleFrame = Instance.new("Frame")
     toggleFrame.Size = UDim2.new(1, 0, 0, 45)
     toggleFrame.Position = UDim2.new(0, 0, 0, 10)
@@ -1108,7 +1084,6 @@ if settingsPage then
     clickArea.Text = ""
     clickArea.ZIndex = 10
     clickArea.Parent = toggleFrame
-
     pickerContainer = Instance.new("Frame")
     pickerContainer.Name = "ColorPicker"
     pickerContainer.Size = UDim2.new(1, -30, 0, 140)
@@ -1145,7 +1120,6 @@ if settingsPage then
     dragArea.Parent = wheelImage
     local isDraggingColor = false
     local scrollFrame = settingsPage
-
     local function UpdateWheelColor(inputPosition)
         if not _G.CustomThemeEnabled then return end
         local wheelCenter = wheelImage.AbsolutePosition + (wheelImage.AbsoluteSize / 2)
@@ -1168,7 +1142,6 @@ if settingsPage then
         end
         _G.MenuThemeColor = pickedColor
     end
-
     dragArea.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
             isDraggingColor = true
@@ -1187,7 +1160,6 @@ if settingsPage then
             scrollFrame.ScrollingEnabled = true
         end
     end)
-
     ShiftContainer = function(shiftDown)
         local targetY = shiftDown and 150 or 0
         TweenService:Create(settingsContainer, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 55 + targetY)}):Play()
@@ -1218,7 +1190,6 @@ if settingsPage then
         end
     end
     SetToggleState(_G.CustomThemeEnabled)
-
     local function UpdateUIColorText()
         local lang = GetLang()
         label.Text = lang.Toggles.UI_Color[1]
@@ -1229,13 +1200,11 @@ if settingsPage then
         PlayClickSound()
         SetToggleState(not _G.CustomThemeEnabled)
     end)
-
     local langFrame = Instance.new("Frame")
     langFrame.Size = UDim2.new(1, -20, 0, 42)
     langFrame.Position = UDim2.new(0, 10, 0, 10)
     langFrame.BackgroundTransparency = 1
     langFrame.Parent = settingsContainer
-
     local function CreateLangButton(text, langCode, xPos)
         local bg = Instance.new("Frame")
         bg.Size = UDim2.new(0.42, 0, 0, 32)
@@ -1296,7 +1265,6 @@ if settingsPage then
     end
     CreateLangButton("Русский", "RU", 0.03)
     CreateLangButton("English", "EN", 0.55)
-
     local opacityFrame = Instance.new("Frame")
     opacityFrame.Size = UDim2.new(1, -20, 0, 55)
     opacityFrame.Position = UDim2.new(0, 10, 0, 60)
@@ -1400,7 +1368,6 @@ if settingsPage then
         opacityDesc.Text = lang.Toggles.Opacity[2]
     end
     table.insert(langUpdateCallbacks, UpdateOpacityText)
-
     local rainbowFrame = Instance.new("Frame")
     rainbowFrame.Size = UDim2.new(1, 0, 0, 45)
     rainbowFrame.Position = UDim2.new(0, 0, 0, 120)
@@ -1489,7 +1456,6 @@ if settingsPage then
         rainbowDesc.Text = lang.Toggles.Rainbow[2]
     end
     table.insert(langUpdateCallbacks, UpdateRainbowText)
-
     local scaleFrame = Instance.new("Frame")
     scaleFrame.Size = UDim2.new(1, -20, 0, 55)
     scaleFrame.Position = UDim2.new(0, 10, 0, 170)
@@ -1594,7 +1560,6 @@ if settingsPage then
         scaleDesc.Text = lang.Toggles.Scale[2]
     end
     table.insert(langUpdateCallbacks, UpdateScaleText)
-
     local flyingFrame = Instance.new("Frame")
     flyingFrame.Name = "Effects"
     flyingFrame.Size = UDim2.new(1, 0, 1, 0)
@@ -1749,7 +1714,6 @@ if settingsPage then
         flyingDesc.Text = lang.Toggles.FlyingDots[2]
     end
     table.insert(langUpdateCallbacks, UpdateFlyingText)
-
     local resetFrame = Instance.new("Frame")
     resetFrame.Size = UDim2.new(1, 0, 0, 45)
     resetFrame.Position = UDim2.new(0, 0, 0, 280)
@@ -1886,7 +1850,6 @@ HideFromScanner(IconButton)
 local IconCorner = Instance.new("UICorner")
 IconCorner.CornerRadius = UDim.new(0, 12)
 IconCorner.Parent = IconButton
-
 IconButton.MouseButton1Click:Connect(function()
     PlayClickSound()
     if MainFrame.Visible then
@@ -1916,21 +1879,17 @@ IconButton.MouseButton1Click:Connect(function()
         MainFrame.Rotation = 0
     end
 end)
-
 UpdateAllTexts()
-
 if TabButtons[1] then
     TabButtons[1].BackgroundColor3 = Color3.fromRGB(35, 40, 50)
     TabButtons[1].TextColor3 = Color3.fromRGB(255, 255, 255)
     TabButtons[1].Size = UDim2.new(0.14, 0, 0, 36)
 end
-
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.KeyCode == Enum.KeyCode.Insert then
         MainFrame.Visible = not MainFrame.Visible
     end
 end)
-
-print("[META] META v7.0.30 - ESP Fixed + Health Bar")
+print("[META] META v7.0.31 - ESP + Health Bar Fixed")
 print("[META] Press Insert or click icon")
