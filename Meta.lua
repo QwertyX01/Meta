@@ -1,4 +1,4 @@
--- ROCKET::META_UI_V7.0.36
+-- ROCKET::META_UI_V7.0.38
 
 local function SetupAntiCheatBypass()
     pcall(function()
@@ -170,6 +170,18 @@ MetaLabel.Font = Enum.Font.GothamBold
 MetaLabel.TextXAlignment = Enum.TextXAlignment.Left
 MetaLabel.TextYAlignment = Enum.TextYAlignment.Center
 MetaLabel.Parent = Header
+
+local BetaLabel = Instance.new("TextLabel")
+BetaLabel.Size = UDim2.new(0, 50, 1, 0)
+BetaLabel.Position = UDim2.new(0, 75, 0, 0)
+BetaLabel.BackgroundTransparency = 1
+BetaLabel.Text = "beta"
+BetaLabel.TextColor3 = Color3.fromRGB(120, 120, 120)
+BetaLabel.TextSize = 12
+BetaLabel.Font = Enum.Font.Gotham
+BetaLabel.TextXAlignment = Enum.TextXAlignment.Left
+BetaLabel.TextYAlignment = Enum.TextYAlignment.Center
+BetaLabel.Parent = Header
 
 local GameNameLabel = Instance.new("TextLabel")
 GameNameLabel.Size = UDim2.new(0.35, 0, 1, 0)
@@ -1036,7 +1048,7 @@ if settingsPage then
     end)
     ShiftContainer = function(shiftDown)
         local targetY = shiftDown and 150 or 0
-        TweenService:Create(settingsContainer, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 55 + targetY)}):Play()
+        TweenService:Create(settingsContainer, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 55 + targetY)}):Play()
     end
     SetToggleState = function(value)
         if value then
@@ -1047,9 +1059,8 @@ if settingsPage then
         else
             TweenService:Create(toggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(42, 47, 58)}):Play()
             TweenService:Create(handle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 3, 0.5, -9)}):Play()
-            ShiftContainer(false)
-            task.wait(0.3)
             pickerContainer.Visible = false
+            ShiftContainer(false)
         end
         _G.CustomThemeEnabled = value
         if not value and not _G.RainbowEnabled then
@@ -1445,7 +1456,7 @@ if settingsPage then
         if w <= 0 then w = 640 end
         if h <= 0 then h = 470 end
         local scale = _G.MenuScale / 45
-        local count = math.floor(30 + scale * 20)
+        local count = math.floor(50 + scale * 30)
         for i = 1, count do
             local dot = Instance.new("Frame")
             dot.Name = "Particle"
@@ -1697,15 +1708,33 @@ IconCorner.Parent = IconButton
 IconButton.MouseButton1Click:Connect(function()
     PlayClickSound()
     if MainFrame.Visible then
-        TweenService:Create(MainScale, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.7}):Play()
+        TweenService:Create(MainScale, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.7}):Play()
+        TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Rotation = 10, BackgroundTransparency = 0.8}):Play()
+        task.wait(0.25)
+        TweenService:Create(MainScale, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.2}):Play()
+        TweenService:Create(MainFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
         task.wait(0.2)
         MainFrame.Visible = false
         MainScale.Scale = 1
+        MainFrame.Rotation = 0
+        MainFrame.BackgroundTransparency = _G.MenuOpacity / 100
     else
         MainFrame.Visible = true
         MainScale.Scale = 0.1
-        task.wait(0.03)
-        TweenService:Create(MainScale, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+        MainFrame.Rotation = -10
+        MainFrame.BackgroundTransparency = 1
+        MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+        task.wait(0.05)
+        TweenService:Create(MainScale, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 0.7}):Play()
+        TweenService:Create(MainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Rotation = -3, BackgroundTransparency = 0.5}):Play()
+        task.wait(0.5)
+        TweenService:Create(MainScale, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+        TweenService:Create(MainFrame, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Rotation = 0, BackgroundTransparency = _G.MenuOpacity / 100}):Play()
+        task.wait(0.6)
+        TweenService:Create(MainScale, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 0.98}):Play()
+        task.wait(0.05)
+        TweenService:Create(MainScale, TweenInfo.new(0.1, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+        MainFrame.Rotation = 0
     end
 end)
 UpdateAllTexts()
@@ -1720,5 +1749,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         MainFrame.Visible = not MainFrame.Visible
     end
 end)
-print("[META] META v7.0.36 - UI Color Animation")
+print("[META] META v7.0.38 - UI Color Instant Hide")
 print("[META] Press Insert or click icon")
