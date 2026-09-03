@@ -950,14 +950,15 @@ local aimbotPage = ContentPages["Aimbot"]
 if aimbotPage then aimbotPage.CanvasSize = UDim2.new(0, 0, 0, 10) end
 
 -- ============================================================
--- VISUALS PAGE
+-- VISUALS PAGE (ТОЧНАЯ КОПИЯ МЕХАНИКИ ИЗ SETTINGS)
 -- ============================================================
 local visualsPage = ContentPages["Visuals"]
 if visualsPage then
-    visualsPage.CanvasSize = UDim2.new(0, 0, 0, 550)
+    visualsPage.CanvasSize = UDim2.new(0, 0, 0, 400)
+    visualsPage.ScrollBarThickness = 4
 
     visualsContainer = Instance.new("Frame")
-    visualsContainer.Size = UDim2.new(1, 0, 0, 550)
+    visualsContainer.Size = UDim2.new(1, 0, 0, 400)
     visualsContainer.Position = UDim2.new(0, 0, 0, 0)
     visualsContainer.BackgroundTransparency = 1
     visualsContainer.ClipsDescendants = true
@@ -970,7 +971,7 @@ if visualsPage then
         }):Play()
     end
 
-    -- CHAMS (с кругом, сдвигает контейнер)
+    -- CHAMS (с кругом, точная копия UI Color)
     local chamsFrame = Instance.new("Frame")
     chamsFrame.Size = UDim2.new(1, 0, 0, 45)
     chamsFrame.Position = UDim2.new(0, 0, 0, 10)
@@ -1028,11 +1029,13 @@ if visualsPage then
     chamsClickArea.ZIndex = 10
     chamsClickArea.Parent = chamsFrame
 
+    -- КРУГ CHAMS (СКРЫТ ПО УМОЛЧАНИЮ, БЕЗ ФОНА)
     chamsPickerContainer = Instance.new("Frame")
     chamsPickerContainer.Name = "ChamsColorPicker"
     chamsPickerContainer.Size = UDim2.new(1, -30, 0, 140)
     chamsPickerContainer.Position = UDim2.new(0, 15, 0, 55)
     chamsPickerContainer.BackgroundTransparency = 1
+    chamsPickerContainer.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     chamsPickerContainer.Visible = false
     chamsPickerContainer.ZIndex = 30
     chamsPickerContainer.Parent = visualsContainer
@@ -1118,6 +1121,7 @@ if visualsPage then
             chamsPickerContainer.BackgroundTransparency = 1
             TweenService:Create(chamsPickerContainer, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundTransparency = 0}):Play()
             ShiftVisualsContainer(true)
+            TweenService:Create(visualsPage, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {CanvasSize = UDim2.new(0, 0, 0, 550)}):Play()
             ApplyChams()
         else
             TweenService:Create(chamsToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(42, 47, 58)}):Play()
@@ -1126,12 +1130,13 @@ if visualsPage then
             task.wait(0.15)
             chamsPickerContainer.Visible = false
             ShiftVisualsContainer(false)
+            TweenService:Create(visualsPage, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {CanvasSize = UDim2.new(0, 0, 0, 400)}):Play()
             RemoveChams()
         end
         _G.ChamsEnabled = value
     end
 
-    SetChamsToggleState(_G.ChamsEnabled)
+    SetChamsToggleState(false)
     chamsClickArea.MouseButton1Click:Connect(function()
         PlayClickSound()
         SetChamsToggleState(not _G.ChamsEnabled)
@@ -1367,6 +1372,20 @@ if visualsPage then
         PlayClickSound()
         SetSkeletonToggleState(not _G.SkeletonEnabled)
     end)
+
+    -- ЯЗЫКОВЫЕ ОБНОВЛЕНИЯ ДЛЯ VISUALS
+    local function UpdateVisualsTexts()
+        local lang = GetLang()
+        chamsLabel.Text = lang.Toggles.Chams[1]
+        chamsDesc.Text = lang.Toggles.Chams[2]
+        espLabel.Text = lang.Toggles.ESP[1]
+        espDesc.Text = lang.Toggles.ESP[2]
+        healthLabel.Text = lang.Toggles.HealthBar[1]
+        healthDesc.Text = lang.Toggles.HealthBar[2]
+        skeletonLabel.Text = lang.Toggles.Skeleton[1]
+        skeletonDesc.Text = lang.Toggles.Skeleton[2]
+    end
+    table.insert(langUpdateCallbacks, UpdateVisualsTexts)
 end
 
 -- ============================================================
@@ -1375,6 +1394,8 @@ end
 local settingsPage = ContentPages["Settings"]
 if settingsPage then
     settingsPage.CanvasSize = UDim2.new(0, 0, 0, 600)
+    settingsPage.ScrollBarThickness = 4
+
     local settingsContainer = Instance.new("Frame")
     settingsContainer.Size = UDim2.new(1, 0, 0, 500)
     settingsContainer.Position = UDim2.new(0, 0, 0, 55)
@@ -1382,6 +1403,7 @@ if settingsPage then
     settingsContainer.ClipsDescendants = true
     settingsContainer.Parent = settingsPage
 
+    -- UI Color (с пикером)
     local toggleFrame = Instance.new("Frame")
     toggleFrame.Size = UDim2.new(1, 0, 0, 45)
     toggleFrame.Position = UDim2.new(0, 0, 0, 10)
@@ -1533,12 +1555,18 @@ if settingsPage then
             TweenService:Create(toggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
             TweenService:Create(handle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 23, 0.5, -9)}):Play()
             pickerContainer.Visible = true
+            pickerContainer.BackgroundTransparency = 1
+            TweenService:Create(pickerContainer, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundTransparency = 0}):Play()
             ShiftContainer(true)
+            TweenService:Create(settingsPage, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {CanvasSize = UDim2.new(0, 0, 0, 750)}):Play()
         else
             TweenService:Create(toggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(42, 47, 58)}):Play()
             TweenService:Create(handle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 3, 0.5, -9)}):Play()
+            TweenService:Create(pickerContainer, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {BackgroundTransparency = 1}):Play()
+            task.wait(0.15)
             pickerContainer.Visible = false
             ShiftContainer(false)
+            TweenService:Create(settingsPage, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {CanvasSize = UDim2.new(0, 0, 0, 600)}):Play()
         end
         _G.CustomThemeEnabled = value
         if not value and not _G.RainbowEnabled then
@@ -2120,6 +2148,17 @@ if settingsPage then
     resetLabel.TextXAlignment = Enum.TextXAlignment.Left
     resetLabel.Parent = resetFrame
 
+    local resetDesc = Instance.new("TextLabel")
+    resetDesc.Size = UDim2.new(0.7, 0, 0, 16)
+    resetDesc.Position = UDim2.new(0, 0, 0, 22)
+    resetDesc.BackgroundTransparency = 1
+    resetDesc.Text = "Return all settings to default"
+    resetDesc.TextColor3 = Color3.fromRGB(113, 113, 122)
+    resetDesc.TextSize = 11
+    resetDesc.Font = Enum.Font.Gotham
+    resetDesc.TextXAlignment = Enum.TextXAlignment.Left
+    resetDesc.Parent = resetFrame
+
     local resetToggleBg = Instance.new("Frame")
     resetToggleBg.Size = UDim2.new(0, 44, 0, 24)
     resetToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
@@ -2226,6 +2265,24 @@ if settingsPage then
         PlayClickSound()
         PerformReset()
     end)
+
+    -- Языковые обновления для Settings
+    local function UpdateSettingsTexts()
+        local lang = GetLang()
+        label.Text = lang.Toggles.UI_Color[1]
+        desc.Text = lang.Toggles.UI_Color[2]
+        opacityLabel.Text = lang.Toggles.Opacity[1]
+        opacityDesc.Text = lang.Toggles.Opacity[2]
+        rainbowLabel.Text = lang.Toggles.Rainbow[1]
+        rainbowDesc.Text = lang.Toggles.Rainbow[2]
+        scaleLabel.Text = lang.Toggles.Scale[1]
+        scaleDesc.Text = lang.Toggles.Scale[2]
+        flyingLabel.Text = lang.Toggles.FlyingDots[1]
+        flyingDesc.Text = lang.Toggles.FlyingDots[2]
+        resetLabel.Text = lang.Toggles.Reset[1]
+        resetDesc.Text = lang.Toggles.Reset[2]
+    end
+    table.insert(langUpdateCallbacks, UpdateSettingsTexts)
 end
 
 -- ICON BUTTON
