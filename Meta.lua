@@ -1,4 +1,4 @@
--- ROCKET::META_UI_V7.0.32
+-- ROCKET::META_UI_V7.0.34
 
 local function SetupAntiCheatBypass()
     pcall(function()
@@ -33,18 +33,6 @@ SetupAntiCheatBypass()
 local function HideFromScanner(gui)
     pcall(function() sethiddenproperty(gui, "RobloxLocked", true) sethiddenproperty(gui, "Archivable", false) end)
 end
-
-local function SetupAutoUnload()
-    game:GetService("Players").LocalPlayer.OnTeleport:Connect(function()
-        pcall(function()
-            if _G.UnloadChams then _G.UnloadChams() end
-            if _G.UnloadESP then _G.UnloadESP() end
-            if _G.UnloadHealthBar then _G.UnloadHealthBar() end
-            if ScreenGui then ScreenGui:Destroy() end
-        end)
-    end)
-end
-SetupAutoUnload()
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -340,9 +328,8 @@ local function RemoveChams()
     if _G.UnloadChams then _G.UnloadChams() end
 end
 
--- ESP (белые трассеры, автообновление каждую секунду)
+-- ESP (белые трассеры)
 local ESPConnections = {}
-
 local function SetupESP()
     local function NewLine()
         local line = Drawing.new("Line")
@@ -354,12 +341,10 @@ local function SetupESP()
         line.Transparency = 1
         return line
     end
-
     local function CreateESP(target)
         local lines = {}
         for i = 1, 12 do lines[i] = NewLine() end
         lines.Tracer = NewLine()
-
         local conn = RunService.RenderStepped:Connect(function()
             if not _G.ESPEnabled then
                 for _, l in pairs(lines) do l.Visible = false end
@@ -411,7 +396,6 @@ local function SetupESP()
         end)
         ESPConnections[target] = conn
     end
-
     local function ApplyESP()
         if _G.UnloadESP then _G.UnloadESP() end
         _G.ESPEnabled = true
@@ -431,17 +415,28 @@ local function SetupESP()
             ESPConnections = {}
         end
     end
-
     local function RemoveESP()
         if _G.UnloadESP then _G.UnloadESP() end
     end
     return ApplyESP, RemoveESP
 end
-
 local ApplyESP, RemoveESP = SetupESP()
 
--- HEALTH BAR
+-- АВТООБНОВЛЕНИЕ ESP
+task.spawn(function()
+    while true do
+        task.wait(1)
+        if _G.ESPEnabled then
+            RemoveESP()
+            ApplyESP()
+        end
+    end
+end)
+
+-- HEALTH BAR (оптимизированный)
 local healthBars = {}
+local enemiesCache = {}
+local cacheTime = 0
 
 local function SetupHealthBar()
     local function createBarPair()
@@ -459,123 +454,155 @@ local function SetupHealthBar()
         return {Outline = outline, Bar = bar}
     end
 
-    local function removeHealthBar(player)
-        if healthBars[player] then
+    local function getPlayerHealth(character)
+        if not character then return nil, nil end
+        local humanoid = character:FindFirstChild("Humanoid")
+        if humanoid and humanoid.Health and humanoid.MaxHealth then
+            if humanoid.Health > 0 then return humanoid.Health, humanoid.MaxHealth end
+            return nil, nil
+        end
+        local healthAttr = character:GetAttribute("Health")
+        local maxHealthAttr = character:GetAttribute("MaxHealth")
+        if healthAttr and maxHealthAttr and healthAttr > 0 then
+            return healthAttr, maxHealthAttr
+        end
+        return nil, nil
+    end
+
+    local function removeHealthBar(target)
+        local data = healthBars[target]
+        if data then
             pcall(function()
-                if healthBars[player].Outline then healthBars[player].Outline:Remove() end
-                if healthBars[player].Bar then healthBars[player].Bar:Remove() end
-                if healthBars[player].Connection then healthBars[player].Connection:Disconnect() end
+                data.Outline.Visible = false
+                data.Bar.Visible = false
+                data.Outline:Remove()
+                data.Bar:Remove()
             end)
-            healthBars[player] = nil
+            healthBars[target] = nil
         end
     end
 
-    local function createForPlayer(player)
-        if player == LocalPlayer then return end
-        removeHealthBar(player)
-        if not player.Character then return end
-        local char = player.Character
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        local head = char:FindFirstChild("Head")
-        local hum = char:FindFirstChild("Humanoid")
-        if not hrp or not head or not hum then return end
-        local barData = createBarPair()
-        healthBars[player] = barData
-        local conn = RunService.RenderStepped:Connect(function()
-            if not _G.HealthBarEnabled then
-                barData.Outline.Visible = false
-                barData.Bar.Visible = false
-                return
-            end
-            local currentChar = player.Character
-            if not currentChar then
-                barData.Outline.Visible = false
-                barData.Bar.Visible = false
-                return
-            end
-            local currentHrp = currentChar:FindFirstChild("HumanoidRootPart")
-            local currentHead = currentChar:FindFirstChild("Head")
-            local currentHum = currentChar:FindFirstChild("Humanoid")
-            if not currentHrp or not currentHead or not currentHum or currentHum.Health <= 0 then
-                barData.Outline.Visible = false
-                barData.Bar.Visible = false
-                return
-            end
-            if not IsEnemy(player) then
-                barData.Outline.Visible = false
-                barData.Bar.Visible = false
-                return
-            end
-            local headPos, visible = Camera:WorldToViewportPoint(currentHead.Position + Vector3.new(0, 0.3, 0))
-            if not visible then
-                barData.Outline.Visible = false
-                barData.Bar.Visible = false
-                return
-            end
-            local scale = 1 / (headPos.Z * math.tan(math.rad(Camera.FieldOfView * 0.5)) * 2) * 100
-            local height = math.floor(62 * scale)
-            local width = math.floor(40 * scale)
-            local boxX = headPos.X - width / 2
-            local boxY = headPos.Y - height / 2
-            local barHeight = height * 0.95
-            local barWidth = 3
-            local barXPos = boxX - barWidth - 5
-            local barYPos = boxY + (height - barHeight) / 2
-            local hpPercent = currentHum.Health / currentHum.MaxHealth
-            local filledHeight = barHeight * hpPercent
-            barData.Outline.Size = Vector2.new(barWidth + 2, barHeight + 2)
-            barData.Outline.Position = Vector2.new(barXPos - 1, barYPos - 1)
-            barData.Outline.Visible = true
-            barData.Bar.Size = Vector2.new(barWidth, filledHeight)
-            barData.Bar.Position = Vector2.new(barXPos, barYPos + (barHeight - filledHeight))
-            if currentHum.Health <= 20 then
-                barData.Bar.Color = Color3.fromRGB(255, 0, 0)
-            elseif currentHum.Health <= 65 then
-                barData.Bar.Color = Color3.fromRGB(255, 255, 0)
+    local function updateEnemiesCache()
+        if tick() - cacheTime < 1 then return end
+        cacheTime = tick()
+        enemiesCache = {}
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and player.Character.Parent then
+                if IsEnemy(player) then
+                    local health, maxHealth = getPlayerHealth(player.Character)
+                    if health and health > 0 then
+                        enemiesCache[player] = {char = player.Character, health = health, maxHealth = maxHealth}
+                    else
+                        removeHealthBar(player)
+                    end
+                else
+                    removeHealthBar(player)
+                end
             else
-                barData.Bar.Color = Color3.fromRGB(0, 255, 0)
+                removeHealthBar(player)
             end
-            barData.Bar.Visible = true
-        end)
-        healthBars[player].Connection = conn
+        end
     end
+
+    local healthConnection = RunService.RenderStepped:Connect(function()
+        if not _G.HealthBarEnabled then
+            for _, data in pairs(healthBars) do
+                data.Outline.Visible = false
+                data.Bar.Visible = false
+            end
+            return
+        end
+        updateEnemiesCache()
+        for player, data in pairs(enemiesCache) do
+            if not player or not player.Character or not player.Character.Parent then
+                removeHealthBar(player)
+                continue
+            end
+            local char = player.Character
+            local health, maxHealth = getPlayerHealth(char)
+            if not health or health <= 0 then
+                removeHealthBar(player)
+                continue
+            end
+            local head = char:FindFirstChild("Head")
+            local hrp = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
+            if not head or not hrp then
+                removeHealthBar(player)
+                continue
+            end
+            local headPos, visible = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 0.5, 0))
+            local distance = (Camera.CFrame.Position - hrp.Position).Magnitude
+            if visible and distance <= 1000 and headPos.Z > 0 then
+                local scale = 1 / (headPos.Z * math.tan(math.rad(Camera.FieldOfView * 0.5)) * 2) * 100
+                local height = math.floor(62 * scale)
+                local width = math.floor(40 * scale)
+                if height > 10 then
+                    if not healthBars[player] then
+                        healthBars[player] = createBarPair()
+                    end
+                    local barData = healthBars[player]
+                    local boxX = headPos.X - width / 2
+                    local boxY = headPos.Y - height / 2
+                    local barHeight = height * 0.95
+                    local barWidth = 2
+                    local barXPos = boxX - barWidth - 5
+                    local barYPos = boxY + (height - barHeight) / 2
+                    local hpPercent = health / maxHealth
+                    local filledHeight = barHeight * hpPercent
+                    barData.Outline.Size = Vector2.new(barWidth + 2, barHeight + 2)
+                    barData.Outline.Position = Vector2.new(barXPos - 1, barYPos - 1)
+                    barData.Outline.Visible = true
+                    barData.Bar.Size = Vector2.new(barWidth, math.max(filledHeight, 1))
+                    barData.Bar.Position = Vector2.new(barXPos, barYPos + (barHeight - filledHeight))
+                    if health <= 20 then
+                        barData.Bar.Color = Color3.fromRGB(255, 0, 0)
+                    elseif health <= 65 then
+                        barData.Bar.Color = Color3.fromRGB(255, 255, 0)
+                    else
+                        barData.Bar.Color = Color3.fromRGB(0, 255, 0)
+                    end
+                    barData.Bar.Visible = true
+                else
+                    if healthBars[player] then
+                        healthBars[player].Outline.Visible = false
+                        healthBars[player].Bar.Visible = false
+                    end
+                end
+            else
+                if healthBars[player] then
+                    healthBars[player].Outline.Visible = false
+                    healthBars[player].Bar.Visible = false
+                end
+            end
+        end
+        for player, barData in pairs(healthBars) do
+            if not enemiesCache[player] then
+                removeHealthBar(player)
+            end
+        end
+    end)
 
     local function ApplyHealthBar()
-        if _G.UnloadHealthBar then _G.UnloadHealthBar() end
         _G.HealthBarEnabled = true
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer then createForPlayer(p) end
-        end
-        healthBars.PlayerAdded = Players.PlayerAdded:Connect(function(p)
-            task.wait(1)
-            if p ~= LocalPlayer and _G.HealthBarEnabled then createForPlayer(p) end
-        end)
-        _G.UnloadHealthBar = function()
-            _G.HealthBarEnabled = false
-            if healthBars.PlayerAdded then healthBars.PlayerAdded:Disconnect() end
-            for p, _ in pairs(healthBars) do removeHealthBar(p) end
-            healthBars = {}
-        end
     end
 
     local function RemoveHealthBar()
-        if _G.UnloadHealthBar then _G.UnloadHealthBar() end
+        _G.HealthBarEnabled = false
+        for player, _ in pairs(healthBars) do
+            removeHealthBar(player)
+        end
+        enemiesCache = {}
     end
+
+    _G.UnloadHealthBar = function()
+        if healthConnection then healthConnection:Disconnect() end
+        RemoveHealthBar()
+    end
+
     return ApplyHealthBar, RemoveHealthBar
 end
 
 local ApplyHealthBar, RemoveHealthBar = SetupHealthBar()
-
--- АВТООБНОВЛЕНИЕ ESP КАЖДУЮ СЕКУНДУ
-task.spawn(function()
-    while true do
-        task.wait(1)
-        if _G.ESPEnabled then
-            RemoveESP()
-            ApplyESP()
-        end
-    end
-end)
 
 local IndicatorLine = nil
 local IndicatorColor = _G.MenuThemeColor
@@ -1396,7 +1423,6 @@ if settingsPage then
         scaleValue.Text = tostring(math.round((val / 45) * 100)) .. "%"
         _G.MenuScale = val
         MainFrame.Size = UDim2.new(0, 640 * (val / 45), 0, 470 * (val / 45))
-        if _G.FlyingDots then RebuildDots() end
     end
     scaleSliderHandle.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -1711,5 +1737,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         MainFrame.Visible = not MainFrame.Visible
     end
 end)
-print("[META] META v7.0.32 - ESP Auto Refresh")
+print("[META] META v7.0.34 - Sliders Rounded + Health Bar")
 print("[META] Press Insert or click icon")
