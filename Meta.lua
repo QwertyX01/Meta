@@ -1,4 +1,4 @@
--- ROCKET::META_UI_V7.0.28
+-- ROCKET::META_UI_V7.0.30
 
 local function SetupAntiCheatBypass()
     pcall(function()
@@ -370,19 +370,41 @@ local function SetupESP()
         lines.Tracer = NewLine()
 
         local conn = RunService.RenderStepped:Connect(function()
-            local char = target.Character
-            local localChar = LocalPlayer.Character
-            if localChar then
-                local myHum = localChar:FindFirstChildOfClass("Humanoid")
-                if myHum and myHum.Health <= 0 then
-                    for _, l in pairs(lines) do l.Visible = false end
-                    return
-                end
-            else
+            if not target or not target.Parent then
                 for _, l in pairs(lines) do l.Visible = false end
                 return
             end
-            if not _G.ESPEnabled or not char or not char:FindFirstChild("HumanoidRootPart") or not char:FindFirstChild("Head") then
+            local char = target.Character
+            local localChar = LocalPlayer.Character
+            if not char then
+                for _, l in pairs(lines) do l.Visible = false end
+                return
+            end
+            if not localChar then
+                for _, l in pairs(lines) do l.Visible = false end
+                return
+            end
+            local myHum = localChar:FindFirstChildOfClass("Humanoid")
+            if myHum and myHum.Health <= 0 then
+                for _, l in pairs(lines) do l.Visible = false end
+                return
+            end
+            if not _G.ESPEnabled then
+                for _, l in pairs(lines) do l.Visible = false end
+                return
+            end
+            if char ~= target.Character then
+                for _, l in pairs(lines) do l.Visible = false end
+                return
+            end
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            local head = char:FindFirstChild("Head")
+            local hum = char:FindFirstChild("Humanoid")
+            if not hrp or not head or not hum then
+                for _, l in pairs(lines) do l.Visible = false end
+                return
+            end
+            if hum.Health <= 0 then
                 for _, l in pairs(lines) do l.Visible = false end
                 return
             end
@@ -390,21 +412,14 @@ local function SetupESP()
                 for _, l in pairs(lines) do l.Visible = false end
                 return
             end
-            local hum = char:FindFirstChild("Humanoid")
-            if hum and hum.Health <= 0 then
-                for _, l in pairs(lines) do l.Visible = false end
-                return
-            end
-            local rootPart = char.HumanoidRootPart
-            local head = char.Head
-            local rootVisible = Camera:WorldToViewportPoint(rootPart.Position)
+            local rootVisible = Camera:WorldToViewportPoint(hrp.Position)
             if not rootVisible then
                 for _, l in pairs(lines) do l.Visible = false end
                 return
             end
             local scale = head.Size.Y / 2
             local boxSize = Vector3.new(2, 3, 1.5) * (scale * 2)
-            local cf = rootPart.CFrame
+            local cf = hrp.CFrame
             local c = {}
             c[1] = Camera:WorldToViewportPoint((cf * CFrame.new(-boxSize.X, boxSize.Y, -boxSize.Z)).Position)
             c[2] = Camera:WorldToViewportPoint((cf * CFrame.new(-boxSize.X, boxSize.Y, boxSize.Z)).Position)
@@ -456,7 +471,6 @@ end
 
 local ApplyESP, RemoveESP = SetupESP()
 
--- ===== HEALTH BAR =====
 local healthBars = {}
 
 local function SetupHealthBar()
@@ -467,13 +481,11 @@ local function SetupHealthBar()
         outline.Visible = false
         outline.Color = Color3.fromRGB(0, 0, 0)
         outline.Transparency = 1
-        
         local bar = Drawing.new("Square")
         bar.Thickness = 1
         bar.Filled = true
         bar.Visible = false
         bar.Transparency = 1
-        
         return {Outline = outline, Bar = bar}
     end
 
@@ -490,16 +502,13 @@ local function SetupHealthBar()
         if player == LocalPlayer then return end
         removeHealthBar(player)
         if not player.Character then return end
-        
         local character = player.Character
         local hrp = character:FindFirstChild("HumanoidRootPart")
         local head = character:FindFirstChild("Head")
         local humanoid = character:FindFirstChild("Humanoid")
         if not hrp or not head or not humanoid then return end
-
         local barData = createBarPair()
         healthBars[player] = barData
-
         local connection = RunService.RenderStepped:Connect(function()
             if not _G.HealthBarEnabled then
                 barData.Outline.Visible = false
@@ -578,9 +587,7 @@ local function SetupHealthBar()
         _G.UnloadHealthBar = function()
             _G.HealthBarEnabled = false
             if healthBars.PlayerAdded then healthBars.PlayerAdded:Disconnect() end
-            for p, _ in pairs(healthBars) do
-                removeHealthBar(p)
-            end
+            for p, _ in pairs(healthBars) do removeHealthBar(p) end
             healthBars = {}
         end
     end
@@ -955,7 +962,6 @@ if visualsPage then
     end
     table.insert(langUpdateCallbacks, UpdateESPText)
 
-    -- Health Bar
     local healthFrame = Instance.new("Frame")
     healthFrame.Name = "HealthBar"
     healthFrame.Size = UDim2.new(1, 0, 0, 45)
@@ -1045,7 +1051,6 @@ end
 local settingsPage = ContentPages["Settings"]
 if settingsPage then
     settingsPage.CanvasSize = UDim2.new(0, 0, 0, 600)
-
     local settingsContainer = Instance.new("Frame")
     settingsContainer.Name = "SettingsPanel"
     settingsContainer.Size = UDim2.new(1, 0, 0, 500)
@@ -1059,7 +1064,6 @@ if settingsPage then
     toggleFrame.Position = UDim2.new(0, 0, 0, 10)
     toggleFrame.BackgroundTransparency = 1
     toggleFrame.Parent = settingsPage
-
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(0.6, 0, 0, 20)
     label.BackgroundTransparency = 1
@@ -1069,7 +1073,6 @@ if settingsPage then
     label.Font = Enum.Font.GothamBold
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Parent = toggleFrame
-
     local desc = Instance.new("TextLabel")
     desc.Size = UDim2.new(0.7, 0, 0, 16)
     desc.Position = UDim2.new(0, 0, 0, 22)
@@ -1080,29 +1083,24 @@ if settingsPage then
     desc.Font = Enum.Font.Gotham
     desc.TextXAlignment = Enum.TextXAlignment.Left
     desc.Parent = toggleFrame
-
     local toggleBg = Instance.new("Frame")
     toggleBg.Size = UDim2.new(0, 44, 0, 24)
     toggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
     toggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
     toggleBg.BorderSizePixel = 0
     toggleBg.Parent = toggleFrame
-
     local toggleCorner = Instance.new("UICorner")
     toggleCorner.CornerRadius = UDim.new(1, 0)
     toggleCorner.Parent = toggleBg
-
     local handle = Instance.new("Frame")
     handle.Size = UDim2.new(0, 18, 0, 18)
     handle.Position = UDim2.new(0, 3, 0.5, -9)
     handle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     handle.BorderSizePixel = 0
     handle.Parent = toggleBg
-
     local handleCorner = Instance.new("UICorner")
     handleCorner.CornerRadius = UDim.new(1, 0)
     handleCorner.Parent = handle
-
     local clickArea = Instance.new("TextButton")
     clickArea.Size = UDim2.new(0, 44, 0, 24)
     clickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
@@ -1119,7 +1117,6 @@ if settingsPage then
     pickerContainer.Visible = _G.CustomThemeEnabled
     pickerContainer.ZIndex = 30
     pickerContainer.Parent = settingsPage
-
     local wheelImage = Instance.new("ImageLabel")
     wheelImage.Size = UDim2.new(0, 120, 0, 120)
     wheelImage.Position = UDim2.new(0.5, -60, 0.5, -60)
@@ -1127,30 +1124,25 @@ if settingsPage then
     wheelImage.Image = "rbxassetid://7393858625"
     wheelImage.ZIndex = 31
     wheelImage.Parent = pickerContainer
-
     pickerDot = Instance.new("Frame")
     pickerDot.Size = UDim2.new(0, 10, 0, 10)
     pickerDot.Position = UDim2.new(0.5, -5, 0.5, -5)
     pickerDot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     pickerDot.ZIndex = 32
     pickerDot.Parent = wheelImage
-
     local dotCorner = Instance.new("UICorner")
     dotCorner.CornerRadius = UDim.new(1, 0)
     dotCorner.Parent = pickerDot
-
     local dotStroke = Instance.new("UIStroke")
     dotStroke.Thickness = 1.5
     dotStroke.Color = Color3.fromRGB(0, 0, 0)
     dotStroke.Parent = pickerDot
-
     local dragArea = Instance.new("TextButton")
     dragArea.Size = UDim2.new(1, 0, 1, 0)
     dragArea.BackgroundTransparency = 1
     dragArea.Text = ""
     dragArea.ZIndex = 33
     dragArea.Parent = wheelImage
-
     local isDraggingColor = false
     local scrollFrame = settingsPage
 
@@ -1184,13 +1176,11 @@ if settingsPage then
             UpdateWheelColor(input.Position)
         end
     end)
-
     UserInputService.InputChanged:Connect(function(input)
         if isDraggingColor and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
             UpdateWheelColor(input.Position)
         end
     end)
-
     UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
             isDraggingColor = false
@@ -1202,7 +1192,6 @@ if settingsPage then
         local targetY = shiftDown and 150 or 0
         TweenService:Create(settingsContainer, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 55 + targetY)}):Play()
     end
-
     local function UpdateColorPickerVisibility()
         if _G.CustomThemeEnabled then
             pickerContainer.Visible = true
@@ -1212,7 +1201,6 @@ if settingsPage then
             ShiftContainer(false)
         end
     end
-
     SetToggleState = function(value)
         if value then
             TweenService:Create(toggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
@@ -1229,7 +1217,6 @@ if settingsPage then
             SearchStroke.Color = _G.MenuThemeColor
         end
     end
-
     SetToggleState(_G.CustomThemeEnabled)
 
     local function UpdateUIColorText()
@@ -1238,7 +1225,6 @@ if settingsPage then
         desc.Text = lang.Toggles.UI_Color[2]
     end
     table.insert(langUpdateCallbacks, UpdateUIColorText)
-
     clickArea.MouseButton1Click:Connect(function()
         PlayClickSound()
         SetToggleState(not _G.CustomThemeEnabled)
@@ -1257,15 +1243,12 @@ if settingsPage then
         bg.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
         bg.BackgroundTransparency = 0.5
         bg.Parent = langFrame
-
         local bgCorner = Instance.new("UICorner")
         bgCorner.CornerRadius = UDim.new(0, 6)
         bgCorner.Parent = bg
-
         local uiScale = Instance.new("UIScale")
         uiScale.Scale = 1
         uiScale.Parent = bg
-
         local txt = Instance.new("TextLabel")
         txt.Size = UDim2.new(1, 0, 1, 0)
         txt.BackgroundTransparency = 1
@@ -1276,14 +1259,12 @@ if settingsPage then
         txt.TextXAlignment = Enum.TextXAlignment.Center
         txt.TextYAlignment = Enum.TextYAlignment.Center
         txt.Parent = bg
-
         local clickBtn = Instance.new("TextButton")
         clickBtn.Size = UDim2.new(1, 0, 1, 0)
         clickBtn.BackgroundTransparency = 1
         clickBtn.Text = ""
         clickBtn.ZIndex = 10
         clickBtn.Parent = bg
-
         local function UpdateLangButton(animate)
             local isActive = (_G.CurrentLang == langCode)
             local targetScale = isActive and 1.1 or 1
@@ -1301,9 +1282,7 @@ if settingsPage then
                 txt.TextColor3 = targetTextColor
             end
         end
-
         UpdateLangButton(false)
-
         clickBtn.MouseButton1Click:Connect(function()
             PlayClickSound()
             if _G.CurrentLang == langCode then return end
@@ -1311,12 +1290,10 @@ if settingsPage then
             for _, btn in ipairs(langButtonData) do pcall(btn.Update, true) end
             UpdateAllTexts()
         end)
-
         local btnData = {Update = UpdateLangButton}
         table.insert(langButtonData, btnData)
         return btnData
     end
-
     CreateLangButton("Русский", "RU", 0.03)
     CreateLangButton("English", "EN", 0.55)
 
@@ -1325,7 +1302,6 @@ if settingsPage then
     opacityFrame.Position = UDim2.new(0, 10, 0, 60)
     opacityFrame.BackgroundTransparency = 1
     opacityFrame.Parent = settingsContainer
-
     local opacityLabel = Instance.new("TextLabel")
     opacityLabel.Size = UDim2.new(0.5, 0, 0, 20)
     opacityLabel.BackgroundTransparency = 1
@@ -1335,7 +1311,6 @@ if settingsPage then
     opacityLabel.Font = Enum.Font.GothamBold
     opacityLabel.TextXAlignment = Enum.TextXAlignment.Left
     opacityLabel.Parent = opacityFrame
-
     local opacityDesc = Instance.new("TextLabel")
     opacityDesc.Size = UDim2.new(0.5, 0, 0, 16)
     opacityDesc.Position = UDim2.new(0, 0, 0, 22)
@@ -1346,7 +1321,6 @@ if settingsPage then
     opacityDesc.Font = Enum.Font.Gotham
     opacityDesc.TextXAlignment = Enum.TextXAlignment.Left
     opacityDesc.Parent = opacityFrame
-
     opacityValue = Instance.new("TextLabel")
     opacityValue.Size = UDim2.new(0.15, 0, 0, 20)
     opacityValue.Position = UDim2.new(0.85, 0, 0, 0)
@@ -1357,41 +1331,33 @@ if settingsPage then
     opacityValue.Font = Enum.Font.GothamBold
     opacityValue.TextXAlignment = Enum.TextXAlignment.Right
     opacityValue.Parent = opacityFrame
-
     local opacitySliderBg = Instance.new("Frame")
     opacitySliderBg.Size = UDim2.new(0.5, 0, 0, 6)
     opacitySliderBg.Position = UDim2.new(0, 0, 0, 40)
     opacitySliderBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
     opacitySliderBg.BorderSizePixel = 0
     opacitySliderBg.Parent = opacityFrame
-
     local opacitySliderCorner = Instance.new("UICorner")
     opacitySliderCorner.CornerRadius = UDim.new(1, 0)
     opacitySliderCorner.Parent = opacitySliderBg
-
     opacitySliderFill = Instance.new("Frame")
     opacitySliderFill.Size = UDim2.new(0.24, 0, 1, 0)
     opacitySliderFill.BackgroundColor3 = Color3.fromRGB(59, 130, 246)
     opacitySliderFill.BorderSizePixel = 0
     opacitySliderFill.Parent = opacitySliderBg
-
     local opacityFillCorner = Instance.new("UICorner")
     opacityFillCorner.CornerRadius = UDim.new(1, 0)
     opacityFillCorner.Parent = opacitySliderFill
-
     opacitySliderHandle = Instance.new("Frame")
     opacitySliderHandle.Size = UDim2.new(0, 16, 0, 16)
     opacitySliderHandle.Position = UDim2.new(0.24, -8, 0.5, -8)
     opacitySliderHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     opacitySliderHandle.BorderSizePixel = 0
     opacitySliderHandle.Parent = opacitySliderBg
-
     local opacityHandleCorner = Instance.new("UICorner")
     opacityHandleCorner.CornerRadius = UDim.new(1, 0)
     opacityHandleCorner.Parent = opacitySliderHandle
-
     local isDraggingOpacity = false
-
     local function UpdateOpacity(mouseX)
         local absPos = opacitySliderBg.AbsolutePosition.X
         local width = opacitySliderBg.AbsoluteSize.X
@@ -1406,33 +1372,28 @@ if settingsPage then
         _G.MenuOpacity = val
         MainFrame.BackgroundTransparency = val / 100
     end
-
     opacitySliderHandle.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             isDraggingOpacity = true
             UpdateOpacity(input.Position.X)
         end
     end)
-
     opacitySliderBg.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             isDraggingOpacity = true
             UpdateOpacity(input.Position.X)
         end
     end)
-
     UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             isDraggingOpacity = false
         end
     end)
-
     UserInputService.InputChanged:Connect(function(input)
         if isDraggingOpacity and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             UpdateOpacity(input.Position.X)
         end
     end)
-
     local function UpdateOpacityText()
         local lang = GetLang()
         opacityLabel.Text = lang.Toggles.Opacity[1]
@@ -1445,7 +1406,6 @@ if settingsPage then
     rainbowFrame.Position = UDim2.new(0, 0, 0, 120)
     rainbowFrame.BackgroundTransparency = 1
     rainbowFrame.Parent = settingsContainer
-
     local rainbowLabel = Instance.new("TextLabel")
     rainbowLabel.Size = UDim2.new(0.6, 0, 0, 20)
     rainbowLabel.BackgroundTransparency = 1
@@ -1455,7 +1415,6 @@ if settingsPage then
     rainbowLabel.Font = Enum.Font.GothamBold
     rainbowLabel.TextXAlignment = Enum.TextXAlignment.Left
     rainbowLabel.Parent = rainbowFrame
-
     local rainbowDesc = Instance.new("TextLabel")
     rainbowDesc.Size = UDim2.new(0.7, 0, 0, 16)
     rainbowDesc.Position = UDim2.new(0, 0, 0, 22)
@@ -1466,29 +1425,24 @@ if settingsPage then
     rainbowDesc.Font = Enum.Font.Gotham
     rainbowDesc.TextXAlignment = Enum.TextXAlignment.Left
     rainbowDesc.Parent = rainbowFrame
-
     local rainbowToggleBg = Instance.new("Frame")
     rainbowToggleBg.Size = UDim2.new(0, 44, 0, 24)
     rainbowToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
     rainbowToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
     rainbowToggleBg.BorderSizePixel = 0
     rainbowToggleBg.Parent = rainbowFrame
-
     local rainbowToggleCorner = Instance.new("UICorner")
     rainbowToggleCorner.CornerRadius = UDim.new(1, 0)
     rainbowToggleCorner.Parent = rainbowToggleBg
-
     local rainbowHandle = Instance.new("Frame")
     rainbowHandle.Size = UDim2.new(0, 18, 0, 18)
     rainbowHandle.Position = UDim2.new(0, 3, 0.5, -9)
     rainbowHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     rainbowHandle.BorderSizePixel = 0
     rainbowHandle.Parent = rainbowToggleBg
-
     local rainbowHandleCorner = Instance.new("UICorner")
     rainbowHandleCorner.CornerRadius = UDim.new(1, 0)
     rainbowHandleCorner.Parent = rainbowHandle
-
     local rainbowClickArea = Instance.new("TextButton")
     rainbowClickArea.Size = UDim2.new(0, 44, 0, 24)
     rainbowClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
@@ -1496,7 +1450,6 @@ if settingsPage then
     rainbowClickArea.Text = ""
     rainbowClickArea.ZIndex = 10
     rainbowClickArea.Parent = rainbowFrame
-
     SetRainbowToggleState = function(value)
         if value then
             TweenService:Create(rainbowToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
@@ -1525,14 +1478,11 @@ if settingsPage then
             end
         end
     end
-
     SetRainbowToggleState(_G.RainbowEnabled)
-
     rainbowClickArea.MouseButton1Click:Connect(function()
         PlayClickSound()
         SetRainbowToggleState(not _G.RainbowEnabled)
     end)
-
     local function UpdateRainbowText()
         local lang = GetLang()
         rainbowLabel.Text = lang.Toggles.Rainbow[1]
@@ -1545,7 +1495,6 @@ if settingsPage then
     scaleFrame.Position = UDim2.new(0, 10, 0, 170)
     scaleFrame.BackgroundTransparency = 1
     scaleFrame.Parent = settingsContainer
-
     local scaleLabel = Instance.new("TextLabel")
     scaleLabel.Size = UDim2.new(0.6, 0, 0, 20)
     scaleLabel.BackgroundTransparency = 1
@@ -1555,7 +1504,6 @@ if settingsPage then
     scaleLabel.Font = Enum.Font.GothamBold
     scaleLabel.TextXAlignment = Enum.TextXAlignment.Left
     scaleLabel.Parent = scaleFrame
-
     local scaleDesc = Instance.new("TextLabel")
     scaleDesc.Size = UDim2.new(0.6, 0, 0, 16)
     scaleDesc.Position = UDim2.new(0, 0, 0, 22)
@@ -1566,7 +1514,6 @@ if settingsPage then
     scaleDesc.Font = Enum.Font.Gotham
     scaleDesc.TextXAlignment = Enum.TextXAlignment.Left
     scaleDesc.Parent = scaleFrame
-
     scaleValue = Instance.new("TextLabel")
     scaleValue.Size = UDim2.new(0.15, 0, 0, 20)
     scaleValue.Position = UDim2.new(0.85, 0, 0, 0)
@@ -1577,41 +1524,33 @@ if settingsPage then
     scaleValue.Font = Enum.Font.GothamBold
     scaleValue.TextXAlignment = Enum.TextXAlignment.Right
     scaleValue.Parent = scaleFrame
-
     local scaleSliderBg = Instance.new("Frame")
     scaleSliderBg.Size = UDim2.new(0.5, 0, 0, 6)
     scaleSliderBg.Position = UDim2.new(0, 0, 0, 40)
     scaleSliderBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
     scaleSliderBg.BorderSizePixel = 0
     scaleSliderBg.Parent = scaleFrame
-
     local scaleSliderCorner = Instance.new("UICorner")
     scaleSliderCorner.CornerRadius = UDim.new(1, 0)
     scaleSliderCorner.Parent = scaleSliderBg
-
     scaleSliderFill = Instance.new("Frame")
     scaleSliderFill.Size = UDim2.new(0.5, 0, 1, 0)
     scaleSliderFill.BackgroundColor3 = Color3.fromRGB(59, 130, 246)
     scaleSliderFill.BorderSizePixel = 0
     scaleSliderFill.Parent = scaleSliderBg
-
     local scaleFillCorner = Instance.new("UICorner")
     scaleFillCorner.CornerRadius = UDim.new(1, 0)
     scaleFillCorner.Parent = scaleSliderFill
-
     scaleSliderHandle = Instance.new("Frame")
     scaleSliderHandle.Size = UDim2.new(0, 16, 0, 16)
     scaleSliderHandle.Position = UDim2.new(0.5, -8, 0.5, -8)
     scaleSliderHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     scaleSliderHandle.BorderSizePixel = 0
     scaleSliderHandle.Parent = scaleSliderBg
-
     local scaleHandleCorner = Instance.new("UICorner")
     scaleHandleCorner.CornerRadius = UDim.new(1, 0)
     scaleHandleCorner.Parent = scaleSliderHandle
-
     local isDraggingScale = false
-
     local function UpdateScale(mouseX)
         local absPos = scaleSliderBg.AbsolutePosition.X
         local width = scaleSliderBg.AbsoluteSize.X
@@ -1627,33 +1566,28 @@ if settingsPage then
         MainFrame.Size = UDim2.new(0, 640 * (val / 45), 0, 470 * (val / 45))
         if _G.FlyingDots then RebuildDots() end
     end
-
     scaleSliderHandle.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             isDraggingScale = true
             UpdateScale(input.Position.X)
         end
     end)
-
     scaleSliderBg.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             isDraggingScale = true
             UpdateScale(input.Position.X)
         end
     end)
-
     UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             isDraggingScale = false
         end
     end)
-
     UserInputService.InputChanged:Connect(function(input)
         if isDraggingScale and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             UpdateScale(input.Position.X)
         end
     end)
-
     local function UpdateScaleText()
         local lang = GetLang()
         scaleLabel.Text = lang.Toggles.Scale[1]
@@ -1667,14 +1601,12 @@ if settingsPage then
     flyingFrame.BackgroundTransparency = 1
     flyingFrame.ZIndex = 100
     flyingFrame.Parent = MainFrame
-
     local dotContainer = Instance.new("Frame")
     dotContainer.Name = "Particles"
     dotContainer.Size = UDim2.new(1, 0, 1, 0)
     dotContainer.BackgroundTransparency = 1
     dotContainer.ClipsDescendants = true
     dotContainer.Parent = flyingFrame
-
     local function RebuildDots()
         for _, data in ipairs(Dots) do
             if data and data.Frame then data.Frame:Destroy() end
@@ -1713,7 +1645,6 @@ if settingsPage then
             table.insert(Dots, {Frame = dot, SpeedX = speedX, SpeedY = speedY, RotSpeed = rotSpeed, Angle = math.random() * math.pi * 2, PosX = math.random(0, w), PosY = math.random(0, h)})
         end
     end
-
     local function UpdateDots()
         local w = MainFrame.AbsoluteSize.X
         local h = MainFrame.AbsoluteSize.Y
@@ -1731,11 +1662,9 @@ if settingsPage then
             end
         end
     end
-
     MainFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
         if _G.FlyingDots then RebuildDots() end
     end)
-
     local function ToggleFlyingDots(state)
         _G.FlyingDots = state
         if state then
@@ -1750,13 +1679,11 @@ if settingsPage then
             Dots = {}
         end
     end
-
     local flyingToggleFrame = Instance.new("Frame")
     flyingToggleFrame.Size = UDim2.new(1, 0, 0, 45)
     flyingToggleFrame.Position = UDim2.new(0, 0, 0, 230)
     flyingToggleFrame.BackgroundTransparency = 1
     flyingToggleFrame.Parent = settingsContainer
-
     local flyingLabel = Instance.new("TextLabel")
     flyingLabel.Size = UDim2.new(0.6, 0, 0, 20)
     flyingLabel.BackgroundTransparency = 1
@@ -1766,7 +1693,6 @@ if settingsPage then
     flyingLabel.Font = Enum.Font.GothamBold
     flyingLabel.TextXAlignment = Enum.TextXAlignment.Left
     flyingLabel.Parent = flyingToggleFrame
-
     local flyingDesc = Instance.new("TextLabel")
     flyingDesc.Size = UDim2.new(0.7, 0, 0, 16)
     flyingDesc.Position = UDim2.new(0, 0, 0, 22)
@@ -1777,29 +1703,24 @@ if settingsPage then
     flyingDesc.Font = Enum.Font.Gotham
     flyingDesc.TextXAlignment = Enum.TextXAlignment.Left
     flyingDesc.Parent = flyingToggleFrame
-
     local flyingToggleBg = Instance.new("Frame")
     flyingToggleBg.Size = UDim2.new(0, 44, 0, 24)
     flyingToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
     flyingToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
     flyingToggleBg.BorderSizePixel = 0
     flyingToggleBg.Parent = flyingToggleFrame
-
     local flyingToggleCorner = Instance.new("UICorner")
     flyingToggleCorner.CornerRadius = UDim.new(1, 0)
     flyingToggleCorner.Parent = flyingToggleBg
-
     local flyingHandle = Instance.new("Frame")
     flyingHandle.Size = UDim2.new(0, 18, 0, 18)
     flyingHandle.Position = UDim2.new(0, 3, 0.5, -9)
     flyingHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     flyingHandle.BorderSizePixel = 0
     flyingHandle.Parent = flyingToggleBg
-
     local flyingHandleCorner = Instance.new("UICorner")
     flyingHandleCorner.CornerRadius = UDim.new(1, 0)
     flyingHandleCorner.Parent = flyingHandle
-
     local flyingClickArea = Instance.new("TextButton")
     flyingClickArea.Size = UDim2.new(0, 44, 0, 24)
     flyingClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
@@ -1807,7 +1728,6 @@ if settingsPage then
     flyingClickArea.Text = ""
     flyingClickArea.ZIndex = 10
     flyingClickArea.Parent = flyingToggleFrame
-
     SetFlyingToggleState = function(value)
         if value then
             TweenService:Create(flyingToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
@@ -1818,14 +1738,11 @@ if settingsPage then
         end
         ToggleFlyingDots(value)
     end
-
     SetFlyingToggleState(_G.FlyingDots)
-
     flyingClickArea.MouseButton1Click:Connect(function()
         PlayClickSound()
         SetFlyingToggleState(not _G.FlyingDots)
     end)
-
     local function UpdateFlyingText()
         local lang = GetLang()
         flyingLabel.Text = lang.Toggles.FlyingDots[1]
@@ -1838,7 +1755,6 @@ if settingsPage then
     resetFrame.Position = UDim2.new(0, 0, 0, 280)
     resetFrame.BackgroundTransparency = 1
     resetFrame.Parent = settingsContainer
-
     local resetLabel = Instance.new("TextLabel")
     resetLabel.Size = UDim2.new(0.6, 0, 0, 20)
     resetLabel.BackgroundTransparency = 1
@@ -1848,7 +1764,6 @@ if settingsPage then
     resetLabel.Font = Enum.Font.GothamBold
     resetLabel.TextXAlignment = Enum.TextXAlignment.Left
     resetLabel.Parent = resetFrame
-
     local resetDesc = Instance.new("TextLabel")
     resetDesc.Size = UDim2.new(0.7, 0, 0, 16)
     resetDesc.Position = UDim2.new(0, 0, 0, 22)
@@ -1859,29 +1774,24 @@ if settingsPage then
     resetDesc.Font = Enum.Font.Gotham
     resetDesc.TextXAlignment = Enum.TextXAlignment.Left
     resetDesc.Parent = resetFrame
-
     local resetToggleBg = Instance.new("Frame")
     resetToggleBg.Size = UDim2.new(0, 44, 0, 24)
     resetToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
     resetToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
     resetToggleBg.BorderSizePixel = 0
     resetToggleBg.Parent = resetFrame
-
     local resetToggleCorner = Instance.new("UICorner")
     resetToggleCorner.CornerRadius = UDim.new(1, 0)
     resetToggleCorner.Parent = resetToggleBg
-
     local resetHandle = Instance.new("Frame")
     resetHandle.Size = UDim2.new(0, 18, 0, 18)
     resetHandle.Position = UDim2.new(0, 3, 0.5, -9)
     resetHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     resetHandle.BorderSizePixel = 0
     resetHandle.Parent = resetToggleBg
-
     local resetHandleCorner = Instance.new("UICorner")
     resetHandleCorner.CornerRadius = UDim.new(1, 0)
     resetHandleCorner.Parent = resetHandle
-
     local resetClickArea = Instance.new("TextButton")
     resetClickArea.Size = UDim2.new(0, 44, 0, 24)
     resetClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
@@ -1889,9 +1799,7 @@ if settingsPage then
     resetClickArea.Text = ""
     resetClickArea.ZIndex = 10
     resetClickArea.Parent = resetFrame
-
     local isResetOn = false
-
     local function PerformReset()
         _G.CustomThemeEnabled = false
         _G.MenuThemeColor = Color3.fromRGB(59, 130, 246)
@@ -1903,7 +1811,6 @@ if settingsPage then
         _G.ChamsEnabled = false
         _G.ESPEnabled = false
         _G.HealthBarEnabled = false
-
         MainFrame.BackgroundTransparency = 0.12
         MainFrame.Size = UDim2.new(0, 640, 0, 470)
         MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
@@ -1912,58 +1819,46 @@ if settingsPage then
         MainStroke.Color = _G.MenuThemeColor
         UpdateIndicatorColor(_G.MenuThemeColor)
         SearchStroke.Color = _G.MenuThemeColor
-
         RemoveChams()
         if SetChamsToggleState then SetChamsToggleState(false) end
         RemoveESP()
         if SetESPToggleState then SetESPToggleState(false) end
         RemoveHealthBar()
         if SetHealthBarToggleState then SetHealthBarToggleState(false) end
-
         for _, btn in ipairs(langButtonData) do pcall(btn.Update, false) end
         UpdateAllTexts()
-
         if rainbowConnection then rainbowConnection:Disconnect() rainbowConnection = nil end
         if SetRainbowToggleState then SetRainbowToggleState(false) end
-
         if DotConnection then DotConnection:Disconnect() DotConnection = nil end
         for _, data in ipairs(Dots) do if data and data.Frame then data.Frame:Destroy() end end
         Dots = {}
         _G.FlyingDots = false
         if SetFlyingToggleState then SetFlyingToggleState(false) end
-
         if SetToggleState then SetToggleState(false) end
         if pickerContainer then pickerContainer.Visible = false end
         if ShiftContainer then ShiftContainer(false) end
-
         if opacitySliderFill and opacitySliderHandle and opacityValue then
             opacitySliderFill.Size = UDim2.new(0.24, 0, 1, 0)
             opacitySliderHandle.Position = UDim2.new(0.24, -8, 0.5, -8)
             opacityValue.Text = "12%"
         end
-
         if scaleSliderFill and scaleSliderHandle and scaleValue then
             scaleSliderFill.Size = UDim2.new(0.5, 0, 1, 0)
             scaleSliderHandle.Position = UDim2.new(0.5, -8, 0.5, -8)
             scaleValue.Text = "100%"
         end
-
         if pickerDot then pickerDot.Position = UDim2.new(0.5, -5, 0.5, -5) end
-
         SwitchToTab(1)
         SearchInput.Text = "Search..."
         SearchClose.Visible = false
-
         print("[RESET] All settings restored")
         PlayClickSound()
         isResetOn = false
     end
-
     resetClickArea.MouseButton1Click:Connect(function()
         PlayClickSound()
         PerformReset()
     end)
-
     local function UpdateResetText()
         local lang = GetLang()
         resetLabel.Text = lang.Toggles.Reset[1]
@@ -1987,53 +1882,37 @@ IconButton.Parent = ScreenGui
 IconButton.Draggable = true
 IconButton.Active = true
 IconButton.Selectable = true
-
 HideFromScanner(IconButton)
-
 local IconCorner = Instance.new("UICorner")
 IconCorner.CornerRadius = UDim.new(0, 12)
 IconCorner.Parent = IconButton
 
-task.wait(0.3)
-IconButton.BackgroundTransparency = 1
-IconButton.Size = UDim2.new(0, 20, 0, 20)
-IconButton.Rotation = -15
-TweenService:Create(IconButton, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 55, 0, 55), BackgroundTransparency = 0.2, Rotation = 0}):Play()
-
 IconButton.MouseButton1Click:Connect(function()
     PlayClickSound()
-    TweenService:Create(IconButton, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Size = UDim2.new(0, 45, 0, 45)}):Play()
-    task.wait(0.1)
-    TweenService:Create(IconButton, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 55, 0, 55)}):Play()
     if MainFrame.Visible then
-        TweenService:Create(MainScale, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1.02}):Play()
-        task.wait(0.08)
-        TweenService:Create(MainScale, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.5}):Play()
-        TweenService:Create(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 0.7}):Play()
+        TweenService:Create(MainScale, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.7}):Play()
+        TweenService:Create(MainFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Rotation = 10, BackgroundTransparency = 0.8}):Play()
         task.wait(0.15)
-        TweenService:Create(MainScale, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.2}):Play()
-        TweenService:Create(MainFrame, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
-        task.wait(0.12)
+        TweenService:Create(MainScale, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.2}):Play()
+        TweenService:Create(MainFrame, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
+        task.wait(0.15)
         MainFrame.Visible = false
         MainScale.Scale = 1
-        MainFrame.BackgroundTransparency = _G.MenuOpacity / 100
         MainFrame.Rotation = 0
+        MainFrame.BackgroundTransparency = _G.MenuOpacity / 100
     else
         MainFrame.Visible = true
         MainScale.Scale = 0.1
+        MainFrame.Rotation = -15
         MainFrame.BackgroundTransparency = 1
-        MainFrame.Rotation = -10
         MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
         task.wait(0.03)
-        TweenService:Create(MainScale, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 0.7}):Play()
-        TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.5, Rotation = -3}):Play()
-        task.wait(0.3)
-        TweenService:Create(MainScale, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
-        TweenService:Create(MainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {BackgroundTransparency = _G.MenuOpacity / 100, Rotation = 0}):Play()
-        task.wait(0.5)
-        TweenService:Create(MainScale, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 0.98}):Play()
-        task.wait(0.05)
-        TweenService:Create(MainScale, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+        TweenService:Create(MainScale, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 0.6}):Play()
+        TweenService:Create(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Rotation = -5, BackgroundTransparency = 0.4}):Play()
+        task.wait(0.25)
+        TweenService:Create(MainScale, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+        TweenService:Create(MainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Rotation = 0, BackgroundTransparency = _G.MenuOpacity / 100}):Play()
+        task.wait(0.4)
         MainFrame.Rotation = 0
     end
 end)
@@ -2053,5 +1932,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] META v7.0.28 - Health Bar Added")
+print("[META] META v7.0.30 - ESP Fixed + Health Bar")
 print("[META] Press Insert or click icon")
