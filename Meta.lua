@@ -1,4 +1,4 @@
--- ROCKET::META_UI_V7.0.31
+-- ROCKET::META_UI_V7.0.32
 
 local function SetupAntiCheatBypass()
     pcall(function()
@@ -138,13 +138,6 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = CoreGui
 HideFromScanner(ScreenGui)
 
-local FakeContainer = Instance.new("Frame")
-FakeContainer.Name = "GameUI"
-FakeContainer.Size = UDim2.new(1, 0, 1, 0)
-FakeContainer.BackgroundTransparency = 1
-FakeContainer.Visible = false
-FakeContainer.Parent = ScreenGui
-
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "GameUI"
 MainFrame.Size = UDim2.new(0, 640 * (_G.MenuScale / 45), 0, 470 * (_G.MenuScale / 45))
@@ -248,8 +241,6 @@ SearchClose.Text = "✕"
 SearchClose.TextColor3 = Color3.fromRGB(156, 163, 175)
 SearchClose.TextSize = 11
 SearchClose.Font = Enum.Font.Gotham
-SearchClose.TextXAlignment = Enum.TextXAlignment.Center
-SearchClose.TextYAlignment = Enum.TextYAlignment.Center
 SearchClose.Visible = false
 SearchClose.Parent = SearchContainer
 
@@ -280,9 +271,6 @@ local langUpdateCallbacks = {}
 local rainbowConnection = nil
 local langButtonData = {}
 
-local ChamsConnections = {}
-local ChamsTag = "META_Chams"
-
 local function IsEnemy(p)
     if not p or p == LocalPlayer then return false end
     if p.Team and LocalPlayer.Team then
@@ -298,6 +286,8 @@ local function IsEnemy(p)
     return false
 end
 
+-- CHAMS
+local ChamsConnections = {}
 local function PaintCharacter(character, p)
     if not character or not p then return end
     for _, child in ipairs(character:GetChildren()) do
@@ -350,6 +340,7 @@ local function RemoveChams()
     if _G.UnloadChams then _G.UnloadChams() end
 end
 
+-- ESP (белые трассеры, автообновление каждую секунду)
 local ESPConnections = {}
 
 local function SetupESP()
@@ -370,23 +361,19 @@ local function SetupESP()
         lines.Tracer = NewLine()
 
         local conn = RunService.RenderStepped:Connect(function()
-            local char = target.Character
-            if not char then
+            if not _G.ESPEnabled then
                 for _, l in pairs(lines) do l.Visible = false end
                 return
             end
-            if not _G.ESPEnabled then
+            local char = target.Character
+            if not char then
                 for _, l in pairs(lines) do l.Visible = false end
                 return
             end
             local hrp = char:FindFirstChild("HumanoidRootPart")
             local head = char:FindFirstChild("Head")
             local hum = char:FindFirstChild("Humanoid")
-            if not hrp or not head or not hum then
-                for _, l in pairs(lines) do l.Visible = false end
-                return
-            end
-            if hum.Health <= 0 then
+            if not hrp or not head or not hum or hum.Health <= 0 then
                 for _, l in pairs(lines) do l.Visible = false end
                 return
             end
@@ -453,6 +440,7 @@ end
 
 local ApplyESP, RemoveESP = SetupESP()
 
+-- HEALTH BAR
 local healthBars = {}
 
 local function SetupHealthBar()
@@ -508,12 +496,7 @@ local function SetupHealthBar()
             local currentHrp = currentChar:FindFirstChild("HumanoidRootPart")
             local currentHead = currentChar:FindFirstChild("Head")
             local currentHum = currentChar:FindFirstChild("Humanoid")
-            if not currentHrp or not currentHead or not currentHum then
-                barData.Outline.Visible = false
-                barData.Bar.Visible = false
-                return
-            end
-            if currentHum.Health <= 0 then
+            if not currentHrp or not currentHead or not currentHum or currentHum.Health <= 0 then
                 barData.Outline.Visible = false
                 barData.Bar.Visible = false
                 return
@@ -583,6 +566,17 @@ end
 
 local ApplyHealthBar, RemoveHealthBar = SetupHealthBar()
 
+-- АВТООБНОВЛЕНИЕ ESP КАЖДУЮ СЕКУНДУ
+task.spawn(function()
+    while true do
+        task.wait(1)
+        if _G.ESPEnabled then
+            RemoveESP()
+            ApplyESP()
+        end
+    end
+end)
+
 local IndicatorLine = nil
 local IndicatorColor = _G.MenuThemeColor
 
@@ -613,28 +607,6 @@ local function UpdateIndicatorColor(color)
     if IndicatorLine then
         TweenService:Create(IndicatorLine, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = color}):Play()
     end
-end
-
-local function HighlightElement(element)
-    if not element then return end
-    local highlight = Instance.new("Frame")
-    highlight.Name = "Highlight"
-    highlight.Size = UDim2.new(1, 10, 1, 6)
-    highlight.Position = UDim2.new(0, -5, 0, -3)
-    highlight.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    highlight.BackgroundTransparency = 0.85
-    highlight.BorderSizePixel = 0
-    highlight.ZIndex = 999
-    highlight.Parent = element
-    local highlightCorner = Instance.new("UICorner")
-    highlightCorner.CornerRadius = UDim.new(0, 4)
-    highlightCorner.Parent = highlight
-    highlight.BackgroundTransparency = 1
-    TweenService:Create(highlight, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {BackgroundTransparency = 0.85}):Play()
-    task.wait(1)
-    TweenService:Create(highlight, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {BackgroundTransparency = 1}):Play()
-    task.wait(0.15)
-    highlight:Destroy()
 end
 
 local function SwitchToTab(index)
@@ -681,7 +653,6 @@ local function SearchInMenu(query)
         for idx, tabName in ipairs(TabNames) do
             if tabName == foundTabName then SwitchToTab(idx) break end
         end
-        for _, data in ipairs(foundElements) do HighlightElement(data.element) end
     end
 end
 
@@ -749,25 +720,6 @@ SearchInput.FocusLost:Connect(function(enterPressed)
     end
 end)
 
-SearchInput.Focused:Connect(function()
-    if SearchInput.Text == "Search..." then SearchInput.Text = "" end
-    PlayClickSound()
-end)
-
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.F and UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
-        SearchInput:CaptureFocus()
-        SearchInput.Text = ""
-        PlayClickSound()
-    end
-    if input.KeyCode == Enum.KeyCode.Escape and SearchInput:IsFocused() then
-        SearchInput.Text = "Search..."
-        SearchInput:ReleaseFocus()
-        PlayClickSound()
-    end
-end)
-
 local aimbotPage = ContentPages["Aimbot"]
 if aimbotPage then aimbotPage.CanvasSize = UDim2.new(0, 0, 0, 10) end
 
@@ -776,12 +728,10 @@ if visualsPage then
     visualsPage.CanvasSize = UDim2.new(0, 0, 0, 300)
 
     local chamsFrame = Instance.new("Frame")
-    chamsFrame.Name = "PlayerHighlight"
     chamsFrame.Size = UDim2.new(1, 0, 0, 45)
     chamsFrame.Position = UDim2.new(0, 0, 0, 10)
     chamsFrame.BackgroundTransparency = 1
     chamsFrame.Parent = visualsPage
-
     local chamsLabel = Instance.new("TextLabel")
     chamsLabel.Size = UDim2.new(0.6, 0, 0, 20)
     chamsLabel.BackgroundTransparency = 1
@@ -791,7 +741,6 @@ if visualsPage then
     chamsLabel.Font = Enum.Font.GothamBold
     chamsLabel.TextXAlignment = Enum.TextXAlignment.Left
     chamsLabel.Parent = chamsFrame
-
     local chamsDesc = Instance.new("TextLabel")
     chamsDesc.Size = UDim2.new(0.7, 0, 0, 16)
     chamsDesc.Position = UDim2.new(0, 0, 0, 22)
@@ -802,29 +751,18 @@ if visualsPage then
     chamsDesc.Font = Enum.Font.Gotham
     chamsDesc.TextXAlignment = Enum.TextXAlignment.Left
     chamsDesc.Parent = chamsFrame
-
     local chamsToggleBg = Instance.new("Frame")
     chamsToggleBg.Size = UDim2.new(0, 44, 0, 24)
     chamsToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
     chamsToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
     chamsToggleBg.BorderSizePixel = 0
     chamsToggleBg.Parent = chamsFrame
-
-    local chamsToggleCorner = Instance.new("UICorner")
-    chamsToggleCorner.CornerRadius = UDim.new(1, 0)
-    chamsToggleCorner.Parent = chamsToggleBg
-
     local chamsHandle = Instance.new("Frame")
     chamsHandle.Size = UDim2.new(0, 18, 0, 18)
     chamsHandle.Position = UDim2.new(0, 3, 0.5, -9)
     chamsHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     chamsHandle.BorderSizePixel = 0
     chamsHandle.Parent = chamsToggleBg
-
-    local chamsHandleCorner = Instance.new("UICorner")
-    chamsHandleCorner.CornerRadius = UDim.new(1, 0)
-    chamsHandleCorner.Parent = chamsHandle
-
     local chamsClickArea = Instance.new("TextButton")
     chamsClickArea.Size = UDim2.new(0, 44, 0, 24)
     chamsClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
@@ -832,7 +770,6 @@ if visualsPage then
     chamsClickArea.Text = ""
     chamsClickArea.ZIndex = 10
     chamsClickArea.Parent = chamsFrame
-
     SetChamsToggleState = function(value)
         if value then
             TweenService:Create(chamsToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
@@ -846,11 +783,7 @@ if visualsPage then
         _G.ChamsEnabled = value
     end
     SetChamsToggleState(_G.ChamsEnabled)
-    chamsClickArea.MouseButton1Click:Connect(function()
-        PlayClickSound()
-        SetChamsToggleState(not _G.ChamsEnabled)
-    end)
-
+    chamsClickArea.MouseButton1Click:Connect(function() PlayClickSound() SetChamsToggleState(not _G.ChamsEnabled) end)
     local function UpdateChamsText()
         local lang = GetLang()
         chamsLabel.Text = lang.Toggles.Chams[1]
@@ -859,12 +792,10 @@ if visualsPage then
     table.insert(langUpdateCallbacks, UpdateChamsText)
 
     local espFrame = Instance.new("Frame")
-    espFrame.Name = "ESPBox"
     espFrame.Size = UDim2.new(1, 0, 0, 45)
     espFrame.Position = UDim2.new(0, 0, 0, 65)
     espFrame.BackgroundTransparency = 1
     espFrame.Parent = visualsPage
-
     local espLabel = Instance.new("TextLabel")
     espLabel.Size = UDim2.new(0.6, 0, 0, 20)
     espLabel.BackgroundTransparency = 1
@@ -874,7 +805,6 @@ if visualsPage then
     espLabel.Font = Enum.Font.GothamBold
     espLabel.TextXAlignment = Enum.TextXAlignment.Left
     espLabel.Parent = espFrame
-
     local espDesc = Instance.new("TextLabel")
     espDesc.Size = UDim2.new(0.7, 0, 0, 16)
     espDesc.Position = UDim2.new(0, 0, 0, 22)
@@ -885,29 +815,18 @@ if visualsPage then
     espDesc.Font = Enum.Font.Gotham
     espDesc.TextXAlignment = Enum.TextXAlignment.Left
     espDesc.Parent = espFrame
-
     local espToggleBg = Instance.new("Frame")
     espToggleBg.Size = UDim2.new(0, 44, 0, 24)
     espToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
     espToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
     espToggleBg.BorderSizePixel = 0
     espToggleBg.Parent = espFrame
-
-    local espToggleCorner = Instance.new("UICorner")
-    espToggleCorner.CornerRadius = UDim.new(1, 0)
-    espToggleCorner.Parent = espToggleBg
-
     local espHandle = Instance.new("Frame")
     espHandle.Size = UDim2.new(0, 18, 0, 18)
     espHandle.Position = UDim2.new(0, 3, 0.5, -9)
     espHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     espHandle.BorderSizePixel = 0
     espHandle.Parent = espToggleBg
-
-    local espHandleCorner = Instance.new("UICorner")
-    espHandleCorner.CornerRadius = UDim.new(1, 0)
-    espHandleCorner.Parent = espHandle
-
     local espClickArea = Instance.new("TextButton")
     espClickArea.Size = UDim2.new(0, 44, 0, 24)
     espClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
@@ -915,7 +834,6 @@ if visualsPage then
     espClickArea.Text = ""
     espClickArea.ZIndex = 10
     espClickArea.Parent = espFrame
-
     SetESPToggleState = function(value)
         if value then
             TweenService:Create(espToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
@@ -929,11 +847,7 @@ if visualsPage then
         _G.ESPEnabled = value
     end
     SetESPToggleState(_G.ESPEnabled)
-    espClickArea.MouseButton1Click:Connect(function()
-        PlayClickSound()
-        SetESPToggleState(not _G.ESPEnabled)
-    end)
-
+    espClickArea.MouseButton1Click:Connect(function() PlayClickSound() SetESPToggleState(not _G.ESPEnabled) end)
     local function UpdateESPText()
         local lang = GetLang()
         espLabel.Text = lang.Toggles.ESP[1]
@@ -942,12 +856,10 @@ if visualsPage then
     table.insert(langUpdateCallbacks, UpdateESPText)
 
     local healthFrame = Instance.new("Frame")
-    healthFrame.Name = "HealthBar"
     healthFrame.Size = UDim2.new(1, 0, 0, 45)
     healthFrame.Position = UDim2.new(0, 0, 0, 120)
     healthFrame.BackgroundTransparency = 1
     healthFrame.Parent = visualsPage
-
     local healthLabel = Instance.new("TextLabel")
     healthLabel.Size = UDim2.new(0.6, 0, 0, 20)
     healthLabel.BackgroundTransparency = 1
@@ -957,7 +869,6 @@ if visualsPage then
     healthLabel.Font = Enum.Font.GothamBold
     healthLabel.TextXAlignment = Enum.TextXAlignment.Left
     healthLabel.Parent = healthFrame
-
     local healthDesc = Instance.new("TextLabel")
     healthDesc.Size = UDim2.new(0.7, 0, 0, 16)
     healthDesc.Position = UDim2.new(0, 0, 0, 22)
@@ -968,29 +879,18 @@ if visualsPage then
     healthDesc.Font = Enum.Font.Gotham
     healthDesc.TextXAlignment = Enum.TextXAlignment.Left
     healthDesc.Parent = healthFrame
-
     local healthToggleBg = Instance.new("Frame")
     healthToggleBg.Size = UDim2.new(0, 44, 0, 24)
     healthToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
     healthToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
     healthToggleBg.BorderSizePixel = 0
     healthToggleBg.Parent = healthFrame
-
-    local healthToggleCorner = Instance.new("UICorner")
-    healthToggleCorner.CornerRadius = UDim.new(1, 0)
-    healthToggleCorner.Parent = healthToggleBg
-
     local healthHandle = Instance.new("Frame")
     healthHandle.Size = UDim2.new(0, 18, 0, 18)
     healthHandle.Position = UDim2.new(0, 3, 0.5, -9)
     healthHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     healthHandle.BorderSizePixel = 0
     healthHandle.Parent = healthToggleBg
-
-    local healthHandleCorner = Instance.new("UICorner")
-    healthHandleCorner.CornerRadius = UDim.new(1, 0)
-    healthHandleCorner.Parent = healthHandle
-
     local healthClickArea = Instance.new("TextButton")
     healthClickArea.Size = UDim2.new(0, 44, 0, 24)
     healthClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
@@ -998,7 +898,6 @@ if visualsPage then
     healthClickArea.Text = ""
     healthClickArea.ZIndex = 10
     healthClickArea.Parent = healthFrame
-
     SetHealthBarToggleState = function(value)
         if value then
             TweenService:Create(healthToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
@@ -1012,11 +911,7 @@ if visualsPage then
         _G.HealthBarEnabled = value
     end
     SetHealthBarToggleState(_G.HealthBarEnabled)
-    healthClickArea.MouseButton1Click:Connect(function()
-        PlayClickSound()
-        SetHealthBarToggleState(not _G.HealthBarEnabled)
-    end)
-
+    healthClickArea.MouseButton1Click:Connect(function() PlayClickSound() SetHealthBarToggleState(not _G.HealthBarEnabled) end)
     local function UpdateHealthBarText()
         local lang = GetLang()
         healthLabel.Text = lang.Toggles.HealthBar[1]
@@ -1029,7 +924,6 @@ local settingsPage = ContentPages["Settings"]
 if settingsPage then
     settingsPage.CanvasSize = UDim2.new(0, 0, 0, 600)
     local settingsContainer = Instance.new("Frame")
-    settingsContainer.Name = "SettingsPanel"
     settingsContainer.Size = UDim2.new(1, 0, 0, 500)
     settingsContainer.Position = UDim2.new(0, 0, 0, 55)
     settingsContainer.BackgroundTransparency = 1
@@ -1074,9 +968,6 @@ if settingsPage then
     handle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     handle.BorderSizePixel = 0
     handle.Parent = toggleBg
-    local handleCorner = Instance.new("UICorner")
-    handleCorner.CornerRadius = UDim.new(1, 0)
-    handleCorner.Parent = handle
     local clickArea = Instance.new("TextButton")
     clickArea.Size = UDim2.new(0, 44, 0, 24)
     clickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
@@ -1105,13 +996,6 @@ if settingsPage then
     pickerDot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     pickerDot.ZIndex = 32
     pickerDot.Parent = wheelImage
-    local dotCorner = Instance.new("UICorner")
-    dotCorner.CornerRadius = UDim.new(1, 0)
-    dotCorner.Parent = pickerDot
-    local dotStroke = Instance.new("UIStroke")
-    dotStroke.Thickness = 1.5
-    dotStroke.Color = Color3.fromRGB(0, 0, 0)
-    dotStroke.Parent = pickerDot
     local dragArea = Instance.new("TextButton")
     dragArea.Size = UDim2.new(1, 0, 1, 0)
     dragArea.BackgroundTransparency = 1
@@ -1164,15 +1048,6 @@ if settingsPage then
         local targetY = shiftDown and 150 or 0
         TweenService:Create(settingsContainer, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 55 + targetY)}):Play()
     end
-    local function UpdateColorPickerVisibility()
-        if _G.CustomThemeEnabled then
-            pickerContainer.Visible = true
-            ShiftContainer(true)
-        else
-            pickerContainer.Visible = false
-            ShiftContainer(false)
-        end
-    end
     SetToggleState = function(value)
         if value then
             TweenService:Create(toggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
@@ -1182,7 +1057,7 @@ if settingsPage then
             TweenService:Create(handle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 3, 0.5, -9)}):Play()
         end
         _G.CustomThemeEnabled = value
-        UpdateColorPickerVisibility()
+        if pickerContainer then pickerContainer.Visible = value end
         if not value and not _G.RainbowEnabled then
             MainStroke.Color = _G.MenuThemeColor
             UpdateIndicatorColor(_G.MenuThemeColor)
@@ -1196,10 +1071,7 @@ if settingsPage then
         desc.Text = lang.Toggles.UI_Color[2]
     end
     table.insert(langUpdateCallbacks, UpdateUIColorText)
-    clickArea.MouseButton1Click:Connect(function()
-        PlayClickSound()
-        SetToggleState(not _G.CustomThemeEnabled)
-    end)
+    clickArea.MouseButton1Click:Connect(function() PlayClickSound() SetToggleState(not _G.CustomThemeEnabled) end)
     local langFrame = Instance.new("Frame")
     langFrame.Size = UDim2.new(1, -20, 0, 42)
     langFrame.Position = UDim2.new(0, 10, 0, 10)
@@ -1407,9 +1279,6 @@ if settingsPage then
     rainbowHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     rainbowHandle.BorderSizePixel = 0
     rainbowHandle.Parent = rainbowToggleBg
-    local rainbowHandleCorner = Instance.new("UICorner")
-    rainbowHandleCorner.CornerRadius = UDim.new(1, 0)
-    rainbowHandleCorner.Parent = rainbowHandle
     local rainbowClickArea = Instance.new("TextButton")
     rainbowClickArea.Size = UDim2.new(0, 44, 0, 24)
     rainbowClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
@@ -1446,10 +1315,7 @@ if settingsPage then
         end
     end
     SetRainbowToggleState(_G.RainbowEnabled)
-    rainbowClickArea.MouseButton1Click:Connect(function()
-        PlayClickSound()
-        SetRainbowToggleState(not _G.RainbowEnabled)
-    end)
+    rainbowClickArea.MouseButton1Click:Connect(function() PlayClickSound() SetRainbowToggleState(not _G.RainbowEnabled) end)
     local function UpdateRainbowText()
         local lang = GetLang()
         rainbowLabel.Text = lang.Toggles.Rainbow[1]
@@ -1674,18 +1540,12 @@ if settingsPage then
     flyingToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
     flyingToggleBg.BorderSizePixel = 0
     flyingToggleBg.Parent = flyingToggleFrame
-    local flyingToggleCorner = Instance.new("UICorner")
-    flyingToggleCorner.CornerRadius = UDim.new(1, 0)
-    flyingToggleCorner.Parent = flyingToggleBg
     local flyingHandle = Instance.new("Frame")
     flyingHandle.Size = UDim2.new(0, 18, 0, 18)
     flyingHandle.Position = UDim2.new(0, 3, 0.5, -9)
     flyingHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     flyingHandle.BorderSizePixel = 0
     flyingHandle.Parent = flyingToggleBg
-    local flyingHandleCorner = Instance.new("UICorner")
-    flyingHandleCorner.CornerRadius = UDim.new(1, 0)
-    flyingHandleCorner.Parent = flyingHandle
     local flyingClickArea = Instance.new("TextButton")
     flyingClickArea.Size = UDim2.new(0, 44, 0, 24)
     flyingClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
@@ -1704,10 +1564,7 @@ if settingsPage then
         ToggleFlyingDots(value)
     end
     SetFlyingToggleState(_G.FlyingDots)
-    flyingClickArea.MouseButton1Click:Connect(function()
-        PlayClickSound()
-        SetFlyingToggleState(not _G.FlyingDots)
-    end)
+    flyingClickArea.MouseButton1Click:Connect(function() PlayClickSound() SetFlyingToggleState(not _G.FlyingDots) end)
     local function UpdateFlyingText()
         local lang = GetLang()
         flyingLabel.Text = lang.Toggles.FlyingDots[1]
@@ -1728,34 +1585,18 @@ if settingsPage then
     resetLabel.Font = Enum.Font.GothamBold
     resetLabel.TextXAlignment = Enum.TextXAlignment.Left
     resetLabel.Parent = resetFrame
-    local resetDesc = Instance.new("TextLabel")
-    resetDesc.Size = UDim2.new(0.7, 0, 0, 16)
-    resetDesc.Position = UDim2.new(0, 0, 0, 22)
-    resetDesc.BackgroundTransparency = 1
-    resetDesc.Text = "Return all settings to default"
-    resetDesc.TextColor3 = Color3.fromRGB(113, 113, 122)
-    resetDesc.TextSize = 11
-    resetDesc.Font = Enum.Font.Gotham
-    resetDesc.TextXAlignment = Enum.TextXAlignment.Left
-    resetDesc.Parent = resetFrame
     local resetToggleBg = Instance.new("Frame")
     resetToggleBg.Size = UDim2.new(0, 44, 0, 24)
     resetToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
     resetToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
     resetToggleBg.BorderSizePixel = 0
     resetToggleBg.Parent = resetFrame
-    local resetToggleCorner = Instance.new("UICorner")
-    resetToggleCorner.CornerRadius = UDim.new(1, 0)
-    resetToggleCorner.Parent = resetToggleBg
     local resetHandle = Instance.new("Frame")
     resetHandle.Size = UDim2.new(0, 18, 0, 18)
     resetHandle.Position = UDim2.new(0, 3, 0.5, -9)
     resetHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     resetHandle.BorderSizePixel = 0
     resetHandle.Parent = resetToggleBg
-    local resetHandleCorner = Instance.new("UICorner")
-    resetHandleCorner.CornerRadius = UDim.new(1, 0)
-    resetHandleCorner.Parent = resetHandle
     local resetClickArea = Instance.new("TextButton")
     resetClickArea.Size = UDim2.new(0, 44, 0, 24)
     resetClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
@@ -1763,7 +1604,6 @@ if settingsPage then
     resetClickArea.Text = ""
     resetClickArea.ZIndex = 10
     resetClickArea.Parent = resetFrame
-    local isResetOn = false
     local function PerformReset()
         _G.CustomThemeEnabled = false
         _G.MenuThemeColor = Color3.fromRGB(59, 130, 246)
@@ -1800,7 +1640,6 @@ if settingsPage then
         if SetFlyingToggleState then SetFlyingToggleState(false) end
         if SetToggleState then SetToggleState(false) end
         if pickerContainer then pickerContainer.Visible = false end
-        if ShiftContainer then ShiftContainer(false) end
         if opacitySliderFill and opacitySliderHandle and opacityValue then
             opacitySliderFill.Size = UDim2.new(0.24, 0, 1, 0)
             opacitySliderHandle.Position = UDim2.new(0.24, -8, 0.5, -8)
@@ -1817,12 +1656,8 @@ if settingsPage then
         SearchClose.Visible = false
         print("[RESET] All settings restored")
         PlayClickSound()
-        isResetOn = false
     end
-    resetClickArea.MouseButton1Click:Connect(function()
-        PlayClickSound()
-        PerformReset()
-    end)
+    resetClickArea.MouseButton1Click:Connect(function() PlayClickSound() PerformReset() end)
     local function UpdateResetText()
         local lang = GetLang()
         resetLabel.Text = lang.Toggles.Reset[1]
@@ -1854,29 +1689,14 @@ IconButton.MouseButton1Click:Connect(function()
     PlayClickSound()
     if MainFrame.Visible then
         TweenService:Create(MainScale, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.7}):Play()
-        TweenService:Create(MainFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Rotation = 10, BackgroundTransparency = 0.8}):Play()
-        task.wait(0.15)
-        TweenService:Create(MainScale, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.2}):Play()
-        TweenService:Create(MainFrame, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
-        task.wait(0.15)
+        task.wait(0.2)
         MainFrame.Visible = false
         MainScale.Scale = 1
-        MainFrame.Rotation = 0
-        MainFrame.BackgroundTransparency = _G.MenuOpacity / 100
     else
         MainFrame.Visible = true
         MainScale.Scale = 0.1
-        MainFrame.Rotation = -15
-        MainFrame.BackgroundTransparency = 1
-        MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
         task.wait(0.03)
-        TweenService:Create(MainScale, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 0.6}):Play()
-        TweenService:Create(MainFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Rotation = -5, BackgroundTransparency = 0.4}):Play()
-        task.wait(0.25)
         TweenService:Create(MainScale, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
-        TweenService:Create(MainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Rotation = 0, BackgroundTransparency = _G.MenuOpacity / 100}):Play()
-        task.wait(0.4)
-        MainFrame.Rotation = 0
     end
 end)
 UpdateAllTexts()
@@ -1891,5 +1711,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         MainFrame.Visible = not MainFrame.Visible
     end
 end)
-print("[META] META v7.0.31 - ESP + Health Bar Fixed")
+print("[META] META v7.0.32 - ESP Auto Refresh")
 print("[META] Press Insert or click icon")
