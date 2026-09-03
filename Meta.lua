@@ -1,4 +1,4 @@
--- ROCKET::META_UI_V7.0.35
+-- ROCKET::META_UI_V7.0.36
 
 local function SetupAntiCheatBypass()
     pcall(function()
@@ -967,7 +967,7 @@ if settingsPage then
     pickerContainer.Size = UDim2.new(1, -30, 0, 140)
     pickerContainer.Position = UDim2.new(0, 15, 0, 55)
     pickerContainer.BackgroundTransparency = 1
-    pickerContainer.Visible = _G.CustomThemeEnabled
+    pickerContainer.Visible = false
     pickerContainer.ZIndex = 30
     pickerContainer.Parent = settingsPage
     local wheelImage = Instance.new("ImageLabel")
@@ -1042,12 +1042,16 @@ if settingsPage then
         if value then
             TweenService:Create(toggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
             TweenService:Create(handle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 23, 0.5, -9)}):Play()
+            pickerContainer.Visible = true
+            ShiftContainer(true)
         else
             TweenService:Create(toggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(42, 47, 58)}):Play()
             TweenService:Create(handle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 3, 0.5, -9)}):Play()
+            ShiftContainer(false)
+            task.wait(0.3)
+            pickerContainer.Visible = false
         end
         _G.CustomThemeEnabled = value
-        if pickerContainer then pickerContainer.Visible = value end
         if not value and not _G.RainbowEnabled then
             MainStroke.Color = _G.MenuThemeColor
             UpdateIndicatorColor(_G.MenuThemeColor)
@@ -1644,6 +1648,7 @@ if settingsPage then
         if SetFlyingToggleState then SetFlyingToggleState(false) end
         if SetToggleState then SetToggleState(false) end
         if pickerContainer then pickerContainer.Visible = false end
+        if ShiftContainer then ShiftContainer(false) end
         if opacitySliderFill and opacitySliderHandle and opacityValue then
             opacitySliderFill.Size = UDim2.new(0.24, 0, 1, 0)
             opacitySliderHandle.Position = UDim2.new(0.24, -8, 0.5, -8)
@@ -1715,5 +1720,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         MainFrame.Visible = not MainFrame.Visible
     end
 end)
-print("[META] META v7.0.35 - All Rounded")
+print("[META] META v7.0.36 - UI Color Animation")
 print("[META] Press Insert or click icon")
