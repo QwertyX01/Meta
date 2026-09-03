@@ -1,4 +1,4 @@
--- ROCKET::META_UI_V7.0.43
+ -- ROCKET::META_UI_V7.0.44
 
 local function SetupAntiCheatBypass()
     pcall(function()
@@ -52,7 +52,6 @@ _G.MenuScale = 45
 _G.FlyingDots = false
 _G.ChamsEnabled = false
 _G.ChamsColor = Color3.fromRGB(110, 60, 170)
-_G.ChamsSliderValue = 0.5
 _G.ESPEnabled = false
 _G.HealthBarEnabled = false
 _G.SkeletonEnabled = false
@@ -63,7 +62,6 @@ local opacitySliderFill, opacitySliderHandle, opacityValue = nil, nil, nil
 local scaleSliderFill, scaleSliderHandle, scaleValue = nil, nil, nil
 local pickerDot, pickerContainer = nil, nil
 local chamsPickerDot, chamsPickerContainer = nil, nil
-local chamsSliderFill, chamsSliderHandle, chamsSliderValue = nil, nil, nil
 local SetToggleState, ShiftContainer = nil, nil
 local SetChamsToggleState, SetRainbowToggleState = nil, nil
 local SetFlyingToggleState, SetESPToggleState = nil, nil
@@ -80,7 +78,6 @@ local LANG = {
             Scale = {"Scaling the menu", "Масштабирование меню (60-140%)"},
             FlyingDots = {"Летающие точки", "Точки, летающие с верху меню"},
             Chams = {"Чамсы", "Функция которая делает противников фиолетовым"},
-            ChamsColor = {"Цвет чамсов", "Выбор цвета для чамсов"},
             ESP = {"Линии и 3D Боксы", "Линии с боксами которые ведут к противникам"},
             HealthBar = {"Хп противников", "Полоска здоровья над головой"},
             Skeleton = {"Скелет", "Скелет противников"},
@@ -96,7 +93,6 @@ local LANG = {
             Scale = {"Scaling the menu", "Menu scaling (60-140%)"},
             FlyingDots = {"Flying Dots", "Floating dots from the top of the menu"},
             Chams = {"Chams", "Makes enemies purple"},
-            ChamsColor = {"Chams Color", "Select color for chams"},
             ESP = {"Tracers and 3D Box", "Lines with boxes leading to enemies"},
             HealthBar = {"Health Bar", "Health bar above head"},
             Skeleton = {"Skeleton", "Enemy skeleton ESP"},
@@ -357,22 +353,6 @@ local function RemoveChams()
     if _G.UnloadChams then _G.UnloadChams() end
 end
 
-local function UpdateChamsColorFromSlider()
-    local t = _G.ChamsSliderValue
-    local hue = t
-    _G.ChamsColor = Color3.fromHSV(hue, 0.65, 0.9)
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p.Character then
-            for _, child in ipairs(p.Character:GetChildren()) do
-                if child:IsA("Highlight") and child:GetAttribute("META_Chams") then
-                    child.FillColor = _G.ChamsColor
-                    child.OutlineColor = _G.ChamsColor
-                end
-            end
-        end
-    end
-end
-
 -- ESP
 local ESPConnections = {}
 local function SetupESP()
@@ -617,7 +597,7 @@ local function SetupHealthBar()
 end
 local ApplyHealthBar, RemoveHealthBar = SetupHealthBar()
 
--- SKELETON ESP
+-- SKELETON ESP (ВАШ КОД ПОЛНОСТЬЮ)
 local skeletons = {}
 local skeletonCache = {}
 local skeletonCacheTime = 0
@@ -935,20 +915,20 @@ if visualsPage then
     chamsClickArea.ZIndex = 10
     chamsClickArea.Parent = chamsFrame
 
-    -- Chams Color Picker (Slider + Color Circle) под тумблером
+    -- Круг Chams под тумблером, над ESP
     chamsPickerContainer = Instance.new("Frame")
     chamsPickerContainer.Name = "ChamsColorPicker"
-    chamsPickerContainer.Size = UDim2.new(1, -30, 0, 140)
-    chamsPickerContainer.Position = UDim2.new(0, 15, 0, 55)
+    chamsPickerContainer.Size = UDim2.new(1, -30, 0, 120)
+    chamsPickerContainer.Position = UDim2.new(0, 15, 0, 50)
     chamsPickerContainer.BackgroundTransparency = 1
     chamsPickerContainer.Visible = false
     chamsPickerContainer.ZIndex = 30
+    chamsPickerContainer.ClipsDescendants = false
     chamsPickerContainer.Parent = visualsContainer
 
-    -- Круг выбора цвета слева
     local chamsWheelImage = Instance.new("ImageLabel")
-    chamsWheelImage.Size = UDim2.new(0, 120, 0, 120)
-    chamsWheelImage.Position = UDim2.new(0.15, -60, 0.5, -60)
+    chamsWheelImage.Size = UDim2.new(0, 100, 0, 100)
+    chamsWheelImage.Position = UDim2.new(0.5, -50, 0.5, -50)
     chamsWheelImage.BackgroundTransparency = 1
     chamsWheelImage.Image = "rbxassetid://7393858625"
     chamsWheelImage.ZIndex = 31
@@ -956,7 +936,7 @@ if visualsPage then
 
     chamsPickerDot = Instance.new("Frame")
     chamsPickerDot.Size = UDim2.new(0, 10, 0, 10)
-    chamsPickerDot.Position = UDim2.new(0.15, -5, 0.5, -5)
+    chamsPickerDot.Position = UDim2.new(0.5, -5, 0.5, -5)
     chamsPickerDot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     chamsPickerDot.ZIndex = 32
     chamsPickerDot.Parent = chamsWheelImage
@@ -973,7 +953,6 @@ if visualsPage then
     chamsDragArea.Parent = chamsWheelImage
 
     local isDraggingChamsColor = false
-
     local function UpdateChamsColorFromWheel(inputPosition)
         local wheelCenter = chamsWheelImage.AbsolutePosition + (chamsWheelImage.AbsoluteSize / 2)
         local delta = Vector2.new(inputPosition.X, inputPosition.Y) - wheelCenter
@@ -983,152 +962,40 @@ if visualsPage then
         local angle = math.atan2(delta.Y, delta.X)
         local xPos = clampedDistance * math.cos(angle)
         local yPos = clampedDistance * math.sin(angle)
-        chamsPickerDot.Position = UDim2.new(0.15, xPos - 5 + 60, 0.5, yPos - 5)
+        chamsPickerDot.Position = UDim2.new(0, xPos + radius - 5, 0, yPos + radius - 5)
         if angle < 0 then angle = angle + (math.pi * 2) end
         local hue = angle / (math.pi * 2)
         local saturation = clampedDistance / radius
-        _G.ChamsSliderValue = hue
-        local pickedColor = Color3.fromHSV(hue, saturation, 1)
-        _G.ChamsColor = pickedColor
-        if chamsSliderFill and chamsSliderHandle and chamsSliderValue then
-            chamsSliderFill.Size = UDim2.new(hue, 0, 1, 0)
-            chamsSliderHandle.Position = UDim2.new(hue, -8, 0.5, -8)
-            chamsSliderValue.Text = tostring(math.round(hue * 100)) .. "%"
+        _G.ChamsColor = Color3.fromHSV(hue, saturation, 1)
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p.Character then
+                for _, child in ipairs(p.Character:GetChildren()) do
+                    if child:IsA("Highlight") and child:GetAttribute("META_Chams") then
+                        child.FillColor = _G.ChamsColor
+                        child.OutlineColor = _G.ChamsColor
+                    end
+                end
+            end
         end
-        UpdateChamsColorFromSlider()
     end
-
     chamsDragArea.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
             isDraggingChamsColor = true
             UpdateChamsColorFromWheel(input.Position)
         end
     end)
-
     UserInputService.InputChanged:Connect(function(input)
         if isDraggingChamsColor and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
             UpdateChamsColorFromWheel(input.Position)
         end
     end)
-
     UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
             isDraggingChamsColor = false
         end
     end)
 
-    -- Слайдер выбора цвета справа
-    chamsSliderValue = Instance.new("TextLabel")
-    chamsSliderValue.Size = UDim2.new(0.15, 0, 0, 20)
-    chamsSliderValue.Position = UDim2.new(0.85, 0, 0, 0)
-    chamsSliderValue.BackgroundTransparency = 1
-    chamsSliderValue.Text = "50%"
-    chamsSliderValue.TextColor3 = Color3.fromRGB(255, 255, 255)
-    chamsSliderValue.TextSize = 14
-    chamsSliderValue.Font = Enum.Font.GothamBold
-    chamsSliderValue.TextXAlignment = Enum.TextXAlignment.Right
-    chamsSliderValue.Parent = chamsPickerContainer
-
-    local chamsSliderBg = Instance.new("Frame")
-    chamsSliderBg.Size = UDim2.new(0.5, 0, 0, 6)
-    chamsSliderBg.Position = UDim2.new(0.45, 0, 0.5, -3)
-    chamsSliderBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
-    chamsSliderBg.BorderSizePixel = 0
-    chamsSliderBg.Parent = chamsPickerContainer
-
-    local chamsSliderCorner = Instance.new("UICorner")
-    chamsSliderCorner.CornerRadius = UDim.new(1, 0)
-    chamsSliderCorner.Parent = chamsSliderBg
-
-    chamsSliderFill = Instance.new("Frame")
-    chamsSliderFill.Size = UDim2.new(0.5, 0, 1, 0)
-    chamsSliderFill.BackgroundColor3 = Color3.fromRGB(59, 130, 246)
-    chamsSliderFill.BorderSizePixel = 0
-    chamsSliderFill.Parent = chamsSliderBg
-
-    local chamsFillCorner = Instance.new("UICorner")
-    chamsFillCorner.CornerRadius = UDim.new(1, 0)
-    chamsFillCorner.Parent = chamsSliderFill
-
-    chamsSliderHandle = Instance.new("Frame")
-    chamsSliderHandle.Size = UDim2.new(0, 16, 0, 16)
-    chamsSliderHandle.Position = UDim2.new(0.5, -8, 0.5, -8)
-    chamsSliderHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    chamsSliderHandle.BorderSizePixel = 0
-    chamsSliderHandle.Parent = chamsSliderBg
-
-    local chamsHandleCorner2 = Instance.new("UICorner")
-    chamsHandleCorner2.CornerRadius = UDim.new(1, 0)
-    chamsHandleCorner2.Parent = chamsSliderHandle
-
-    local isDraggingChamsSlider = false
-    local function UpdateChamsSlider(mouseX)
-        local absPos = chamsSliderBg.AbsolutePosition.X
-        local width = chamsSliderBg.AbsoluteSize.X
-        if width <= 0 then return end
-        local percent = math.clamp((mouseX - absPos) / width, 0, 1)
-        _G.ChamsSliderValue = percent
-        chamsSliderFill.Size = UDim2.new(percent, 0, 1, 0)
-        chamsSliderHandle.Position = UDim2.new(percent, -8, 0.5, -8)
-        chamsSliderValue.Text = tostring(math.round(percent * 100)) .. "%"
-        local hue = percent
-        local pickedColor = Color3.fromHSV(hue, 0.65, 0.9)
-        _G.ChamsColor = pickedColor
-        if chamsPickerDot then
-            local radius = chamsWheelImage.AbsoluteSize.X / 2
-            local angle = hue * (math.pi * 2)
-            local distance = 0.65 * radius
-            local xPos = distance * math.cos(angle)
-            local yPos = distance * math.sin(angle)
-            chamsPickerDot.Position = UDim2.new(0.15, xPos - 5 + 60, 0.5, yPos - 5)
-        end
-        UpdateChamsColorFromSlider()
-    end
-    chamsSliderHandle.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then isDraggingChamsSlider = true UpdateChamsSlider(input.Position.X) end
-    end)
-    chamsSliderBg.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then isDraggingChamsSlider = true UpdateChamsSlider(input.Position.X) end
-    end)
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then isDraggingChamsSlider = false end
-    end)
-    UserInputService.InputChanged:Connect(function(input)
-        if isDraggingChamsSlider and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then UpdateChamsSlider(input.Position.X) end
-    end)
-
-    -- Функции сдвигаются вниз при включении Chams
-    ShiftVisualsContainer = function(shiftDown)
-        local targetY = shiftDown and 140 or 0
-        TweenService:Create(visualsContainer, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, targetY)}):Play()
-    end
-
-    SetChamsToggleState = function(value)
-        if value then
-            TweenService:Create(chamsToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
-            TweenService:Create(chamsHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 23, 0.5, -9)}):Play()
-            ApplyChams()
-            chamsPickerContainer.Visible = true
-            ShiftVisualsContainer(true)
-        else
-            TweenService:Create(chamsToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(42, 47, 58)}):Play()
-            TweenService:Create(chamsHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 3, 0.5, -9)}):Play()
-            RemoveChams()
-            chamsPickerContainer.Visible = false
-            ShiftVisualsContainer(false)
-        end
-        _G.ChamsEnabled = value
-    end
-    SetChamsToggleState(_G.ChamsEnabled)
-    chamsClickArea.MouseButton1Click:Connect(function() PlayClickSound() SetChamsToggleState(not _G.ChamsEnabled) end)
-    local function UpdateChamsText()
-        local lang = GetLang()
-        chamsLabel.Text = lang.Toggles.Chams[1]
-        chamsDesc.Text = lang.Toggles.Chams[2]
-    end
-    table.insert(langUpdateCallbacks, UpdateChamsText)
-
-    -- ESP Toggle
+    -- ESP Toggle (сдвигается вниз при включении Chams)
     local espFrame = Instance.new("Frame")
     espFrame.Size = UDim2.new(1, 0, 0, 45)
     espFrame.Position = UDim2.new(0, 0, 0, 50)
@@ -1340,8 +1207,40 @@ if visualsPage then
         skeletonDesc.Text = lang.Toggles.Skeleton[2]
     end
     table.insert(langUpdateCallbacks, UpdateSkeletonText)
+
+    -- Сдвиг контейнера при включении Chams
+    ShiftVisualsContainer = function(shiftDown)
+        local targetY = shiftDown and 120 or 0
+        TweenService:Create(visualsContainer, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, targetY)}):Play()
+    end
+
+    SetChamsToggleState = function(value)
+        if value then
+            TweenService:Create(chamsToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
+            TweenService:Create(chamsHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 23, 0.5, -9)}):Play()
+            ApplyChams()
+            chamsPickerContainer.Visible = true
+            ShiftVisualsContainer(true)
+        else
+            TweenService:Create(chamsToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(42, 47, 58)}):Play()
+            TweenService:Create(chamsHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 3, 0.5, -9)}):Play()
+            RemoveChams()
+            chamsPickerContainer.Visible = false
+            ShiftVisualsContainer(false)
+        end
+        _G.ChamsEnabled = value
+    end
+    SetChamsToggleState(_G.ChamsEnabled)
+    chamsClickArea.MouseButton1Click:Connect(function() PlayClickSound() SetChamsToggleState(not _G.ChamsEnabled) end)
+    local function UpdateChamsText()
+        local lang = GetLang()
+        chamsLabel.Text = lang.Toggles.Chams[1]
+        chamsDesc.Text = lang.Toggles.Chams[2]
+    end
+    table.insert(langUpdateCallbacks, UpdateChamsText)
 end
 
+-- Настройки, иконка, и т.д. (остальной код без изменений)
 local settingsPage = ContentPages["Settings"]
 if settingsPage then
     settingsPage.CanvasSize = UDim2.new(0, 0, 0, 600)
@@ -1372,8 +1271,7 @@ if settingsPage then
     desc.Text = "Enable interface color customization"
     desc.TextColor3 = Color3.fromRGB(113, 113, 122)
     desc.TextSize = 11
-    desc.Font = Enum.Font.Gotham
-    desc.TextXAlignment = Enum.TextXAlignment.Left
+    desc.Font = Enum.Font.Gotham    desc.TextXAlignment = Enum.TextXAlignment.Left
     desc.Parent = toggleFrame
     local toggleBg = Instance.new("Frame")
     toggleBg.Size = UDim2.new(0, 44, 0, 24)
@@ -2051,7 +1949,6 @@ if settingsPage then
         _G.FlyingDots = false
         _G.ChamsEnabled = false
         _G.ChamsColor = Color3.fromRGB(110, 60, 170)
-        _G.ChamsSliderValue = 0.5
         _G.ESPEnabled = false
         _G.HealthBarEnabled = false
         _G.SkeletonEnabled = false
@@ -2096,12 +1993,7 @@ if settingsPage then
             scaleValue.Text = "100%"
         end
         if pickerDot then pickerDot.Position = UDim2.new(0.5, -5, 0.5, -5) end
-        if chamsPickerDot then chamsPickerDot.Position = UDim2.new(0.15, -5, 0.5, -5) end
-        if chamsSliderFill and chamsSliderHandle and chamsSliderValue then
-            chamsSliderFill.Size = UDim2.new(0.5, 0, 1, 0)
-            chamsSliderHandle.Position = UDim2.new(0.5, -8, 0.5, -8)
-            chamsSliderValue.Text = "50%"
-        end
+        if chamsPickerDot then chamsPickerDot.Position = UDim2.new(0.5, -5, 0.5, -5) end
         SwitchToTab(1)
         SearchInput.Text = "Search..."
         SearchClose.Visible = false
@@ -2178,5 +2070,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.KeyCode == Enum.KeyCode.Insert then MainFrame.Visible = not MainFrame.Visible end
 end)
-print("[META] META v7.0.43 - Fixed Chams picker + Skeleton")
+print("[META] META v7.0.44 - Chams circle under toggle, Skeleton fixed")
 print("[META] Press Insert or click icon")
