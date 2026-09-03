@@ -1,4 +1,4 @@
--- ROCKET::META_UI_V7.0.40
+-- ROCKET::META_UI_V7.0.42
 
 local function SetupAntiCheatBypass()
     pcall(function()
@@ -51,18 +51,22 @@ _G.RainbowEnabled = false
 _G.MenuScale = 45
 _G.FlyingDots = false
 _G.ChamsEnabled = false
+_G.ChamsColor = Color3.fromRGB(110, 60, 170)
 _G.ESPEnabled = false
 _G.HealthBarEnabled = false
+_G.SkeletonEnabled = false
 
 local Dots = {}
 local DotConnection = nil
 local opacitySliderFill, opacitySliderHandle, opacityValue = nil, nil, nil
 local scaleSliderFill, scaleSliderHandle, scaleValue = nil, nil, nil
 local pickerDot, pickerContainer = nil, nil
+local chamsPickerDot, chamsPickerContainer = nil, nil
 local SetToggleState, ShiftContainer = nil, nil
 local SetChamsToggleState, SetRainbowToggleState = nil, nil
 local SetFlyingToggleState, SetESPToggleState = nil, nil
-local SetHealthBarToggleState = nil
+local SetHealthBarToggleState, SetSkeletonToggleState = nil, nil
+local ShiftVisualsContainer = nil
 
 local LANG = {
     RU = {
@@ -75,7 +79,8 @@ local LANG = {
             FlyingDots = {"Летающие точки", "Точки, летающие с верху меню"},
             Chams = {"Чамсы", "Функция которая делает противников фиолетовым"},
             ESP = {"Линии и 3D Боксы", "Линии с боксами которые ведут к противникам"},
-            HealthBar = {"Хп противников", "Полоска здоровья"},
+            HealthBar = {"Хп противников", "Полоска здоровья над головой"},
+            Skeleton = {"Скелет", "Скелет противников"},
             Reset = {"Сброс настроек", "Вернуть все настройки к стандартным"}
         }
     },
@@ -89,7 +94,8 @@ local LANG = {
             FlyingDots = {"Flying Dots", "Floating dots from the top of the menu"},
             Chams = {"Chams", "Makes enemies purple"},
             ESP = {"Tracers and 3D Box", "Lines with boxes leading to enemies"},
-            HealthBar = {"Health Bar", "Health bar display"},
+            HealthBar = {"Health Bar", "Health bar above head"},
+            Skeleton = {"Skeleton", "Enemy skeleton ESP"},
             Reset = {"Reset Settings", "Return all settings to default"}
         }
     }
@@ -297,8 +303,8 @@ local function PaintCharacter(character, p)
         local highlight = Instance.new("Highlight")
         highlight.Name = "Highlight"
         highlight:SetAttribute("META_Chams", true)
-        highlight.FillColor = Color3.fromRGB(110, 60, 170)
-        highlight.OutlineColor = Color3.fromRGB(110, 60, 170)
+        highlight.FillColor = _G.ChamsColor
+        highlight.OutlineColor = _G.ChamsColor
         highlight.FillTransparency = 0.65
         highlight.OutlineTransparency = 0.5
         highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
@@ -426,7 +432,7 @@ task.spawn(function()
     end
 end)
 
--- HEALTH BAR ESP (ВПРАВО К ПЛЕЧУ)
+-- HEALTH BAR (НАД ГОЛОВОЙ)
 local healthBars = {}
 local enemiesCache = {}
 local cacheTime = 0
@@ -435,32 +441,34 @@ local healthHistory = {}
 local function SetupHealthBar()
     local function createBarPair()
         local bg = Drawing.new("Square")
-        bg.Thickness = 1
+        bg.Thickness = 0
         bg.Filled = true
         bg.Visible = false
-        bg.Color = Color3.fromRGB(15, 15, 20)
-        bg.Transparency = 0.35
-
+        bg.Color = Color3.fromRGB(30, 30, 40)
+        bg.Transparency = 0.7
         local bar = Drawing.new("Square")
-        bar.Thickness = 1
+        bar.Thickness = 0
         bar.Filled = true
         bar.Visible = false
         bar.Transparency = 1
-
+        local border = Drawing.new("Square")
+        border.Thickness = 1
+        border.Filled = false
+        border.Visible = false
+        border.Color = Color3.fromRGB(60, 60, 80)
+        border.Transparency = 0.5
         local dividers = {}
         for i = 1, 8 do
             local div = Drawing.new("Square")
             div.Thickness = 1
-            div.Filled = true
+            div.Filled = false
             div.Visible = false
-            div.Color = Color3.fromRGB(100, 100, 110)
+            div.Color = Color3.fromRGB(50, 50, 65)
             div.Transparency = 0.5
             table.insert(dividers, div)
         end
-
-        return {Bg = bg, Bar = bar, Dividers = dividers}
+        return {Bg = bg, Bar = bar, Border = border, Dividers = dividers}
     end
-
     local function getPlayerHealth(character)
         if not character then return nil, nil end
         local humanoid = character:FindFirstChild("Humanoid")
@@ -473,36 +481,32 @@ local function SetupHealthBar()
         if healthAttr and maxHealthAttr and healthAttr > 0 then return healthAttr, maxHealthAttr end
         return nil, nil
     end
-
     local function getHealthColor(health, maxHealth, prevHealth)
         local percent = health / maxHealth
         local isDamaged = prevHealth and prevHealth > health and (prevHealth - health) > 5
         if isDamaged then return Color3.fromRGB(255, 255, 255) end
-        if percent <= 0.20 then return Color3.fromRGB(255, 0, 0)
-        elseif percent <= 0.35 then return Color3.fromRGB(255, 100, 0)
-        elseif percent <= 0.55 then return Color3.fromRGB(255, 200, 0)
-        elseif percent <= 0.75 then return Color3.fromRGB(200, 255, 0)
-        else return Color3.fromRGB(0, 255, 100) end
+        if percent <= 0.20 then return Color3.fromRGB(255, 50, 50)
+        elseif percent <= 0.40 then return Color3.fromRGB(255, 170, 50)
+        elseif percent <= 0.60 then return Color3.fromRGB(255, 220, 50)
+        elseif percent <= 0.80 then return Color3.fromRGB(150, 255, 50)
+        else return Color3.fromRGB(50, 255, 150) end
     end
-
     local function removeHealthBar(target)
         local data = healthBars[target]
         if data then
             pcall(function()
                 data.Bg.Visible = false
                 data.Bar.Visible = false
+                data.Border.Visible = false
                 data.Bg:Remove()
                 data.Bar:Remove()
-                for _, div in pairs(data.Dividers) do
-                    div.Visible = false
-                    div:Remove()
-                end
+                data.Border:Remove()
+                for _, div in pairs(data.Dividers) do div.Visible = false div:Remove() end
             end)
             healthBars[target] = nil
         end
         healthHistory[target] = nil
     end
-
     local function updateEnemiesCache()
         if tick() - cacheTime < 0.5 then return end
         cacheTime = tick()
@@ -513,148 +517,197 @@ local function SetupHealthBar()
                     local health, maxHealth = getPlayerHealth(player.Character)
                     if health and health > 0 then
                         enemiesCache[player] = {char = player.Character, health = health, maxHealth = maxHealth}
-                    else
-                        removeHealthBar(player)
-                    end
-                else
-                    removeHealthBar(player)
-                end
-            else
-                removeHealthBar(player)
-            end
+                    else removeHealthBar(player) end
+                else removeHealthBar(player) end
+            else removeHealthBar(player) end
         end
     end
-
     local healthConnection = RunService.RenderStepped:Connect(function()
         if not _G.HealthBarEnabled then
-            for _, data in pairs(healthBars) do
-                data.Bg.Visible = false
-                data.Bar.Visible = false
-                for _, div in pairs(data.Dividers) do div.Visible = false end
-            end
+            for _, data in pairs(healthBars) do data.Bg.Visible = false data.Bar.Visible = false data.Border.Visible = false for _, div in pairs(data.Dividers) do div.Visible = false end end
             return
         end
-
         updateEnemiesCache()
-
         for player, data in pairs(enemiesCache) do
-            if not player or not player.Character or not player.Character.Parent then
-                removeHealthBar(player)
-                continue
-            end
-
+            if not player or not player.Character or not player.Character.Parent then removeHealthBar(player) continue end
             local char = player.Character
             local health, maxHealth = getPlayerHealth(char)
-            if not health or health <= 0 then
-                removeHealthBar(player)
-                continue
-            end
-
+            if not health or health <= 0 then removeHealthBar(player) continue end
             local prevHealth = healthHistory[player]
             healthHistory[player] = health
-
             local head = char:FindFirstChild("Head")
-            local hrp = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
-
-            if not head or not hrp then
-                removeHealthBar(player)
-                continue
-            end
-
-            local headPos, visible = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 0.5, 0))
-            local hrpPos, hrpVis = Camera:WorldToViewportPoint(hrp.Position)
-            local distance = (Camera.CFrame.Position - hrp.Position).Magnitude
-
-            if visible and distance <= 1000 and headPos.Z > 0 and hrpVis and hrpPos.Z > 0 then
-                local scale = 1 / (headPos.Z * math.tan(math.rad(Camera.FieldOfView * 0.5)) * 2) * 100
-                local height = math.floor(62 * scale)
-                local width = math.floor(40 * scale)
-
-                if height > 10 then
-                    if not healthBars[player] then
-                        healthBars[player] = createBarPair()
-                    end
-
-                    local barData = healthBars[player]
-                    local boxX = headPos.X - width / 2
-                    local boxY = headPos.Y - height / 2
-
-                    local barHeight = height * 0.95
-                    local barWidth = 1.0
-
-                    local rightOffset = width * 0.55
-                    local barXPos = boxX + rightOffset
-                    local barYPos = boxY + (height - barHeight) / 2 + 4
-
-                    local hpPercent = health / maxHealth
-                    local filledHeight = barHeight * hpPercent
-
-                    barData.Bg.Size = Vector2.new(barWidth, barHeight)
-                    barData.Bg.Position = Vector2.new(barXPos, barYPos)
-                    barData.Bg.Visible = true
-                    barData.Bg.Transparency = 0.35
-                    barData.Bg.Color = Color3.fromRGB(15, 15, 20)
-
-                    barData.Bar.Size = Vector2.new(barWidth, math.max(filledHeight, 0.5))
-                    barData.Bar.Position = Vector2.new(barXPos, barYPos + (barHeight - filledHeight))
-                    barData.Bar.Visible = true
-                    barData.Bar.Transparency = 1
-
-                    local barColor = getHealthColor(health, maxHealth, prevHealth)
-                    barData.Bar.Color = barColor
-
-                    if prevHealth and prevHealth > health and (prevHealth - health) > 5 then
-                        barData.Bar.Color = Color3.fromRGB(255, 255, 255)
-                    end
-
-                    local segmentHeight = barHeight / 9
-                    for i = 1, 8 do
-                        local div = barData.Dividers[i]
-                        local yPos = barYPos + (i * segmentHeight)
-                        div.Size = Vector2.new(barWidth + 0.5, 0.3)
-                        div.Position = Vector2.new(barXPos - 0.25, yPos)
-                        div.Visible = true
-                        div.Transparency = 0.5
-                        div.Color = Color3.fromRGB(100, 100, 110)
-                    end
-                else
-                    if healthBars[player] then
-                        healthBars[player].Bg.Visible = false
-                        healthBars[player].Bar.Visible = false
-                        for _, div in pairs(healthBars[player].Dividers) do div.Visible = false end
-                    end
+            if not head then removeHealthBar(player) continue end
+            local headPos, headVis = Camera:WorldToViewportPoint(head.Position)
+            local distance = (Camera.CFrame.Position - head.Position).Magnitude
+            if headVis and headPos.Z > 0 and distance <= 1000 then
+                local barWidth = 50
+                local barHeight = 6
+                local scale = 1 / (headPos.Z * 0.015 + 0.5)
+                if scale > 1.5 then scale = 1.5 end
+                if scale < 0.4 then scale = 0.4 end
+                local finalWidth = barWidth * scale
+                local finalHeight = barHeight * scale
+                local offsetY = 4 * scale
+                local barX = headPos.X - finalWidth / 2
+                local barY = headPos.Y - finalHeight - offsetY
+                if barX < 5 then barX = 5 end
+                if barX + finalWidth > Camera.ViewportSize.X - 5 then barX = Camera.ViewportSize.X - finalWidth - 5 end
+                if barY < 5 then barY = 5 end
+                if not healthBars[player] then healthBars[player] = createBarPair() end
+                local barData = healthBars[player]
+                local hpPercent = health / maxHealth
+                local filledWidth = finalWidth * hpPercent
+                barData.Bg.Size = Vector2.new(finalWidth, finalHeight)
+                barData.Bg.Position = Vector2.new(barX, barY)
+                barData.Bg.Visible = true
+                barData.Bg.Transparency = 0.6
+                barData.Bg.Color = Color3.fromRGB(25, 25, 35)
+                barData.Bar.Size = Vector2.new(math.max(filledWidth, 0.5), finalHeight)
+                barData.Bar.Position = Vector2.new(barX, barY)
+                barData.Bar.Visible = true
+                barData.Bar.Transparency = 1
+                barData.Bar.Color = getHealthColor(health, maxHealth, prevHealth)
+                if prevHealth and prevHealth > health and (prevHealth - health) > 5 then barData.Bar.Color = Color3.fromRGB(255, 255, 255) end
+                barData.Border.Size = Vector2.new(finalWidth, finalHeight)
+                barData.Border.Position = Vector2.new(barX, barY)
+                barData.Border.Visible = true
+                barData.Border.Transparency = 0.4
+                barData.Border.Color = Color3.fromRGB(70, 70, 100)
+                local segmentWidth = finalWidth / 9
+                for i = 1, 8 do
+                    local div = barData.Dividers[i]
+                    div.Size = Vector2.new(0.3, finalHeight)
+                    div.Position = Vector2.new(barX + (i * segmentWidth), barY)
+                    div.Visible = true
+                    div.Transparency = 0.5
+                    div.Color = Color3.fromRGB(50, 50, 70)
                 end
             else
-                if healthBars[player] then
-                    healthBars[player].Bg.Visible = false
-                    healthBars[player].Bar.Visible = false
-                    for _, div in pairs(healthBars[player].Dividers) do div.Visible = false end
-                end
+                if healthBars[player] then healthBars[player].Bg.Visible = false healthBars[player].Bar.Visible = false healthBars[player].Border.Visible = false for _, div in pairs(healthBars[player].Dividers) do div.Visible = false end end
             end
         end
-
-        for player, barData in pairs(healthBars) do
-            if not enemiesCache[player] then
-                removeHealthBar(player)
-            end
+        for player, _ in pairs(healthBars) do
+            if not enemiesCache[player] then removeHealthBar(player) end
         end
     end)
-
     local function ApplyHealthBar() _G.HealthBarEnabled = true end
-    local function RemoveHealthBar()
-        _G.HealthBarEnabled = false
-        for player, _ in pairs(healthBars) do removeHealthBar(player) end
-        enemiesCache = {}
-        healthHistory = {}
-    end
-    _G.UnloadHealthBar = function()
-        if healthConnection then healthConnection:Disconnect() end
-        RemoveHealthBar()
-    end
+    local function RemoveHealthBar() _G.HealthBarEnabled = false for player, _ in pairs(healthBars) do removeHealthBar(player) end enemiesCache = {} healthHistory = {} end
+    _G.UnloadHealthBar = function() if healthConnection then healthConnection:Disconnect() end RemoveHealthBar() end
     return ApplyHealthBar, RemoveHealthBar
 end
-
 local ApplyHealthBar, RemoveHealthBar = SetupHealthBar()
+
+-- SKELETON ESP
+local skeletons = {}
+local skeletonCache = {}
+local skeletonCacheTime = 0
+
+local function SetupSkeleton()
+    local function createLine()
+        local line = Drawing.new("Line")
+        line.Thickness = 2
+        line.Visible = false
+        line.Color = Color3.fromRGB(255, 255, 255)
+        line.Transparency = 1
+        return line
+    end
+    local function getPos(part)
+        if not part or not part:IsA("BasePart") then return nil end
+        local pos, onScreen = Camera:WorldToViewportPoint(part.Position)
+        if pos.Z > 0 then return Vector2.new(pos.X, pos.Y) end
+        return nil
+    end
+    local function removeSkeleton(target)
+        local data = skeletons[target]
+        if data then
+            pcall(function() for _, line in pairs(data) do line.Visible = false line:Remove() end end)
+            skeletons[target] = nil
+        end
+    end
+    local function updateSkeletonCache()
+        if tick() - skeletonCacheTime < 0.5 then return end
+        skeletonCacheTime = tick()
+        skeletonCache = {}
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and player.Character.Parent then
+                if IsEnemy(player) then skeletonCache[player] = player.Character else removeSkeleton(player) end
+            else removeSkeleton(player) end
+        end
+    end
+    local skeletonConnection = RunService.RenderStepped:Connect(function()
+        if not _G.SkeletonEnabled then for _, data in pairs(skeletons) do for _, line in pairs(data) do line.Visible = false end end return end
+        updateSkeletonCache()
+        for player, char in pairs(skeletonCache) do
+            if not char or not char.Parent then removeSkeleton(player) continue end
+            local hum = char:FindFirstChild("Humanoid")
+            if not hum or hum.Health <= 0 then removeSkeleton(player) continue end
+            local head = char:FindFirstChild("Head")
+            local upperTorso = char:FindFirstChild("UpperTorso")
+            local lowerTorso = char:FindFirstChild("LowerTorso")
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            local leftUpperArm = char:FindFirstChild("LeftUpperArm")
+            local leftLowerArm = char:FindFirstChild("LeftLowerArm")
+            local leftHand = char:FindFirstChild("LeftHand")
+            local rightUpperArm = char:FindFirstChild("RightUpperArm")
+            local rightLowerArm = char:FindFirstChild("RightLowerArm")
+            local rightHand = char:FindFirstChild("RightHand")
+            local leftUpperLeg = char:FindFirstChild("LeftUpperLeg")
+            local leftLowerLeg = char:FindFirstChild("LeftLowerLeg")
+            local leftFoot = char:FindFirstChild("LeftFoot")
+            local rightUpperLeg = char:FindFirstChild("RightUpperLeg")
+            local rightLowerLeg = char:FindFirstChild("RightLowerLeg")
+            local rightFoot = char:FindFirstChild("RightFoot")
+            if not head or not upperTorso then removeSkeleton(player) continue end
+            local headPos = getPos(head)
+            local upperTorsoPos = getPos(upperTorso)
+            local lowerTorsoPos = getPos(lowerTorso)
+            local hrpPos = getPos(hrp)
+            local leftUpperArmPos = getPos(leftUpperArm)
+            local leftLowerArmPos = getPos(leftLowerArm)
+            local leftHandPos = getPos(leftHand)
+            local rightUpperArmPos = getPos(rightUpperArm)
+            local rightLowerArmPos = getPos(rightLowerArm)
+            local rightHandPos = getPos(rightHand)
+            local leftUpperLegPos = getPos(leftUpperLeg)
+            local leftLowerLegPos = getPos(leftLowerLeg)
+            local leftFootPos = getPos(leftFoot)
+            local rightUpperLegPos = getPos(rightUpperLeg)
+            local rightLowerLegPos = getPos(rightLowerLeg)
+            local rightFootPos = getPos(rightFoot)
+            if not headPos or not upperTorsoPos then removeSkeleton(player) continue end
+            if not skeletons[player] then skeletons[player] = {} for i = 1, 15 do table.insert(skeletons[player], createLine()) end end
+            local lines = skeletons[player]
+            local idx = 1
+            local function setLine(from, to, show)
+                if from and to and show then lines[idx].From = from lines[idx].To = to lines[idx].Visible = true else lines[idx].Visible = false end
+                idx = idx + 1
+            end
+            setLine(headPos, upperTorsoPos, true)
+            setLine(upperTorsoPos, lowerTorsoPos, lowerTorsoPos ~= nil)
+            setLine(upperTorsoPos, hrpPos, hrpPos ~= nil)
+            setLine(upperTorsoPos, leftUpperArmPos, leftUpperArmPos ~= nil)
+            setLine(leftUpperArmPos, leftLowerArmPos, leftUpperArmPos ~= nil and leftLowerArmPos ~= nil)
+            setLine(leftLowerArmPos, leftHandPos, leftLowerArmPos ~= nil and leftHandPos ~= nil)
+            setLine(upperTorsoPos, rightUpperArmPos, rightUpperArmPos ~= nil)
+            setLine(rightUpperArmPos, rightLowerArmPos, rightUpperArmPos ~= nil and rightLowerArmPos ~= nil)
+            setLine(rightLowerArmPos, rightHandPos, rightLowerArmPos ~= nil and rightHandPos ~= nil)
+            local basePos = lowerTorsoPos or hrpPos or upperTorsoPos
+            setLine(basePos, leftUpperLegPos, leftUpperLegPos ~= nil)
+            setLine(basePos, rightUpperLegPos, rightUpperLegPos ~= nil)
+            setLine(leftUpperLegPos, leftLowerLegPos, leftUpperLegPos ~= nil and leftLowerLegPos ~= nil)
+            setLine(rightUpperLegPos, rightLowerLegPos, rightUpperLegPos ~= nil and rightLowerLegPos ~= nil)
+            setLine(leftLowerLegPos, leftFootPos, leftLowerLegPos ~= nil and leftFootPos ~= nil)
+            setLine(rightLowerLegPos, rightFootPos, rightLowerLegPos ~= nil and rightFootPos ~= nil)
+            while idx <= #lines do lines[idx].Visible = false idx = idx + 1 end
+        end
+        for player, _ in pairs(skeletons) do if not skeletonCache[player] then removeSkeleton(player) end end
+    end)
+    local function ApplySkeleton() _G.SkeletonEnabled = true end
+    local function RemoveSkeleton() _G.SkeletonEnabled = false for player, _ in pairs(skeletons) do removeSkeleton(player) end skeletonCache = {} end
+    _G.UnloadSkeleton = function() if skeletonConnection then skeletonConnection:Disconnect() end RemoveSkeleton() end
+    return ApplySkeleton, RemoveSkeleton
+end
+local ApplySkeleton, RemoveSkeleton = SetupSkeleton()
 
 local IndicatorLine = nil
 local IndicatorColor = _G.MenuThemeColor
@@ -683,9 +736,7 @@ end
 
 local function UpdateIndicatorColor(color)
     IndicatorColor = color
-    if IndicatorLine then
-        TweenService:Create(IndicatorLine, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = color}):Play()
-    end
+    if IndicatorLine then TweenService:Create(IndicatorLine, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = color}):Play() end
 end
 
 local function SwitchToTab(index)
@@ -804,13 +855,20 @@ if aimbotPage then aimbotPage.CanvasSize = UDim2.new(0, 0, 0, 10) end
 
 local visualsPage = ContentPages["Visuals"]
 if visualsPage then
-    visualsPage.CanvasSize = UDim2.new(0, 0, 0, 300)
+    visualsPage.CanvasSize = UDim2.new(0, 0, 0, 400)
+
+    local visualsContainer = Instance.new("Frame")
+    visualsContainer.Size = UDim2.new(1, 0, 0, 400)
+    visualsContainer.Position = UDim2.new(0, 0, 0, 0)
+    visualsContainer.BackgroundTransparency = 1
+    visualsContainer.ClipsDescendants = true
+    visualsContainer.Parent = visualsPage
 
     local chamsFrame = Instance.new("Frame")
     chamsFrame.Size = UDim2.new(1, 0, 0, 45)
     chamsFrame.Position = UDim2.new(0, 0, 0, 10)
     chamsFrame.BackgroundTransparency = 1
-    chamsFrame.Parent = visualsPage
+    chamsFrame.Parent = visualsContainer
     local chamsLabel = Instance.new("TextLabel")
     chamsLabel.Size = UDim2.new(0.6, 0, 0, 20)
     chamsLabel.BackgroundTransparency = 1
@@ -855,15 +913,103 @@ if visualsPage then
     chamsClickArea.Text = ""
     chamsClickArea.ZIndex = 10
     chamsClickArea.Parent = chamsFrame
+
+    -- Chams Color Picker
+    chamsPickerContainer = Instance.new("Frame")
+    chamsPickerContainer.Name = "ChamsColorPicker"
+    chamsPickerContainer.Size = UDim2.new(1, -30, 0, 140)
+    chamsPickerContainer.Position = UDim2.new(0, 15, 0, 55)
+    chamsPickerContainer.BackgroundTransparency = 1
+    chamsPickerContainer.Visible = false
+    chamsPickerContainer.ZIndex = 30
+    chamsPickerContainer.Parent = visualsContainer
+
+    local chamsWheelImage = Instance.new("ImageLabel")
+    chamsWheelImage.Size = UDim2.new(0, 120, 0, 120)
+    chamsWheelImage.Position = UDim2.new(0.3, -60, 0.5, -60)
+    chamsWheelImage.BackgroundTransparency = 1
+    chamsWheelImage.Image = "rbxassetid://7393858625"
+    chamsWheelImage.ZIndex = 31
+    chamsWheelImage.Parent = chamsPickerContainer
+
+    chamsPickerDot = Instance.new("Frame")
+    chamsPickerDot.Size = UDim2.new(0, 10, 0, 10)
+    chamsPickerDot.Position = UDim2.new(0.3, -5, 0.5, -5)
+    chamsPickerDot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    chamsPickerDot.ZIndex = 32
+    chamsPickerDot.Parent = chamsWheelImage
+
+    local chamsDotCorner = Instance.new("UICorner")
+    chamsDotCorner.CornerRadius = UDim.new(1, 0)
+    chamsDotCorner.Parent = chamsPickerDot
+
+    local chamsDragArea = Instance.new("TextButton")
+    chamsDragArea.Size = UDim2.new(1, 0, 1, 0)
+    chamsDragArea.BackgroundTransparency = 1
+    chamsDragArea.Text = ""
+    chamsDragArea.ZIndex = 33
+    chamsDragArea.Parent = chamsWheelImage
+
+    local isDraggingChamsColor = false
+
+    local function UpdateChamsColorFromInput(inputPosition)
+        local wheelCenter = chamsWheelImage.AbsolutePosition + (chamsWheelImage.AbsoluteSize / 2)
+        local delta = Vector2.new(inputPosition.X, inputPosition.Y) - wheelCenter
+        local distance = delta.Magnitude
+        local radius = chamsWheelImage.AbsoluteSize.X / 2
+        local clampedDistance = math.clamp(distance, 0, radius)
+        local angle = math.atan2(delta.Y, delta.X)
+        local xPos = clampedDistance * math.cos(angle)
+        local yPos = clampedDistance * math.sin(angle)
+        chamsPickerDot.Position = UDim2.new(0.3, xPos - 5 + 60, 0.5, yPos - 5)
+        if angle < 0 then angle = angle + (math.pi * 2) end
+        local hue = angle / (math.pi * 2)
+        local saturation = clampedDistance / radius
+        _G.ChamsColor = Color3.fromHSV(hue, saturation, 1)
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p.Character then
+                for _, child in ipairs(p.Character:GetChildren()) do
+                    if child:IsA("Highlight") and child:GetAttribute("META_Chams") then
+                        child.FillColor = _G.ChamsColor
+                        child.OutlineColor = _G.ChamsColor
+                    end
+                end
+            end
+        end
+    end
+
+    chamsDragArea.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isDraggingChamsColor = true
+            UpdateChamsColorFromInput(input.Position)
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if isDraggingChamsColor and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
+            UpdateChamsColorFromInput(input.Position)
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isDraggingChamsColor = false
+        end
+    end)
+
     SetChamsToggleState = function(value)
         if value then
             TweenService:Create(chamsToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
             TweenService:Create(chamsHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 23, 0.5, -9)}):Play()
             ApplyChams()
+            chamsPickerContainer.Visible = true
+            TweenService:Create(visualsContainer, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 150)}):Play()
         else
             TweenService:Create(chamsToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(42, 47, 58)}):Play()
             TweenService:Create(chamsHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 3, 0.5, -9)}):Play()
             RemoveChams()
+            chamsPickerContainer.Visible = false
+            TweenService:Create(visualsContainer, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 0)}):Play()
         end
         _G.ChamsEnabled = value
     end
@@ -876,11 +1022,12 @@ if visualsPage then
     end
     table.insert(langUpdateCallbacks, UpdateChamsText)
 
+    -- ESP Toggle
     local espFrame = Instance.new("Frame")
     espFrame.Size = UDim2.new(1, 0, 0, 45)
     espFrame.Position = UDim2.new(0, 0, 0, 65)
     espFrame.BackgroundTransparency = 1
-    espFrame.Parent = visualsPage
+    espFrame.Parent = visualsContainer
     local espLabel = Instance.new("TextLabel")
     espLabel.Size = UDim2.new(0.6, 0, 0, 20)
     espLabel.BackgroundTransparency = 1
@@ -946,11 +1093,12 @@ if visualsPage then
     end
     table.insert(langUpdateCallbacks, UpdateESPText)
 
+    -- Health Bar Toggle
     local healthFrame = Instance.new("Frame")
     healthFrame.Size = UDim2.new(1, 0, 0, 45)
     healthFrame.Position = UDim2.new(0, 0, 0, 120)
     healthFrame.BackgroundTransparency = 1
-    healthFrame.Parent = visualsPage
+    healthFrame.Parent = visualsContainer
     local healthLabel = Instance.new("TextLabel")
     healthLabel.Size = UDim2.new(0.6, 0, 0, 20)
     healthLabel.BackgroundTransparency = 1
@@ -964,7 +1112,7 @@ if visualsPage then
     healthDesc.Size = UDim2.new(0.7, 0, 0, 16)
     healthDesc.Position = UDim2.new(0, 0, 0, 22)
     healthDesc.BackgroundTransparency = 1
-    healthDesc.Text = "Health bar display"
+    healthDesc.Text = "Health bar above head"
     healthDesc.TextColor3 = Color3.fromRGB(113, 113, 122)
     healthDesc.TextSize = 11
     healthDesc.Font = Enum.Font.Gotham
@@ -1015,6 +1163,77 @@ if visualsPage then
         healthDesc.Text = lang.Toggles.HealthBar[2]
     end
     table.insert(langUpdateCallbacks, UpdateHealthBarText)
+
+    -- Skeleton Toggle
+    local skeletonFrame = Instance.new("Frame")
+    skeletonFrame.Size = UDim2.new(1, 0, 0, 45)
+    skeletonFrame.Position = UDim2.new(0, 0, 0, 175)
+    skeletonFrame.BackgroundTransparency = 1
+    skeletonFrame.Parent = visualsContainer
+    local skeletonLabel = Instance.new("TextLabel")
+    skeletonLabel.Size = UDim2.new(0.6, 0, 0, 20)
+    skeletonLabel.BackgroundTransparency = 1
+    skeletonLabel.Text = "Skeleton"
+    skeletonLabel.TextColor3 = Color3.fromRGB(209, 213, 219)
+    skeletonLabel.TextSize = 13
+    skeletonLabel.Font = Enum.Font.GothamBold
+    skeletonLabel.TextXAlignment = Enum.TextXAlignment.Left
+    skeletonLabel.Parent = skeletonFrame
+    local skeletonDesc = Instance.new("TextLabel")
+    skeletonDesc.Size = UDim2.new(0.7, 0, 0, 16)
+    skeletonDesc.Position = UDim2.new(0, 0, 0, 22)
+    skeletonDesc.BackgroundTransparency = 1
+    skeletonDesc.Text = "Enemy skeleton ESP"
+    skeletonDesc.TextColor3 = Color3.fromRGB(113, 113, 122)
+    skeletonDesc.TextSize = 11
+    skeletonDesc.Font = Enum.Font.Gotham
+    skeletonDesc.TextXAlignment = Enum.TextXAlignment.Left
+    skeletonDesc.Parent = skeletonFrame
+    local skeletonToggleBg = Instance.new("Frame")
+    skeletonToggleBg.Size = UDim2.new(0, 44, 0, 24)
+    skeletonToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
+    skeletonToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
+    skeletonToggleBg.BorderSizePixel = 0
+    skeletonToggleBg.Parent = skeletonFrame
+    local skeletonToggleCorner = Instance.new("UICorner")
+    skeletonToggleCorner.CornerRadius = UDim.new(1, 0)
+    skeletonToggleCorner.Parent = skeletonToggleBg
+    local skeletonHandle = Instance.new("Frame")
+    skeletonHandle.Size = UDim2.new(0, 18, 0, 18)
+    skeletonHandle.Position = UDim2.new(0, 3, 0.5, -9)
+    skeletonHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    skeletonHandle.BorderSizePixel = 0
+    skeletonHandle.Parent = skeletonToggleBg
+    local skeletonHandleCorner = Instance.new("UICorner")
+    skeletonHandleCorner.CornerRadius = UDim.new(1, 0)
+    skeletonHandleCorner.Parent = skeletonHandle
+    local skeletonClickArea = Instance.new("TextButton")
+    skeletonClickArea.Size = UDim2.new(0, 44, 0, 24)
+    skeletonClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
+    skeletonClickArea.BackgroundTransparency = 1
+    skeletonClickArea.Text = ""
+    skeletonClickArea.ZIndex = 10
+    skeletonClickArea.Parent = skeletonFrame
+    SetSkeletonToggleState = function(value)
+        if value then
+            TweenService:Create(skeletonToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
+            TweenService:Create(skeletonHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 23, 0.5, -9)}):Play()
+            ApplySkeleton()
+        else
+            TweenService:Create(skeletonToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(42, 47, 58)}):Play()
+            TweenService:Create(skeletonHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 3, 0.5, -9)}):Play()
+            RemoveSkeleton()
+        end
+        _G.SkeletonEnabled = value
+    end
+    SetSkeletonToggleState(_G.SkeletonEnabled)
+    skeletonClickArea.MouseButton1Click:Connect(function() PlayClickSound() SetSkeletonToggleState(not _G.SkeletonEnabled) end)
+    local function UpdateSkeletonText()
+        local lang = GetLang()
+        skeletonLabel.Text = lang.Toggles.Skeleton[1]
+        skeletonDesc.Text = lang.Toggles.Skeleton[2]
+    end
+    table.insert(langUpdateCallbacks, UpdateSkeletonText)
 end
 
 local settingsPage = ContentPages["Settings"]
@@ -1414,9 +1633,7 @@ if settingsPage then
                 SearchStroke.Color = color
             end)
         else
-            if rainbowConnection then
-                rainbowConnection:Disconnect()
-                rainbowConnection = nil
+            if rainbowConnection then rainbowConnection:Disconnect() rainbowConnection = nil
                 MainStroke.Color = _G.MenuThemeColor
                 UpdateIndicatorColor(_G.MenuThemeColor)
                 SearchStroke.Color = _G.MenuThemeColor
@@ -1507,26 +1724,16 @@ if settingsPage then
         MainFrame.Size = UDim2.new(0, 640 * (val / 45), 0, 470 * (val / 45))
     end
     scaleSliderHandle.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            isDraggingScale = true
-            UpdateScale(input.Position.X)
-        end
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then isDraggingScale = true UpdateScale(input.Position.X) end
     end)
     scaleSliderBg.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            isDraggingScale = true
-            UpdateScale(input.Position.X)
-        end
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then isDraggingScale = true UpdateScale(input.Position.X) end
     end)
     UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            isDraggingScale = false
-        end
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then isDraggingScale = false end
     end)
     UserInputService.InputChanged:Connect(function(input)
-        if isDraggingScale and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            UpdateScale(input.Position.X)
-        end
+        if isDraggingScale and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then UpdateScale(input.Position.X) end
     end)
     local function UpdateScaleText()
         local lang = GetLang()
@@ -1547,9 +1754,7 @@ if settingsPage then
     dotContainer.ClipsDescendants = true
     dotContainer.Parent = flyingFrame
     local function RebuildDots()
-        for _, data in ipairs(Dots) do
-            if data and data.Frame then data.Frame:Destroy() end
-        end
+        for _, data in ipairs(Dots) do if data and data.Frame then data.Frame:Destroy() end end
         Dots = {}
         if not _G.FlyingDots then return end
         local w = MainFrame.AbsoluteSize.X
@@ -1601,9 +1806,7 @@ if settingsPage then
             end
         end
     end
-    MainFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-        if _G.FlyingDots then RebuildDots() end
-    end)
+    MainFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function() if _G.FlyingDots then RebuildDots() end end)
     local function ToggleFlyingDots(state)
         _G.FlyingDots = state
         if state then
@@ -1612,9 +1815,7 @@ if settingsPage then
             DotConnection = RunService.Heartbeat:Connect(UpdateDots)
         else
             if DotConnection then DotConnection:Disconnect() DotConnection = nil end
-            for _, data in ipairs(Dots) do
-                if data and data.Frame then data.Frame:Destroy() end
-            end
+            for _, data in ipairs(Dots) do if data and data.Frame then data.Frame:Destroy() end end
             Dots = {}
         end
     end
@@ -1733,8 +1934,10 @@ if settingsPage then
         _G.MenuScale = 45
         _G.FlyingDots = false
         _G.ChamsEnabled = false
+        _G.ChamsColor = Color3.fromRGB(110, 60, 170)
         _G.ESPEnabled = false
         _G.HealthBarEnabled = false
+        _G.SkeletonEnabled = false
         MainFrame.BackgroundTransparency = 0.12
         MainFrame.Size = UDim2.new(0, 640, 0, 470)
         MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
@@ -1749,6 +1952,8 @@ if settingsPage then
         if SetESPToggleState then SetESPToggleState(false) end
         RemoveHealthBar()
         if SetHealthBarToggleState then SetHealthBarToggleState(false) end
+        RemoveSkeleton()
+        if SetSkeletonToggleState then SetSkeletonToggleState(false) end
         for _, btn in ipairs(langButtonData) do pcall(btn.Update, false) end
         UpdateAllTexts()
         if rainbowConnection then rainbowConnection:Disconnect() rainbowConnection = nil end
@@ -1846,9 +2051,7 @@ if TabButtons[1] then
 end
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.Insert then
-        MainFrame.Visible = not MainFrame.Visible
-    end
+    if input.KeyCode == Enum.KeyCode.Insert then MainFrame.Visible = not MainFrame.Visible end
 end)
-print("[META] META v7.0.40 - Health Bar Right Shoulder")
+print("[META] META v7.0.42 - Skeleton + Health Bar + Chams Color")
 print("[META] Press Insert or click icon")
