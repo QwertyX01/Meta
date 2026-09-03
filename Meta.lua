@@ -1,4 +1,4 @@
--- ROCKET::META_UI_V7.0.34
+-- ROCKET::META_UI_V7.0.35
 
 local function SetupAntiCheatBypass()
     pcall(function()
@@ -328,7 +328,7 @@ local function RemoveChams()
     if _G.UnloadChams then _G.UnloadChams() end
 end
 
--- ESP (белые трассеры)
+-- ESP
 local ESPConnections = {}
 local function SetupESP()
     local function NewLine()
@@ -346,31 +346,16 @@ local function SetupESP()
         for i = 1, 12 do lines[i] = NewLine() end
         lines.Tracer = NewLine()
         local conn = RunService.RenderStepped:Connect(function()
-            if not _G.ESPEnabled then
-                for _, l in pairs(lines) do l.Visible = false end
-                return
-            end
+            if not _G.ESPEnabled then for _, l in pairs(lines) do l.Visible = false end return end
             local char = target.Character
-            if not char then
-                for _, l in pairs(lines) do l.Visible = false end
-                return
-            end
+            if not char then for _, l in pairs(lines) do l.Visible = false end return end
             local hrp = char:FindFirstChild("HumanoidRootPart")
             local head = char:FindFirstChild("Head")
             local hum = char:FindFirstChild("Humanoid")
-            if not hrp or not head or not hum or hum.Health <= 0 then
-                for _, l in pairs(lines) do l.Visible = false end
-                return
-            end
-            if target == LocalPlayer or not IsEnemy(target) then
-                for _, l in pairs(lines) do l.Visible = false end
-                return
-            end
+            if not hrp or not head or not hum or hum.Health <= 0 then for _, l in pairs(lines) do l.Visible = false end return end
+            if target == LocalPlayer or not IsEnemy(target) then for _, l in pairs(lines) do l.Visible = false end return end
             local rootVisible = Camera:WorldToViewportPoint(hrp.Position)
-            if not rootVisible then
-                for _, l in pairs(lines) do l.Visible = false end
-                return
-            end
+            if not rootVisible then for _, l in pairs(lines) do l.Visible = false end return end
             local scale = head.Size.Y / 2
             local boxSize = Vector3.new(2, 3, 1.5) * (scale * 2)
             local cf = hrp.CFrame
@@ -422,22 +407,17 @@ local function SetupESP()
 end
 local ApplyESP, RemoveESP = SetupESP()
 
--- АВТООБНОВЛЕНИЕ ESP
 task.spawn(function()
     while true do
         task.wait(1)
-        if _G.ESPEnabled then
-            RemoveESP()
-            ApplyESP()
-        end
+        if _G.ESPEnabled then RemoveESP() ApplyESP() end
     end
 end)
 
--- HEALTH BAR (оптимизированный)
+-- HEALTH BAR
 local healthBars = {}
 local enemiesCache = {}
 local cacheTime = 0
-
 local function SetupHealthBar()
     local function createBarPair()
         local outline = Drawing.new("Square")
@@ -453,7 +433,6 @@ local function SetupHealthBar()
         bar.Transparency = 1
         return {Outline = outline, Bar = bar}
     end
-
     local function getPlayerHealth(character)
         if not character then return nil, nil end
         local humanoid = character:FindFirstChild("Humanoid")
@@ -463,12 +442,9 @@ local function SetupHealthBar()
         end
         local healthAttr = character:GetAttribute("Health")
         local maxHealthAttr = character:GetAttribute("MaxHealth")
-        if healthAttr and maxHealthAttr and healthAttr > 0 then
-            return healthAttr, maxHealthAttr
-        end
+        if healthAttr and maxHealthAttr and healthAttr > 0 then return healthAttr, maxHealthAttr end
         return nil, nil
     end
-
     local function removeHealthBar(target)
         local data = healthBars[target]
         if data then
@@ -481,7 +457,6 @@ local function SetupHealthBar()
             healthBars[target] = nil
         end
     end
-
     local function updateEnemiesCache()
         if tick() - cacheTime < 1 then return end
         cacheTime = tick()
@@ -503,33 +478,20 @@ local function SetupHealthBar()
             end
         end
     end
-
     local healthConnection = RunService.RenderStepped:Connect(function()
         if not _G.HealthBarEnabled then
-            for _, data in pairs(healthBars) do
-                data.Outline.Visible = false
-                data.Bar.Visible = false
-            end
+            for _, data in pairs(healthBars) do data.Outline.Visible = false data.Bar.Visible = false end
             return
         end
         updateEnemiesCache()
         for player, data in pairs(enemiesCache) do
-            if not player or not player.Character or not player.Character.Parent then
-                removeHealthBar(player)
-                continue
-            end
+            if not player or not player.Character or not player.Character.Parent then removeHealthBar(player) continue end
             local char = player.Character
             local health, maxHealth = getPlayerHealth(char)
-            if not health or health <= 0 then
-                removeHealthBar(player)
-                continue
-            end
+            if not health or health <= 0 then removeHealthBar(player) continue end
             local head = char:FindFirstChild("Head")
             local hrp = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
-            if not head or not hrp then
-                removeHealthBar(player)
-                continue
-            end
+            if not head or not hrp then removeHealthBar(player) continue end
             local headPos, visible = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 0.5, 0))
             local distance = (Camera.CFrame.Position - hrp.Position).Magnitude
             if visible and distance <= 1000 and headPos.Z > 0 then
@@ -537,9 +499,7 @@ local function SetupHealthBar()
                 local height = math.floor(62 * scale)
                 local width = math.floor(40 * scale)
                 if height > 10 then
-                    if not healthBars[player] then
-                        healthBars[player] = createBarPair()
-                    end
+                    if not healthBars[player] then healthBars[player] = createBarPair() end
                     local barData = healthBars[player]
                     local boxX = headPos.X - width / 2
                     local boxY = headPos.Y - height / 2
@@ -554,54 +514,33 @@ local function SetupHealthBar()
                     barData.Outline.Visible = true
                     barData.Bar.Size = Vector2.new(barWidth, math.max(filledHeight, 1))
                     barData.Bar.Position = Vector2.new(barXPos, barYPos + (barHeight - filledHeight))
-                    if health <= 20 then
-                        barData.Bar.Color = Color3.fromRGB(255, 0, 0)
-                    elseif health <= 65 then
-                        barData.Bar.Color = Color3.fromRGB(255, 255, 0)
-                    else
-                        barData.Bar.Color = Color3.fromRGB(0, 255, 0)
-                    end
+                    if health <= 20 then barData.Bar.Color = Color3.fromRGB(255, 0, 0)
+                    elseif health <= 65 then barData.Bar.Color = Color3.fromRGB(255, 255, 0)
+                    else barData.Bar.Color = Color3.fromRGB(0, 255, 0) end
                     barData.Bar.Visible = true
                 else
-                    if healthBars[player] then
-                        healthBars[player].Outline.Visible = false
-                        healthBars[player].Bar.Visible = false
-                    end
+                    if healthBars[player] then healthBars[player].Outline.Visible = false healthBars[player].Bar.Visible = false end
                 end
             else
-                if healthBars[player] then
-                    healthBars[player].Outline.Visible = false
-                    healthBars[player].Bar.Visible = false
-                end
+                if healthBars[player] then healthBars[player].Outline.Visible = false healthBars[player].Bar.Visible = false end
             end
         end
         for player, barData in pairs(healthBars) do
-            if not enemiesCache[player] then
-                removeHealthBar(player)
-            end
+            if not enemiesCache[player] then removeHealthBar(player) end
         end
     end)
-
-    local function ApplyHealthBar()
-        _G.HealthBarEnabled = true
-    end
-
+    local function ApplyHealthBar() _G.HealthBarEnabled = true end
     local function RemoveHealthBar()
         _G.HealthBarEnabled = false
-        for player, _ in pairs(healthBars) do
-            removeHealthBar(player)
-        end
+        for player, _ in pairs(healthBars) do removeHealthBar(player) end
         enemiesCache = {}
     end
-
     _G.UnloadHealthBar = function()
         if healthConnection then healthConnection:Disconnect() end
         RemoveHealthBar()
     end
-
     return ApplyHealthBar, RemoveHealthBar
 end
-
 local ApplyHealthBar, RemoveHealthBar = SetupHealthBar()
 
 local IndicatorLine = nil
@@ -784,12 +723,18 @@ if visualsPage then
     chamsToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
     chamsToggleBg.BorderSizePixel = 0
     chamsToggleBg.Parent = chamsFrame
+    local chamsToggleCorner = Instance.new("UICorner")
+    chamsToggleCorner.CornerRadius = UDim.new(1, 0)
+    chamsToggleCorner.Parent = chamsToggleBg
     local chamsHandle = Instance.new("Frame")
     chamsHandle.Size = UDim2.new(0, 18, 0, 18)
     chamsHandle.Position = UDim2.new(0, 3, 0.5, -9)
     chamsHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     chamsHandle.BorderSizePixel = 0
     chamsHandle.Parent = chamsToggleBg
+    local chamsHandleCorner = Instance.new("UICorner")
+    chamsHandleCorner.CornerRadius = UDim.new(1, 0)
+    chamsHandleCorner.Parent = chamsHandle
     local chamsClickArea = Instance.new("TextButton")
     chamsClickArea.Size = UDim2.new(0, 44, 0, 24)
     chamsClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
@@ -848,12 +793,18 @@ if visualsPage then
     espToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
     espToggleBg.BorderSizePixel = 0
     espToggleBg.Parent = espFrame
+    local espToggleCorner = Instance.new("UICorner")
+    espToggleCorner.CornerRadius = UDim.new(1, 0)
+    espToggleCorner.Parent = espToggleBg
     local espHandle = Instance.new("Frame")
     espHandle.Size = UDim2.new(0, 18, 0, 18)
     espHandle.Position = UDim2.new(0, 3, 0.5, -9)
     espHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     espHandle.BorderSizePixel = 0
     espHandle.Parent = espToggleBg
+    local espHandleCorner = Instance.new("UICorner")
+    espHandleCorner.CornerRadius = UDim.new(1, 0)
+    espHandleCorner.Parent = espHandle
     local espClickArea = Instance.new("TextButton")
     espClickArea.Size = UDim2.new(0, 44, 0, 24)
     espClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
@@ -912,12 +863,18 @@ if visualsPage then
     healthToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
     healthToggleBg.BorderSizePixel = 0
     healthToggleBg.Parent = healthFrame
+    local healthToggleCorner = Instance.new("UICorner")
+    healthToggleCorner.CornerRadius = UDim.new(1, 0)
+    healthToggleCorner.Parent = healthToggleBg
     local healthHandle = Instance.new("Frame")
     healthHandle.Size = UDim2.new(0, 18, 0, 18)
     healthHandle.Position = UDim2.new(0, 3, 0.5, -9)
     healthHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     healthHandle.BorderSizePixel = 0
     healthHandle.Parent = healthToggleBg
+    local healthHandleCorner = Instance.new("UICorner")
+    healthHandleCorner.CornerRadius = UDim.new(1, 0)
+    healthHandleCorner.Parent = healthHandle
     local healthClickArea = Instance.new("TextButton")
     healthClickArea.Size = UDim2.new(0, 44, 0, 24)
     healthClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
@@ -995,6 +952,9 @@ if settingsPage then
     handle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     handle.BorderSizePixel = 0
     handle.Parent = toggleBg
+    local handleCorner = Instance.new("UICorner")
+    handleCorner.CornerRadius = UDim.new(1, 0)
+    handleCorner.Parent = handle
     local clickArea = Instance.new("TextButton")
     clickArea.Size = UDim2.new(0, 44, 0, 24)
     clickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
@@ -1023,6 +983,9 @@ if settingsPage then
     pickerDot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     pickerDot.ZIndex = 32
     pickerDot.Parent = wheelImage
+    local dotCorner = Instance.new("UICorner")
+    dotCorner.CornerRadius = UDim.new(1, 0)
+    dotCorner.Parent = pickerDot
     local dragArea = Instance.new("TextButton")
     dragArea.Size = UDim2.new(1, 0, 1, 0)
     dragArea.BackgroundTransparency = 1
@@ -1306,6 +1269,9 @@ if settingsPage then
     rainbowHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     rainbowHandle.BorderSizePixel = 0
     rainbowHandle.Parent = rainbowToggleBg
+    local rainbowHandleCorner = Instance.new("UICorner")
+    rainbowHandleCorner.CornerRadius = UDim.new(1, 0)
+    rainbowHandleCorner.Parent = rainbowHandle
     local rainbowClickArea = Instance.new("TextButton")
     rainbowClickArea.Size = UDim2.new(0, 44, 0, 24)
     rainbowClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
@@ -1566,12 +1532,18 @@ if settingsPage then
     flyingToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
     flyingToggleBg.BorderSizePixel = 0
     flyingToggleBg.Parent = flyingToggleFrame
+    local flyingToggleCorner = Instance.new("UICorner")
+    flyingToggleCorner.CornerRadius = UDim.new(1, 0)
+    flyingToggleCorner.Parent = flyingToggleBg
     local flyingHandle = Instance.new("Frame")
     flyingHandle.Size = UDim2.new(0, 18, 0, 18)
     flyingHandle.Position = UDim2.new(0, 3, 0.5, -9)
     flyingHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     flyingHandle.BorderSizePixel = 0
     flyingHandle.Parent = flyingToggleBg
+    local flyingHandleCorner = Instance.new("UICorner")
+    flyingHandleCorner.CornerRadius = UDim.new(1, 0)
+    flyingHandleCorner.Parent = flyingHandle
     local flyingClickArea = Instance.new("TextButton")
     flyingClickArea.Size = UDim2.new(0, 44, 0, 24)
     flyingClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
@@ -1617,12 +1589,18 @@ if settingsPage then
     resetToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
     resetToggleBg.BorderSizePixel = 0
     resetToggleBg.Parent = resetFrame
+    local resetToggleCorner = Instance.new("UICorner")
+    resetToggleCorner.CornerRadius = UDim.new(1, 0)
+    resetToggleCorner.Parent = resetToggleBg
     local resetHandle = Instance.new("Frame")
     resetHandle.Size = UDim2.new(0, 18, 0, 18)
     resetHandle.Position = UDim2.new(0, 3, 0.5, -9)
     resetHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     resetHandle.BorderSizePixel = 0
     resetHandle.Parent = resetToggleBg
+    local resetHandleCorner = Instance.new("UICorner")
+    resetHandleCorner.CornerRadius = UDim.new(1, 0)
+    resetHandleCorner.Parent = resetHandle
     local resetClickArea = Instance.new("TextButton")
     resetClickArea.Size = UDim2.new(0, 44, 0, 24)
     resetClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
@@ -1737,5 +1715,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         MainFrame.Visible = not MainFrame.Visible
     end
 end)
-print("[META] META v7.0.34 - Sliders Rounded + Health Bar")
+print("[META] META v7.0.35 - All Rounded")
 print("[META] Press Insert or click icon")
