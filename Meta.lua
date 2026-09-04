@@ -1850,3 +1850,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         MainFrame.Visible = not MainFrame.Visible
     end
 end)
+print("[META] META v7.0.40 - Health Bar Right Shoulder")
+print("[META] Press Insert or click icon")
