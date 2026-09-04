@@ -1,4 +1,4 @@
--- ROCKET::META_UI_V7.0.40_SKELETON
+-- ROCKET::META_UI_V7.0.40_SEARCH_HIGHLIGHT
 
 local function SetupAntiCheatBypass()
     pcall(function()
@@ -56,6 +56,8 @@ _G.HealthBarEnabled = false
 _G.SkeletonEnabled = false
 _G.SkeletonColor = Color3.fromRGB(255,255,255)
 _G.SkeletonThickness = 2
+_G.HealthBarWidth = 50
+_G.HealthBarHeight = 6
 
 local Dots = {}
 local DotConnection = nil
@@ -67,8 +69,8 @@ local SetChamsToggleState, SetRainbowToggleState = nil, nil
 local SetFlyingToggleState, SetESPToggleState = nil, nil
 local SetHealthBarToggleState = nil
 local SetSkeletonToggleState = nil
-local SetThicknessValue = nil
 local thicknessSliderFill, thicknessSliderHandle, thicknessValue = nil, nil, nil
+local highlightConnections = {}
 
 local LANG = {
     RU = {
@@ -81,7 +83,7 @@ local LANG = {
             FlyingDots = {"Летающие точки", "Точки, летающие с верху меню"},
             Chams = {"Чамсы", "Функция которая делает противников фиолетовым"},
             ESP = {"Линии и 3D Боксы", "Линии с боксами которые ведут к противникам"},
-            HealthBar = {"Хп противников", "Полоска здоровья"},
+            HealthBar = {"Хп противников", "Полоска здоровья над головой"},
             Skeleton = {"Скелет", "Отобразить скелет врагов"},
             Thickness = {"Толщина", "Толщина линий скелета"},
             Reset = {"Сброс настроек", "Вернуть все настройки к стандартным"}
@@ -97,7 +99,7 @@ local LANG = {
             FlyingDots = {"Flying Dots", "Floating dots from the top of the menu"},
             Chams = {"Chams", "Makes enemies purple"},
             ESP = {"Tracers and 3D Box", "Lines with boxes leading to enemies"},
-            HealthBar = {"Health Bar", "Health bar display"},
+            HealthBar = {"Health Bar", "Health bar above head"},
             Skeleton = {"Skeleton", "Display enemy skeleton"},
             Thickness = {"Thickness", "Skeleton line thickness"},
             Reset = {"Reset Settings", "Return all settings to default"}
@@ -281,6 +283,83 @@ local langUpdateCallbacks = {}
 local rainbowConnection = nil
 local langButtonData = {}
 
+-- ПОИСК И ПОДСВЕТКА
+local highlightCache = {}
+
+local function ClearHighlights()
+    for _, hl in ipairs(highlightCache) do
+        pcall(function()
+            if hl and hl.Parent then
+                TweenService:Create(hl, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {BackgroundTransparency = 1}):Play()
+                task.delay(0.35, function() hl:Destroy() end)
+            end
+        end)
+    end
+    highlightCache = {}
+end
+
+local function HighlightElement(element, tabName)
+    if not element or not element.Parent then return end
+    local highlight = Instance.new("Frame")
+    highlight.Size = UDim2.new(1, 0, 1, 0)
+    highlight.Position = UDim2.new(0, 0, 0, 0)
+    highlight.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    highlight.BackgroundTransparency = 0.85
+    highlight.BorderSizePixel = 0
+    highlight.ZIndex = 999
+    highlight.Parent = element
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 4)
+    corner.Parent = highlight
+    table.insert(highlightCache, highlight)
+    TweenService:Create(highlight, TweenInfo.new(0.7, Enum.EasingStyle.Quad), {BackgroundTransparency = 0.6}):Play()
+    task.delay(1.5, function()
+        pcall(function()
+            TweenService:Create(highlight, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {BackgroundTransparency = 1}):Play()
+            task.delay(0.35, function() highlight:Destroy() end)
+        end)
+    end)
+end
+
+local function SearchAndHighlight(query)
+    ClearHighlights()
+    if not query or query == "" or query == "Search..." then return end
+    query = string.lower(query)
+    local found = {}
+    local targetTab = nil
+    for tabName, page in pairs(ContentPages) do
+        if page then
+            local function scanChildren(parent)
+                for _, child in ipairs(parent:GetChildren()) do
+                    if child:IsA("TextLabel") or child:IsA("TextButton") then
+                        local text = string.lower(child.Text)
+                        if text ~= "" and string.find(text, query) then
+                            table.insert(found, {element = child, tab = tabName})
+                            if not targetTab then targetTab = tabName end
+                        end
+                    end
+                    if child:IsA("Frame") or child:IsA("ScrollingFrame") then
+                        scanChildren(child)
+                    end
+                end
+            end
+            scanChildren(page)
+        end
+    end
+    if #found > 0 and targetTab then
+        for idx, name in ipairs(TabNames) do
+            if name == targetTab then
+                SwitchToTab(idx)
+                break
+            end
+        end
+        task.wait(0.1)
+        for _, data in ipairs(found) do
+            HighlightElement(data.element, data.tab)
+        end
+    end
+end
+
 local function IsEnemy(p)
     if not p or p == LocalPlayer then return false end
     if p.Team and LocalPlayer.Team then
@@ -380,86 +459,68 @@ local function StartSkeleton()
             end
             return
         end
-        
         updateEnemiesCache()
-        
         for player, data in pairs(enemiesCache) do
             if not player or not player.Character or not player.Character.Parent then
                 removeSkeleton(player)
                 continue
             end
-            
             local char = player.Character
             local health, maxHealth = getPlayerHealth(char)
             if not health or health <= 0 then
                 removeSkeleton(player)
                 continue
             end
-            
             local head = char:FindFirstChild("Head")
             local upperTorso = char:FindFirstChild("UpperTorso")
             local lowerTorso = char:FindFirstChild("LowerTorso")
             local hrp = char:FindFirstChild("HumanoidRootPart")
-            
             local leftUpperArm = char:FindFirstChild("LeftUpperArm")
             local leftLowerArm = char:FindFirstChild("LeftLowerArm")
             local leftHand = char:FindFirstChild("LeftHand")
-            
             local rightUpperArm = char:FindFirstChild("RightUpperArm")
             local rightLowerArm = char:FindFirstChild("RightLowerArm")
             local rightHand = char:FindFirstChild("RightHand")
-            
             local leftUpperLeg = char:FindFirstChild("LeftUpperLeg")
             local leftLowerLeg = char:FindFirstChild("LeftLowerLeg")
             local leftFoot = char:FindFirstChild("LeftFoot")
-            
             local rightUpperLeg = char:FindFirstChild("RightUpperLeg")
             local rightLowerLeg = char:FindFirstChild("RightLowerLeg")
             local rightFoot = char:FindFirstChild("RightFoot")
-            
             if not head or not upperTorso then
                 removeSkeleton(player)
                 continue
             end
-            
             local headPos = getPos(head)
             local upperTorsoPos = getPos(upperTorso)
             local lowerTorsoPos = getPos(lowerTorso)
             local hrpPos = getPos(hrp)
-            
             local leftUpperArmPos = getPos(leftUpperArm)
             local leftLowerArmPos = getPos(leftLowerArm)
             local leftHandPos = getPos(leftHand)
-            
             local rightUpperArmPos = getPos(rightUpperArm)
             local rightLowerArmPos = getPos(rightLowerArm)
             local rightHandPos = getPos(rightHand)
-            
             local leftUpperLegPos = getPos(leftUpperLeg)
             local leftLowerLegPos = getPos(leftLowerLeg)
             local leftFootPos = getPos(leftFoot)
-            
             local rightUpperLegPos = getPos(rightUpperLeg)
             local rightLowerLegPos = getPos(rightLowerLeg)
             local rightFootPos = getPos(rightFoot)
-            
             if not headPos or not upperTorsoPos then
                 removeSkeleton(player)
                 continue
             end
-            
             if not skeletons[player] then
                 skeletons[player] = {}
                 for i = 1, 15 do
                     table.insert(skeletons[player], createLine())
                 end
             end
-            
             local lines = skeletons[player]
             local color = _G.SkeletonColor
             local thickness = _G.SkeletonThickness
             local idx = 1
-            
             local function setLine(from, to, show)
                 if from and to and show then
                     lines[idx].From = from
@@ -472,19 +533,15 @@ local function StartSkeleton()
                 end
                 idx = idx + 1
             end
-            
             setLine(headPos, upperTorsoPos, true)
             setLine(upperTorsoPos, lowerTorsoPos, lowerTorsoPos ~= nil)
             setLine(upperTorsoPos, hrpPos, hrpPos ~= nil)
-            
             setLine(upperTorsoPos, leftUpperArmPos, leftUpperArmPos ~= nil)
             setLine(leftUpperArmPos, leftLowerArmPos, leftUpperArmPos ~= nil and leftLowerArmPos ~= nil)
             setLine(leftLowerArmPos, leftHandPos, leftLowerArmPos ~= nil and leftHandPos ~= nil)
-            
             setLine(upperTorsoPos, rightUpperArmPos, rightUpperArmPos ~= nil)
             setLine(rightUpperArmPos, rightLowerArmPos, rightUpperArmPos ~= nil and rightLowerArmPos ~= nil)
             setLine(rightLowerArmPos, rightHandPos, rightLowerArmPos ~= nil and rightHandPos ~= nil)
-            
             if lowerTorsoPos then
                 setLine(lowerTorsoPos, leftUpperLegPos, leftUpperLegPos ~= nil)
                 setLine(lowerTorsoPos, rightUpperLegPos, rightUpperLegPos ~= nil)
@@ -495,18 +552,15 @@ local function StartSkeleton()
                 setLine(upperTorsoPos, leftUpperLegPos, leftUpperLegPos ~= nil)
                 setLine(upperTorsoPos, rightUpperLegPos, rightUpperLegPos ~= nil)
             end
-            
             setLine(leftUpperLegPos, leftLowerLegPos, leftUpperLegPos ~= nil and leftLowerLegPos ~= nil)
             setLine(rightUpperLegPos, rightLowerLegPos, rightUpperLegPos ~= nil and rightLowerLegPos ~= nil)
             setLine(leftLowerLegPos, leftFootPos, leftLowerLegPos ~= nil and leftFootPos ~= nil)
             setLine(rightLowerLegPos, rightFootPos, rightLowerLegPos ~= nil and rightFootPos ~= nil)
-            
             while idx <= #lines do
                 lines[idx].Visible = false
                 idx = idx + 1
             end
         end
-        
         for player, _ in pairs(skeletons) do
             if not enemiesCache[player] then
                 removeSkeleton(player)
@@ -532,7 +586,7 @@ local function StopSkeleton()
     enemiesCache = {}
 end
 
--- CHAMS
+-- CHAMS (БЕЗ ЗАДЕРЖКИ)
 local ChamsConnections = {}
 local function PaintCharacter(character, p)
     if not character or not p then return end
@@ -557,10 +611,11 @@ local function SetupPlayer(p)
     if p == LocalPlayer then return end
     if ChamsConnections[p] then ChamsConnections[p]:Disconnect() end
     ChamsConnections[p] = p.CharacterAdded:Connect(function(char)
-        task.wait(0.6)
         PaintCharacter(char, p)
     end)
-    if p.Character then task.wait(0.2) PaintCharacter(p.Character, p) end
+    if p.Character then
+        PaintCharacter(p.Character, p)
+    end
 end
 
 local function ApplyChams()
@@ -672,235 +727,247 @@ task.spawn(function()
     end
 end)
 
--- HEALTH BAR ESP
+-- HEALTH BAR ESP (НОВЫЙ - НАД ГОЛОВОЙ)
 local healthBars = {}
 local enemiesCacheHealth = {}
 local cacheTimeHealth = 0
 local healthHistory = {}
 
-local function SetupHealthBar()
-    local function createBarPair()
-        local bg = Drawing.new("Square")
-        bg.Thickness = 1
-        bg.Filled = true
-        bg.Visible = false
-        bg.Color = Color3.fromRGB(15, 15, 20)
-        bg.Transparency = 0.35
-
-        local bar = Drawing.new("Square")
-        bar.Thickness = 1
-        bar.Filled = true
-        bar.Visible = false
-        bar.Transparency = 1
-
-        local dividers = {}
-        for i = 1, 8 do
-            local div = Drawing.new("Square")
-            div.Thickness = 1
-            div.Filled = true
-            div.Visible = false
-            div.Color = Color3.fromRGB(100, 100, 110)
-            div.Transparency = 0.5
-            table.insert(dividers, div)
-        end
-
-        return {Bg = bg, Bar = bar, Dividers = dividers}
-    end
-
-    local function getPlayerHealth(character)
-        if not character then return nil, nil end
-        local humanoid = character:FindFirstChild("Humanoid")
-        if humanoid and humanoid.Health and humanoid.MaxHealth then
-            if humanoid.Health > 0 then return humanoid.Health, humanoid.MaxHealth end
-            return nil, nil
-        end
-        local healthAttr = character:GetAttribute("Health")
-        local maxHealthAttr = character:GetAttribute("MaxHealth")
-        if healthAttr and maxHealthAttr and healthAttr > 0 then return healthAttr, maxHealthAttr end
+local function getPlayerHealthNew(character)
+    if not character then return nil, nil end
+    local humanoid = character:FindFirstChild("Humanoid")
+    if humanoid and humanoid.Health and humanoid.MaxHealth then
+        if humanoid.Health > 0 then return humanoid.Health, humanoid.MaxHealth end
         return nil, nil
     end
+    local healthAttr = character:GetAttribute("Health")
+    local maxHealthAttr = character:GetAttribute("MaxHealth")
+    if healthAttr and maxHealthAttr and healthAttr > 0 then return healthAttr, maxHealthAttr end
+    return nil, nil
+end
 
-    local function getHealthColor(health, maxHealth, prevHealth)
-        local percent = health / maxHealth
-        local isDamaged = prevHealth and prevHealth > health and (prevHealth - health) > 5
-        if isDamaged then return Color3.fromRGB(255, 255, 255) end
-        if percent <= 0.20 then return Color3.fromRGB(255, 0, 0)
-        elseif percent <= 0.35 then return Color3.fromRGB(255, 100, 0)
-        elseif percent <= 0.55 then return Color3.fromRGB(255, 200, 0)
-        elseif percent <= 0.75 then return Color3.fromRGB(200, 255, 0)
-        else return Color3.fromRGB(0, 255, 100) end
+local function getHealthColorNew(health, maxHealth, prevHealth)
+    local percent = health / maxHealth
+    local isDamaged = prevHealth and prevHealth > health and (prevHealth - health) > 5
+    if isDamaged then return Color3.fromRGB(255, 255, 255) end
+    if percent <= 0.20 then return Color3.fromRGB(255, 50, 50)
+    elseif percent <= 0.40 then return Color3.fromRGB(255, 170, 50)
+    elseif percent <= 0.60 then return Color3.fromRGB(255, 220, 50)
+    elseif percent <= 0.80 then return Color3.fromRGB(150, 255, 50)
+    else return Color3.fromRGB(50, 255, 150) end
+end
+
+local function createBarPairNew()
+    local bg = Drawing.new("Square")
+    bg.Thickness = 0
+    bg.Filled = true
+    bg.Visible = false
+    bg.Color = Color3.fromRGB(30, 30, 40)
+    bg.Transparency = 0.7
+    bg.ZIndex = 0
+    local bar = Drawing.new("Square")
+    bar.Thickness = 0
+    bar.Filled = true
+    bar.Visible = false
+    bar.Transparency = 1
+    bar.ZIndex = 1
+    local border = Drawing.new("Square")
+    border.Thickness = 1
+    border.Filled = false
+    border.Visible = false
+    border.Color = Color3.fromRGB(60, 60, 80)
+    border.Transparency = 0.5
+    border.ZIndex = 2
+    local dividers = {}
+    for i = 1, 8 do
+        local div = Drawing.new("Square")
+        div.Thickness = 1
+        div.Filled = false
+        div.Visible = false
+        div.Color = Color3.fromRGB(50, 50, 65)
+        div.Transparency = 0.5
+        div.ZIndex = 3
+        table.insert(dividers, div)
     end
+    return {Bg = bg, Bar = bar, Border = border, Dividers = dividers}
+end
 
-    local function removeHealthBar(target)
-        local data = healthBars[target]
-        if data then
-            pcall(function()
-                data.Bg.Visible = false
-                data.Bar.Visible = false
-                data.Bg:Remove()
-                data.Bar:Remove()
-                for _, div in pairs(data.Dividers) do
-                    div.Visible = false
-                    div:Remove()
-                end
-            end)
-            healthBars[target] = nil
-        end
-        healthHistory[target] = nil
+local function removeHealthBarNew(target)
+    local data = healthBars[target]
+    if data then
+        pcall(function()
+            data.Bg.Visible = false
+            data.Bar.Visible = false
+            data.Border.Visible = false
+            data.Bg:Remove()
+            data.Bar:Remove()
+            data.Border:Remove()
+            for _, div in pairs(data.Dividers) do
+                div.Visible = false
+                div:Remove()
+            end
+        end)
+        healthBars[target] = nil
     end
+    healthHistory[target] = nil
+end
 
-    local function updateEnemiesCache()
-        if tick() - cacheTimeHealth < 0.5 then return end
-        cacheTimeHealth = tick()
-        enemiesCacheHealth = {}
-        for _, player in pairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer and player.Character and player.Character.Parent then
-                if IsEnemy(player) then
-                    local health, maxHealth = getPlayerHealth(player.Character)
-                    if health and health > 0 then
-                        enemiesCacheHealth[player] = {char = player.Character, health = health, maxHealth = maxHealth}
-                    else
-                        removeHealthBar(player)
-                    end
+local function updateEnemiesCacheHealth()
+    if tick() - cacheTimeHealth < 0.5 then return end
+    cacheTimeHealth = tick()
+    enemiesCacheHealth = {}
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character.Parent then
+            if IsEnemy(player) then
+                local health, maxHealth = getPlayerHealthNew(player.Character)
+                if health and health > 0 then
+                    enemiesCacheHealth[player] = {char = player.Character, health = health, maxHealth = maxHealth}
                 else
-                    removeHealthBar(player)
+                    removeHealthBarNew(player)
                 end
             else
-                removeHealthBar(player)
+                removeHealthBarNew(player)
             end
+        else
+            removeHealthBarNew(player)
         end
     end
+end
 
-    local healthConnection = RunService.RenderStepped:Connect(function()
+local healthConnection = nil
+
+local function StartHealthBar()
+    if healthConnection then healthConnection:Disconnect() end
+    healthConnection = RunService.RenderStepped:Connect(function()
         if not _G.HealthBarEnabled then
             for _, data in pairs(healthBars) do
                 data.Bg.Visible = false
                 data.Bar.Visible = false
-                for _, div in pairs(data.Dividers) do div.Visible = false end
+                data.Border.Visible = false
+                for _, div in pairs(data.Dividers) do
+                    div.Visible = false
+                end
             end
             return
         end
-
-        updateEnemiesCache()
-
+        updateEnemiesCacheHealth()
         for player, data in pairs(enemiesCacheHealth) do
             if not player or not player.Character or not player.Character.Parent then
-                removeHealthBar(player)
+                removeHealthBarNew(player)
                 continue
             end
-
             local char = player.Character
-            local health, maxHealth = getPlayerHealth(char)
+            local health, maxHealth = getPlayerHealthNew(char)
             if not health or health <= 0 then
-                removeHealthBar(player)
+                removeHealthBarNew(player)
                 continue
             end
-
             local prevHealth = healthHistory[player]
             healthHistory[player] = health
-
             local head = char:FindFirstChild("Head")
-            local hrp = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
-
-            if not head or not hrp then
-                removeHealthBar(player)
+            if not head then
+                removeHealthBarNew(player)
                 continue
             end
-
-            local headPos, visible = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 0.5, 0))
-            local hrpPos, hrpVis = Camera:WorldToViewportPoint(hrp.Position)
-            local distance = (Camera.CFrame.Position - hrp.Position).Magnitude
-
-            if visible and distance <= 1000 and headPos.Z > 0 and hrpVis and hrpPos.Z > 0 then
-                local scale = 1 / (headPos.Z * math.tan(math.rad(Camera.FieldOfView * 0.5)) * 2) * 100
-                local height = math.floor(62 * scale)
-                local width = math.floor(40 * scale)
-
-                if height > 10 then
-                    if not healthBars[player] then
-                        healthBars[player] = createBarPair()
-                    end
-
-                    local barData = healthBars[player]
-                    local boxX = headPos.X - width / 2
-                    local boxY = headPos.Y - height / 2
-
-                    local barHeight = height * 0.95
-                    local barWidth = 1.0
-
-                    local rightOffset = width * 0.55
-                    local barXPos = boxX + rightOffset
-                    local barYPos = boxY + (height - barHeight) / 2 + 4
-
-                    local hpPercent = health / maxHealth
-                    local filledHeight = barHeight * hpPercent
-
-                    barData.Bg.Size = Vector2.new(barWidth, barHeight)
-                    barData.Bg.Position = Vector2.new(barXPos, barYPos)
-                    barData.Bg.Visible = true
-                    barData.Bg.Transparency = 0.35
-                    barData.Bg.Color = Color3.fromRGB(15, 15, 20)
-
-                    barData.Bar.Size = Vector2.new(barWidth, math.max(filledHeight, 0.5))
-                    barData.Bar.Position = Vector2.new(barXPos, barYPos + (barHeight - filledHeight))
-                    barData.Bar.Visible = true
-                    barData.Bar.Transparency = 1
-
-                    local barColor = getHealthColor(health, maxHealth, prevHealth)
-                    barData.Bar.Color = barColor
-
-                    if prevHealth and prevHealth > health and (prevHealth - health) > 5 then
-                        barData.Bar.Color = Color3.fromRGB(255, 255, 255)
-                    end
-
-                    local segmentHeight = barHeight / 9
-                    for i = 1, 8 do
-                        local div = barData.Dividers[i]
-                        local yPos = barYPos + (i * segmentHeight)
-                        div.Size = Vector2.new(barWidth + 0.5, 0.3)
-                        div.Position = Vector2.new(barXPos - 0.25, yPos)
-                        div.Visible = true
-                        div.Transparency = 0.5
-                        div.Color = Color3.fromRGB(100, 100, 110)
-                    end
-                else
-                    if healthBars[player] then
-                        healthBars[player].Bg.Visible = false
-                        healthBars[player].Bar.Visible = false
-                        for _, div in pairs(healthBars[player].Dividers) do div.Visible = false end
-                    end
+            local headPos, headVis = Camera:WorldToViewportPoint(head.Position)
+            local distance = (Camera.CFrame.Position - head.Position).Magnitude
+            if headVis and headPos.Z > 0 and distance <= 1000 then
+                local barWidth = _G.HealthBarWidth or 50
+                local barHeight = _G.HealthBarHeight or 6
+                local scale = 1 / (headPos.Z * 0.015 + 0.5)
+                if scale > 1.5 then scale = 1.5 end
+                if scale < 0.4 then scale = 0.4 end
+                local finalWidth = barWidth * scale
+                local finalHeight = barHeight * scale
+                local offsetY = 4 * scale
+                local barX = headPos.X - finalWidth / 2
+                local barY = headPos.Y - finalHeight - offsetY
+                if barX < 5 then barX = 5 end
+                if barX + finalWidth > Camera.ViewportSize.X - 5 then 
+                    barX = Camera.ViewportSize.X - finalWidth - 5 
+                end
+                if barY < 5 then barY = 5 end
+                if not healthBars[player] then
+                    healthBars[player] = createBarPairNew()
+                end
+                local barData = healthBars[player]
+                local hpPercent = health / maxHealth
+                local filledWidth = finalWidth * hpPercent
+                barData.Bg.Size = Vector2.new(finalWidth, finalHeight)
+                barData.Bg.Position = Vector2.new(barX, barY)
+                barData.Bg.Visible = true
+                barData.Bg.Transparency = 0.6
+                barData.Bg.Color = Color3.fromRGB(25, 25, 35)
+                barData.Bg.Thickness = 0
+                barData.Bar.Size = Vector2.new(math.max(filledWidth, 0.5), finalHeight)
+                barData.Bar.Position = Vector2.new(barX, barY)
+                barData.Bar.Visible = true
+                barData.Bar.Transparency = 1
+                barData.Bar.Thickness = 0
+                local barColor = getHealthColorNew(health, maxHealth, prevHealth)
+                barData.Bar.Color = barColor
+                if prevHealth and prevHealth > health and (prevHealth - health) > 5 then
+                    barData.Bar.Color = Color3.fromRGB(255, 255, 255)
+                end
+                barData.Border.Size = Vector2.new(finalWidth, finalHeight)
+                barData.Border.Position = Vector2.new(barX, barY)
+                barData.Border.Visible = true
+                barData.Border.Transparency = 0.4
+                barData.Border.Color = Color3.fromRGB(70, 70, 100)
+                barData.Border.Thickness = 0.5
+                local segmentWidth = finalWidth / 9
+                for i = 1, 8 do
+                    local div = barData.Dividers[i]
+                    local xPos = barX + (i * segmentWidth)
+                    div.Size = Vector2.new(0.3, finalHeight)
+                    div.Position = Vector2.new(xPos, barY)
+                    div.Visible = true
+                    div.Transparency = 0.5
+                    div.Color = Color3.fromRGB(50, 50, 70)
+                    div.Thickness = 0.3
                 end
             else
                 if healthBars[player] then
                     healthBars[player].Bg.Visible = false
                     healthBars[player].Bar.Visible = false
-                    for _, div in pairs(healthBars[player].Dividers) do div.Visible = false end
+                    healthBars[player].Border.Visible = false
+                    for _, div in pairs(healthBars[player].Dividers) do
+                        div.Visible = false
+                    end
                 end
             end
         end
-
         for player, barData in pairs(healthBars) do
             if not enemiesCacheHealth[player] then
-                removeHealthBar(player)
+                removeHealthBarNew(player)
             end
         end
     end)
-
-    local function ApplyHealthBar() _G.HealthBarEnabled = true end
-    local function RemoveHealthBar()
-        _G.HealthBarEnabled = false
-        for player, _ in pairs(healthBars) do removeHealthBar(player) end
-        enemiesCacheHealth = {}
-        healthHistory = {}
-    end
-    _G.UnloadHealthBar = function()
-        if healthConnection then healthConnection:Disconnect() end
-        RemoveHealthBar()
-    end
-    return ApplyHealthBar, RemoveHealthBar
 end
 
-local ApplyHealthBar, RemoveHealthBar = SetupHealthBar()
+local function StopHealthBar()
+    if healthConnection then
+        healthConnection:Disconnect()
+        healthConnection = nil
+    end
+    for player, data in pairs(healthBars) do
+        pcall(function()
+            data.Bg.Visible = false
+            data.Bar.Visible = false
+            data.Border.Visible = false
+            data.Bg:Remove()
+            data.Bar:Remove()
+            data.Border:Remove()
+            for _, div in pairs(data.Dividers) do
+                div.Visible = false
+                div:Remove()
+            end
+        end)
+    end
+    healthBars = {}
+    enemiesCacheHealth = {}
+    healthHistory = {}
+end
 
 local IndicatorLine = nil
 local IndicatorColor = _G.MenuThemeColor
@@ -950,35 +1017,6 @@ local function SwitchToTab(index)
     if targetPage then targetPage.Visible = true end
     activeIndex = index
     UpdateIndicatorPosition(index)
-end
-
-local function SearchInMenu(query)
-    query = string.lower(query)
-    if not ContentPages then return end
-    local foundElements = {}
-    local foundTabName = nil
-    for tabName, page in pairs(ContentPages) do
-        if page then
-            local function scanChildren(parent)
-                for _, child in ipairs(parent:GetChildren()) do
-                    if child:IsA("TextLabel") or child:IsA("TextButton") then
-                        local text = string.lower(child.Text)
-                        if text ~= "" and string.find(text, query) then
-                            table.insert(foundElements, {element = child, tab = tabName})
-                            if not foundTabName then foundTabName = tabName end
-                        end
-                    end
-                    if child:IsA("Frame") then scanChildren(child) end
-                end
-            end
-            scanChildren(page)
-        end
-    end
-    if #foundElements > 0 and foundTabName then
-        for idx, tabName in ipairs(TabNames) do
-            if tabName == foundTabName then SwitchToTab(idx) break end
-        end
-    end
 end
 
 local function UpdateTabsLanguage()
@@ -1037,11 +1075,26 @@ end
 CreateIndicatorLine()
 UpdateIndicatorPosition(1)
 
+-- ПОИСК (ПОДКЛЮЧАЕМ)
 SearchInput.FocusLost:Connect(function(enterPressed)
     if enterPressed and SearchInput.Text ~= "" and SearchInput.Text ~= "Search..." then
-        SearchInMenu(SearchInput.Text)
+        SearchAndHighlight(SearchInput.Text)
         PlayClickSound()
         SearchInput.Text = "Search..."
+    end
+end)
+
+SearchInput:GetPropertyChangedSignal("Text"):Connect(function()
+    if SearchInput.Text == "" or SearchInput.Text == "Search..." then
+        ClearHighlights()
+        SearchClose.Visible = false
+    else
+        SearchClose.Visible = true
+        -- Автопоиск при вводе (реализуем)
+        task.wait(0.15)
+        if SearchInput.Text ~= "" and SearchInput.Text ~= "Search..." then
+            SearchAndHighlight(SearchInput.Text)
+        end
     end
 end)
 
@@ -1210,7 +1263,7 @@ if visualsPage then
     healthDesc.Size = UDim2.new(0.7, 0, 0, 16)
     healthDesc.Position = UDim2.new(0, 0, 0, 22)
     healthDesc.BackgroundTransparency = 1
-    healthDesc.Text = "Health bar display"
+    healthDesc.Text = "Health bar above head"
     healthDesc.TextColor3 = Color3.fromRGB(113, 113, 122)
     healthDesc.TextSize = 11
     healthDesc.Font = Enum.Font.Gotham
@@ -1245,11 +1298,11 @@ if visualsPage then
         if value then
             TweenService:Create(healthToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
             TweenService:Create(healthHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 23, 0.5, -9)}):Play()
-            ApplyHealthBar()
+            StartHealthBar()
         else
             TweenService:Create(healthToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(42, 47, 58)}):Play()
             TweenService:Create(healthHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 3, 0.5, -9)}):Play()
-            RemoveHealthBar()
+            StopHealthBar()
         end
         _G.HealthBarEnabled = value
     end
@@ -1335,7 +1388,7 @@ if visualsPage then
     end
     table.insert(langUpdateCallbacks, UpdateSkeletonText)
 
-    -- THICKNESS SLIDER (появляется при включённом Skeleton)
+    -- THICKNESS SLIDER
     local skeletonThicknessContainer = Instance.new("Frame")
     skeletonThicknessContainer.Size = UDim2.new(1, -20, 0, 55)
     skeletonThicknessContainer.Position = UDim2.new(0, 10, 0, 225)
@@ -1411,7 +1464,6 @@ if visualsPage then
         thicknessSliderHandle.Position = UDim2.new(p, -8, 0.5, -8)
         thicknessValue.Text = tostring(val)
         _G.SkeletonThickness = val
-        -- обновляем существующие линии в реальном времени
         for player, lines in pairs(skeletons) do
             for _, line in pairs(lines) do
                 if line and line.Visible then
@@ -2215,7 +2267,7 @@ if settingsPage then
         if SetChamsToggleState then SetChamsToggleState(false) end
         RemoveESP()
         if SetESPToggleState then SetESPToggleState(false) end
-        RemoveHealthBar()
+        StopHealthBar()
         if SetHealthBarToggleState then SetHealthBarToggleState(false) end
         StopSkeleton()
         if SetSkeletonToggleState then SetSkeletonToggleState(false) end
@@ -2325,5 +2377,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         MainFrame.Visible = not MainFrame.Visible
     end
 end)
-print("[META] META v7.0.40 - Skeleton + Thickness Integrated")
+print("[META] META v7.0.40 - Search Highlight + Skeleton + HealthBar Fixed")
 print("[META] Press Insert or click icon")
+]]
+)()
