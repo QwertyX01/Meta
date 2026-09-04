@@ -1,4 +1,4 @@
--- ROCKET::META_UI_V7.0.43_FULLY_WORKING
+-- ROCKET::META_UI_V7.0.40_FINAL
 
 local function SetupAntiCheatBypass()
     pcall(function()
@@ -80,7 +80,7 @@ local LANG = {
             UI_Color = {"Цвет интерфейса", "Включить кастомизацию цвета интерфейса"},
             Opacity = {"Прозрачность", "Регулировка прозрачности меню (0-50%)"},
             Rainbow = {"Разноцветная обводка", "Включить радужную обводку меню"},
-            Scale = {"Масштаб меню", "Масштабирование меню (60-140%)"},
+            Scale = {"Scaling the menu", "Масштабирование меню (60-140%)"},
             FlyingDots = {"Летающие точки", "Точки, летающие с верху меню"},
             Chams = {"Чамсы", "Фиолетовые враги (Default/Ghost/Glass)"},
             ESP = {"Трассеры", "Линии к противникам"},
@@ -130,18 +130,159 @@ local function PlayClickSound()
     task.delay(sound.TimeLength + 0.1, function() sound:Destroy() end)
 end
 
--- ============================================
--- ФУНКЦИИ ДЛЯ ПОИСКА И НАВИГАЦИИ
--- ============================================
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "RobloxGui"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.DisplayOrder = 999999998
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent = CoreGui
+HideFromScanner(ScreenGui)
 
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "GameUI"
+MainFrame.Size = UDim2.new(0, 640 * (_G.MenuScale / 45), 0, 470 * (_G.MenuScale / 45))
+MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(17, 20, 26)
+MainFrame.BackgroundTransparency = _G.MenuOpacity / 100
+MainFrame.ClipsDescendants = true
+MainFrame.Parent = ScreenGui
+MainFrame.Draggable = true
+MainFrame.Active = true
+MainFrame.Selectable = true
+
+local MainScale = Instance.new("UIScale")
+MainScale.Scale = 1
+MainScale.Parent = MainFrame
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 12)
+MainCorner.Parent = MainFrame
+
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Thickness = 2
+MainStroke.Color = _G.MenuThemeColor
+MainStroke.Transparency = 0.4
+MainStroke.Parent = MainFrame
+
+local Header = Instance.new("Frame")
+Header.Name = "Topbar"
+Header.Size = UDim2.new(1, 0, 0, 38)
+Header.BackgroundTransparency = 1
+Header.Parent = MainFrame
+
+local MetaLabel = Instance.new("TextLabel")
+MetaLabel.Size = UDim2.new(0.1, 0, 1, 0)
+MetaLabel.Position = UDim2.new(0, 15, 0, 0)
+MetaLabel.BackgroundTransparency = 1
+MetaLabel.Text = "META"
+MetaLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+MetaLabel.TextSize = 20
+MetaLabel.Font = Enum.Font.GothamBold
+MetaLabel.TextXAlignment = Enum.TextXAlignment.Left
+MetaLabel.TextYAlignment = Enum.TextYAlignment.Center
+MetaLabel.Parent = Header
+
+local BetaLabel = Instance.new("TextLabel")
+BetaLabel.Size = UDim2.new(0, 50, 1, 0)
+BetaLabel.Position = UDim2.new(0, 75, 0, 0)
+BetaLabel.BackgroundTransparency = 1
+BetaLabel.Text = "beta"
+BetaLabel.TextColor3 = Color3.fromRGB(120, 120, 120)
+BetaLabel.TextSize = 12
+BetaLabel.Font = Enum.Font.Gotham
+BetaLabel.TextXAlignment = Enum.TextXAlignment.Left
+BetaLabel.TextYAlignment = Enum.TextYAlignment.Center
+BetaLabel.Parent = Header
+
+local GameNameLabel = Instance.new("TextLabel")
+GameNameLabel.Size = UDim2.new(0.35, 0, 1, 0)
+GameNameLabel.Position = UDim2.new(0.32, 0, 0, 0)
+GameNameLabel.BackgroundTransparency = 1
+GameNameLabel.Text = "Loading..."
+GameNameLabel.TextColor3 = Color3.fromRGB(156, 163, 175)
+GameNameLabel.TextSize = 13
+GameNameLabel.Font = Enum.Font.Gotham
+GameNameLabel.TextXAlignment = Enum.TextXAlignment.Left
+GameNameLabel.TextYAlignment = Enum.TextYAlignment.Center
+GameNameLabel.Parent = Header
+
+pcall(function()
+    local MarketplaceService = game:GetService("MarketplaceService")
+    local info = MarketplaceService:GetProductInfo(game.PlaceId)
+    if info and info.Name then GameNameLabel.Text = info.Name end
+end)
+
+local SearchContainer = Instance.new("Frame")
+SearchContainer.Name = "SearchBar"
+SearchContainer.Size = UDim2.new(0.3, 0, 0.7, 0)
+SearchContainer.Position = UDim2.new(0.68, 0, 0.15, 0)
+SearchContainer.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
+SearchContainer.BackgroundTransparency = 0.5
+SearchContainer.BorderSizePixel = 0
+SearchContainer.Parent = Header
+
+local SearchCorner = Instance.new("UICorner")
+SearchCorner.CornerRadius = UDim.new(0, 6)
+SearchCorner.Parent = SearchContainer
+
+local SearchStroke = Instance.new("UIStroke")
+SearchStroke.Thickness = 1
+SearchStroke.Color = _G.MenuThemeColor
+SearchStroke.Transparency = 0.6
+SearchStroke.Parent = SearchContainer
+
+local SearchInput = Instance.new("TextBox")
+SearchInput.Size = UDim2.new(1, -12, 1, 0)
+SearchInput.Position = UDim2.new(0, 8, 0, 0)
+SearchInput.BackgroundTransparency = 1
+SearchInput.Text = "Search..."
+SearchInput.TextColor3 = Color3.fromRGB(209, 213, 219)
+SearchInput.TextSize = 13
+SearchInput.Font = Enum.Font.Gotham
+SearchInput.TextXAlignment = Enum.TextXAlignment.Left
+SearchInput.TextYAlignment = Enum.TextYAlignment.Center
+SearchInput.ClearTextOnFocus = false
+SearchInput.Parent = SearchContainer
+
+local SearchClose = Instance.new("TextButton")
+SearchClose.Size = UDim2.new(0, 16, 1, 0)
+SearchClose.Position = UDim2.new(1, -20, 0, 0)
+SearchClose.BackgroundTransparency = 1
+SearchClose.Text = "✕"
+SearchClose.TextColor3 = Color3.fromRGB(156, 163, 175)
+SearchClose.TextSize = 11
+SearchClose.Font = Enum.Font.Gotham
+SearchClose.Visible = false
+SearchClose.Parent = SearchContainer
+
+SearchClose.MouseButton1Click:Connect(function()
+    SearchInput.Text = "Search..."
+    SearchClose.Visible = false
+    PlayClickSound()
+end)
+
+local Separator = Instance.new("Frame")
+Separator.Size = UDim2.new(1, -20, 0, 1)
+Separator.Position = UDim2.new(0, 10, 0, 38)
+Separator.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
+Separator.BorderSizePixel = 0
+Separator.Parent = MainFrame
+
+local TabContainer = Instance.new("Frame")
+TabContainer.Size = UDim2.new(1, 0, 0, 48)
+TabContainer.Position = UDim2.new(0, 0, 0, 39)
+TabContainer.BackgroundTransparency = 1
+TabContainer.Parent = MainFrame
+
+local TabNames = {"Aimbot", "Visuals", "Settings"}
 local TabButtons = {}
 local ContentPages = {}
 local activeIndex = 1
 local langUpdateCallbacks = {}
 local rainbowConnection = nil
 local langButtonData = {}
-local IndicatorLine = nil
-local IndicatorColor = _G.MenuThemeColor
 
 local function ClearHighlights()
     for _, hl in ipairs(highlightCache) do
@@ -158,8 +299,8 @@ end
 local function HighlightElement(element)
     if not element or not element.Parent then return end
     local highlight = Instance.new("Frame")
-    highlight.Size = UDim2.new(1, 0, 0, 30)
-    highlight.Position = UDim2.new(0, 0, 0.5, -15)
+    highlight.Size = UDim2.new(1, 0, 1, 0)
+    highlight.Position = UDim2.new(0, 0, 0, 0)
     highlight.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     highlight.BackgroundTransparency = 0.85
     highlight.BorderSizePixel = 0
@@ -178,38 +319,6 @@ local function HighlightElement(element)
     end)
 end
 
-local function CreateIndicatorLine()
-    if IndicatorLine then 
-        IndicatorLine:Destroy() 
-        IndicatorLine = nil
-    end
-    IndicatorLine = Instance.new("Frame")
-    IndicatorLine.Name = "SelectionIndicator"
-    IndicatorLine.Size = UDim2.new(0.12, 0, 0, 2)
-    IndicatorLine.Position = UDim2.new(0.02, 0, 1, -2)
-    IndicatorLine.BackgroundColor3 = IndicatorColor
-    IndicatorLine.BorderSizePixel = 0
-    IndicatorLine.Parent = TabContainer
-    IndicatorLine.ZIndex = 10
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(1, 0)
-    corner.Parent = IndicatorLine
-end
-
-local function UpdateIndicatorPosition(index)
-    if not IndicatorLine or not IndicatorLine.Parent then return end
-    local width = 0.12
-    local xPos = 0.02 + (index - 1) * (width + 0.03)
-    TweenService:Create(IndicatorLine, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(xPos, 0, 1, -2), Size = UDim2.new(width + 0.02, 0, 0, 2)}):Play()
-end
-
-local function UpdateIndicatorColor(color)
-    IndicatorColor = color
-    if IndicatorLine then
-        TweenService:Create(IndicatorLine, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = color}):Play()
-    end
-end
-
 local function SwitchToTab(index)
     if index < 1 or index > #TabButtons then return end
     for i, b in ipairs(TabButtons) do
@@ -221,9 +330,7 @@ local function SwitchToTab(index)
     btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     TweenService:Create(btn, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0.14, 0, 0, 36)}):Play()
-    for name, page in pairs(ContentPages) do
-        if page then page.Visible = false end
-    end
+    for name, page in pairs(ContentPages) do page.Visible = false end
     local targetPage = ContentPages[TabNames[index]]
     if targetPage then targetPage.Visible = true end
     activeIndex = index
@@ -262,17 +369,12 @@ local function SearchAndHighlight(query)
                 break
             end
         end
+        task.wait(0.1)
         for _, data in ipairs(found) do
             HighlightElement(data.element)
         end
     end
 end
-
-local TabNames = {"Aimbot", "Visuals", "Settings"}
-
--- ============================================
--- ОСТАЛЬНЫЕ ФУНКЦИИ
--- ============================================
 
 local function IsEnemy(p)
     if not p or p == LocalPlayer then return false end
@@ -289,7 +391,7 @@ local function IsEnemy(p)
     return false
 end
 
--- SKELETON
+-- SKELETON ESP
 local skeletons = {}
 local enemiesCache = {}
 local cacheTime = 0
@@ -500,9 +602,8 @@ local function StopSkeleton()
     enemiesCache = {}
 end
 
--- CHAMS
+-- CHAMS С РЕЖИМАМИ
 local ChamsConnections = {}
-local ChamsHighlights = {}
 
 local function GetChamsStyle()
     local mode = _G.ChamsMode or "Default"
@@ -535,11 +636,12 @@ end
 
 local function PaintCharacter(character, p)
     if not character or not p then return end
-    if ChamsHighlights[p] then
-        pcall(function() ChamsHighlights[p]:Destroy() end)
-        ChamsHighlights[p] = nil
+    for _, child in ipairs(character:GetChildren()) do
+        if child:IsA("Highlight") and child:GetAttribute("META_Chams") then
+            child:Destroy()
+        end
     end
-    if IsEnemy(p) and _G.ChamsEnabled then
+    if IsEnemy(p) then
         local style = GetChamsStyle()
         local highlight = Instance.new("Highlight")
         highlight.Name = "Highlight"
@@ -551,7 +653,6 @@ local function PaintCharacter(character, p)
         highlight.DepthMode = style.DepthMode
         highlight.Adornee = character
         highlight.Parent = character
-        ChamsHighlights[p] = highlight
     end
 end
 
@@ -559,7 +660,6 @@ local function SetupPlayer(p)
     if p == LocalPlayer then return end
     if ChamsConnections[p] then ChamsConnections[p]:Disconnect() end
     ChamsConnections[p] = p.CharacterAdded:Connect(function(char)
-        task.wait(0.1)
         PaintCharacter(char, p)
     end)
     if p.Character then
@@ -577,9 +677,12 @@ local function ApplyChams()
         if ChamsConnections.PlayerAdded then ChamsConnections.PlayerAdded:Disconnect() end
         for _, p in ipairs(Players:GetPlayers()) do
             if ChamsConnections[p] then ChamsConnections[p]:Disconnect() end
-            if ChamsHighlights[p] then
-                pcall(function() ChamsHighlights[p]:Destroy() end)
-                ChamsHighlights[p] = nil
+            if p.Character then
+                for _, child in ipairs(p.Character:GetChildren()) do
+                    if child:IsA("Highlight") and child:GetAttribute("META_Chams") then
+                        child:Destroy()
+                    end
+                end
             end
         end
     end
@@ -589,7 +692,7 @@ local function RemoveChams()
     if _G.UnloadChams then _G.UnloadChams() end
 end
 
--- TRACERS
+-- TRACERS (БЕЛЫЕ НИТОЧКИ)
 local espObjects = {}
 local tracerConnections = {}
 
@@ -603,40 +706,37 @@ local function CreateTracerESP(player)
     tracer.Color = Color3.fromRGB(255, 255, 255)
     tracer.Thickness = 1.2
     tracer.Transparency = 0.65
-    tracer.Visible = false
     
-    local connection
-    local isDead = false
-    
-    connection = RunService.RenderStepped:Connect(function()
-        if not _G.ESPEnabled or isDead then
+    local function update()
+        if not _G.ESPEnabled then
             tracer.Visible = false
-            return
-        end
-        if not player or not player.Character or not player.Character.Parent then
-            tracer.Visible = false
-            isDead = true
-            return
+            return true
         end
         if not IsEnemy(player) then
             tracer.Visible = false
-            return
+            return true
         end
-        local char = player.Character
-        local hrpPart = char:FindFirstChild("HumanoidRootPart")
-        local hum = char:FindFirstChild("Humanoid")
-        if not hrpPart or not hum or hum.Health <= 0 then
-            tracer.Visible = false
-            isDead = true
-            return
+        if not character or not character.Parent or not character:FindFirstChild("HumanoidRootPart") then
+            tracer:Remove()
+            return false
         end
-        local hrpPos, onScreen = Camera:WorldToViewportPoint(hrpPart.Position - Vector3.new(0, 3, 0))
+        local hrpPos, onScreen = Camera:WorldToViewportPoint(hrp.Position - Vector3.new(0, 3, 0))
         if onScreen and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
             tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
             tracer.To = Vector2.new(hrpPos.X, hrpPos.Y)
             tracer.Visible = true
         else
             tracer.Visible = false
+        end
+        return true
+    end
+    
+    local connection
+    connection = RunService.RenderStepped:Connect(function()
+        if not update() then
+            connection:Disconnect()
+            tracer:Remove()
+            espObjects[player] = nil
         end
     end)
     
@@ -662,16 +762,6 @@ local function OnCharacterAdded(player)
             end
         end
     end)
-    if player.Character then
-        local hum = player.Character:FindFirstChild("Humanoid")
-        if hum then
-            hum.HealthChanged:Connect(function(health)
-                if health <= 0 then
-                    RemoveTracerESP(player)
-                end
-            end)
-        end
-    end
     if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
         RemoveTracerESP(player)
         if IsEnemy(player) and _G.ESPEnabled then
@@ -709,7 +799,7 @@ local function StopTracers()
     espObjects = {}
 end
 
--- HEALTH BAR
+-- HEALTH BAR ESP
 local healthBars = {}
 local enemiesCacheHealth = {}
 local cacheTimeHealth = 0
@@ -951,159 +1041,37 @@ local function StopHealthBar()
     healthHistory = {}
 end
 
--- ============================================
--- GUI
--- ============================================
+local IndicatorLine = nil
+local IndicatorColor = _G.MenuThemeColor
 
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "RobloxGui"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.IgnoreGuiInset = true
-ScreenGui.DisplayOrder = 999999998
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.Parent = CoreGui
-HideFromScanner(ScreenGui)
+local function CreateIndicatorLine()
+    if IndicatorLine then IndicatorLine:Destroy() end
+    IndicatorLine = Instance.new("Frame")
+    IndicatorLine.Name = "SelectionIndicator"
+    IndicatorLine.Size = UDim2.new(0.12, 0, 0, 2)
+    IndicatorLine.Position = UDim2.new(0.02, 0, 1, -2)
+    IndicatorLine.BackgroundColor3 = IndicatorColor
+    IndicatorLine.BorderSizePixel = 0
+    IndicatorLine.Parent = TabContainer
+    IndicatorLine.ZIndex = 10
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(1, 0)
+    corner.Parent = IndicatorLine
+end
 
-local MainFrame = Instance.new("Frame")
-MainFrame.Name = "GameUI"
-MainFrame.Size = UDim2.new(0, 640 * (_G.MenuScale / 45), 0, 470 * (_G.MenuScale / 45))
-MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(17, 20, 26)
-MainFrame.BackgroundTransparency = _G.MenuOpacity / 100
-MainFrame.ClipsDescendants = true
-MainFrame.Parent = ScreenGui
-MainFrame.Draggable = true
-MainFrame.Active = true
-MainFrame.Selectable = true
+local function UpdateIndicatorPosition(index)
+    if not IndicatorLine then return end
+    local width = 0.12
+    local xPos = 0.02 + (index - 1) * (width + 0.03)
+    TweenService:Create(IndicatorLine, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(xPos, 0, 1, -2), Size = UDim2.new(width + 0.02, 0, 0, 2)}):Play()
+end
 
-local MainScale = Instance.new("UIScale")
-MainScale.Scale = 1
-MainScale.Parent = MainFrame
-
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 12)
-MainCorner.Parent = MainFrame
-
-local MainStroke = Instance.new("UIStroke")
-MainStroke.Thickness = 2
-MainStroke.Color = _G.MenuThemeColor
-MainStroke.Transparency = 0.4
-MainStroke.Parent = MainFrame
-
-local Header = Instance.new("Frame")
-Header.Name = "Topbar"
-Header.Size = UDim2.new(1, 0, 0, 38)
-Header.BackgroundTransparency = 1
-Header.Parent = MainFrame
-
-local MetaLabel = Instance.new("TextLabel")
-MetaLabel.Size = UDim2.new(0.1, 0, 1, 0)
-MetaLabel.Position = UDim2.new(0, 15, 0, 0)
-MetaLabel.BackgroundTransparency = 1
-MetaLabel.Text = "META"
-MetaLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-MetaLabel.TextSize = 20
-MetaLabel.Font = Enum.Font.GothamBold
-MetaLabel.TextXAlignment = Enum.TextXAlignment.Left
-MetaLabel.TextYAlignment = Enum.TextYAlignment.Center
-MetaLabel.Parent = Header
-
-local BetaLabel = Instance.new("TextLabel")
-BetaLabel.Size = UDim2.new(0, 50, 1, 0)
-BetaLabel.Position = UDim2.new(0, 75, 0, 0)
-BetaLabel.BackgroundTransparency = 1
-BetaLabel.Text = "beta"
-BetaLabel.TextColor3 = Color3.fromRGB(120, 120, 120)
-BetaLabel.TextSize = 12
-BetaLabel.Font = Enum.Font.Gotham
-BetaLabel.TextXAlignment = Enum.TextXAlignment.Left
-BetaLabel.TextYAlignment = Enum.TextYAlignment.Center
-BetaLabel.Parent = Header
-
-local GameNameLabel = Instance.new("TextLabel")
-GameNameLabel.Size = UDim2.new(0.35, 0, 1, 0)
-GameNameLabel.Position = UDim2.new(0.32, 0, 0, 0)
-GameNameLabel.BackgroundTransparency = 1
-GameNameLabel.Text = "Loading..."
-GameNameLabel.TextColor3 = Color3.fromRGB(156, 163, 175)
-GameNameLabel.TextSize = 13
-GameNameLabel.Font = Enum.Font.Gotham
-GameNameLabel.TextXAlignment = Enum.TextXAlignment.Left
-GameNameLabel.TextYAlignment = Enum.TextYAlignment.Center
-GameNameLabel.Parent = Header
-
-pcall(function()
-    local MarketplaceService = game:GetService("MarketplaceService")
-    local info = MarketplaceService:GetProductInfo(game.PlaceId)
-    if info and info.Name then GameNameLabel.Text = info.Name end
-end)
-
-local SearchContainer = Instance.new("Frame")
-SearchContainer.Name = "SearchBar"
-SearchContainer.Size = UDim2.new(0.3, 0, 0.7, 0)
-SearchContainer.Position = UDim2.new(0.68, 0, 0.15, 0)
-SearchContainer.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
-SearchContainer.BackgroundTransparency = 0.5
-SearchContainer.BorderSizePixel = 0
-SearchContainer.Parent = Header
-
-local SearchCorner = Instance.new("UICorner")
-SearchCorner.CornerRadius = UDim.new(0, 6)
-SearchCorner.Parent = SearchContainer
-
-local SearchStroke = Instance.new("UIStroke")
-SearchStroke.Thickness = 1
-SearchStroke.Color = _G.MenuThemeColor
-SearchStroke.Transparency = 0.6
-SearchStroke.Parent = SearchContainer
-
-local SearchInput = Instance.new("TextBox")
-SearchInput.Size = UDim2.new(1, -12, 1, 0)
-SearchInput.Position = UDim2.new(0, 8, 0, 0)
-SearchInput.BackgroundTransparency = 1
-SearchInput.Text = "Search..."
-SearchInput.TextColor3 = Color3.fromRGB(209, 213, 219)
-SearchInput.TextSize = 13
-SearchInput.Font = Enum.Font.Gotham
-SearchInput.TextXAlignment = Enum.TextXAlignment.Left
-SearchInput.TextYAlignment = Enum.TextYAlignment.Center
-SearchInput.ClearTextOnFocus = false
-SearchInput.Parent = SearchContainer
-
-local SearchClose = Instance.new("TextButton")
-SearchClose.Size = UDim2.new(0, 16, 1, 0)
-SearchClose.Position = UDim2.new(1, -20, 0, 0)
-SearchClose.BackgroundTransparency = 1
-SearchClose.Text = "✕"
-SearchClose.TextColor3 = Color3.fromRGB(156, 163, 175)
-SearchClose.TextSize = 11
-SearchClose.Font = Enum.Font.Gotham
-SearchClose.Visible = false
-SearchClose.Parent = SearchContainer
-
-SearchClose.MouseButton1Click:Connect(function()
-    SearchInput.Text = "Search..."
-    SearchClose.Visible = false
-    PlayClickSound()
-end)
-
-local Separator = Instance.new("Frame")
-Separator.Size = UDim2.new(1, -20, 0, 1)
-Separator.Position = UDim2.new(0, 10, 0, 38)
-Separator.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
-Separator.BorderSizePixel = 0
-Separator.Parent = MainFrame
-
-local TabContainer = Instance.new("Frame")
-TabContainer.Size = UDim2.new(1, 0, 0, 48)
-TabContainer.Position = UDim2.new(0, 0, 0, 39)
-TabContainer.BackgroundTransparency = 1
-TabContainer.Parent = MainFrame
-
--- ============================================
--- СОЗДАНИЕ ВКЛАДОК
--- ============================================
+local function UpdateIndicatorColor(color)
+    IndicatorColor = color
+    if IndicatorLine then
+        TweenService:Create(IndicatorLine, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = color}):Play()
+    end
+end
 
 for i, name in ipairs(TabNames) do
     local btn = Instance.new("TextButton")
@@ -1132,12 +1100,8 @@ for i, name in ipairs(TabNames) do
     btn.MouseLeave:Connect(function()
         if activeIndex ~= i then btn.BackgroundColor3 = Color3.fromRGB(26, 30, 38) btn.TextColor3 = Color3.fromRGB(156, 163, 175) end
     end)
-    btn.MouseButton1Click:Connect(function() 
-        PlayTabSound() 
-        SwitchToTab(i) 
-    end)
+    btn.MouseButton1Click:Connect(function() PlayTabSound() SwitchToTab(i) end)
     table.insert(TabButtons, btn)
-    
     local page = Instance.new("ScrollingFrame")
     page.Name = "Content" .. i
     page.Size = UDim2.new(1, -20, 1, -96)
@@ -1152,18 +1116,8 @@ for i, name in ipairs(TabNames) do
     ContentPages[name] = page
 end
 
--- ============================================
--- ИНДИКАТОР И АКТИВАЦИЯ ПЕРВОЙ ВКЛАДКИ
--- ============================================
-
 CreateIndicatorLine()
-if TabButtons[1] then
-    SwitchToTab(1)
-end
-
--- ============================================
--- ПОИСК
--- ============================================
+UpdateIndicatorPosition(1)
 
 SearchInput.FocusLost:Connect(function(enterPressed)
     if enterPressed and SearchInput.Text ~= "" and SearchInput.Text ~= "Search..." then
@@ -1188,10 +1142,6 @@ end)
 
 local aimbotPage = ContentPages["Aimbot"]
 if aimbotPage then aimbotPage.CanvasSize = UDim2.new(0, 0, 0, 10) end
-
--- ============================================
--- VISUALS
--- ============================================
 
 local visualsPage = ContentPages["Visuals"]
 if visualsPage then
@@ -1504,7 +1454,7 @@ if visualsPage then
     end
     table.insert(langUpdateCallbacks, UpdateSkeletonText)
 
-    -- THICKNESS
+    -- THICKNESS SLIDER
     local skeletonThicknessContainer = Instance.new("Frame")
     skeletonThicknessContainer.Size = UDim2.new(1, -20, 0, 55)
     skeletonThicknessContainer.Position = UDim2.new(0, 10, 0, 225)
@@ -1536,8 +1486,7 @@ if visualsPage then
     thicknessValue = Instance.new("TextLabel")
     thicknessValue.Size = UDim2.new(0.15, 0, 0, 20)
     thicknessValue.Position = UDim2.new(0.85, 0, 0, 0)
-    thicknessValue.BackgroundTransparency = 1
-    thicknessValue.Text = tostring(_G.SkeletonThickness)
+    thicknessValue.BackgroundTransparency = 1    thicknessValue.Text = tostring(_G.SkeletonThickness)
     thicknessValue.TextColor3 = Color3.fromRGB(255, 255, 255)
     thicknessValue.TextSize = 14
     thicknessValue.Font = Enum.Font.GothamBold
@@ -1624,23 +1573,17 @@ if visualsPage then
     table.insert(langUpdateCallbacks, UpdateThicknessText)
 end
 
--- ============================================
--- SETTINGS
--- ============================================
-
 local settingsPage = ContentPages["Settings"]
 if settingsPage then
     settingsPage.CanvasSize = UDim2.new(0, 0, 0, 600)
     local settingsContainer = Instance.new("Frame")
     settingsContainer.Size = UDim2.new(1, 0, 0, 500)
-    settingsContainer.Position = UDim2.new(0, 0, 0, 0)
+    settingsContainer.Position = UDim2.new(0, 0, 0, 55)
     settingsContainer.BackgroundTransparency = 1
     settingsContainer.ClipsDescendants = true
     settingsContainer.Parent = settingsPage
     
-    -- ==========================================
-    -- 1. UI COLOR (СВЕРХУ, Y = 10)
-    -- ==========================================
+    -- UI COLOR TOGGLE
     local toggleFrame = Instance.new("Frame")
     toggleFrame.Size = UDim2.new(1, 0, 0, 45)
     toggleFrame.Position = UDim2.new(0, 0, 0, 10)
@@ -1777,7 +1720,7 @@ if settingsPage then
     
     ShiftContainer = function(shiftDown)
         local targetY = shiftDown and 150 or 0
-        TweenService:Create(settingsContainer, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 0)}):Play()
+        TweenService:Create(settingsContainer, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 55 + targetY)}):Play()
     end
     
     SetToggleState = function(value)
@@ -1810,15 +1753,12 @@ if settingsPage then
     
     clickArea.MouseButton1Click:Connect(function() PlayClickSound() SetToggleState(not _G.CustomThemeEnabled) end)
     
-    -- ==========================================
-    -- 2. ЯЗЫКОВЫЕ КНОПКИ (ПОД UI COLOR, Y = 60)
-    -- ==========================================
+    -- LANGUAGE BUTTONS
     local langFrame = Instance.new("Frame")
     langFrame.Size = UDim2.new(1, -20, 0, 42)
-    langFrame.Position = UDim2.new(0, 10, 0, 60)
+    langFrame.Position = UDim2.new(0, 10, 0, 10)
     langFrame.BackgroundTransparency = 1
-    langFrame.Parent = settingsPage
-    langFrame.ZIndex = 5
+    langFrame.Parent = settingsContainer
     
     local function CreateLangButton(text, langCode, xPos)
         local bg = Instance.new("Frame")
@@ -1875,7 +1815,6 @@ if settingsPage then
             _G.CurrentLang = langCode
             for _, btn in ipairs(langButtonData) do pcall(btn.Update, true) end
             UpdateAllTexts()
-            UpdateIndicatorPosition(activeIndex)
         end)
         
         local btnData = {Update = UpdateLangButton}
@@ -1885,14 +1824,12 @@ if settingsPage then
     CreateLangButton("Русский", "RU", 0.03)
     CreateLangButton("English", "EN", 0.55)
     
-    -- ==========================================
-    -- 3. OPACITY (Y = 110)
-    -- ==========================================
+    -- OPACITY SLIDER
     local opacityFrame = Instance.new("Frame")
     opacityFrame.Size = UDim2.new(1, -20, 0, 55)
-    opacityFrame.Position = UDim2.new(0, 10, 0, 110)
+    opacityFrame.Position = UDim2.new(0, 10, 0, 60)
     opacityFrame.BackgroundTransparency = 1
-    opacityFrame.Parent = settingsPage
+    opacityFrame.Parent = settingsContainer
     
     local opacityLabel = Instance.new("TextLabel")
     opacityLabel.Size = UDim2.new(0.5, 0, 0, 20)
@@ -1999,14 +1936,12 @@ if settingsPage then
     end
     table.insert(langUpdateCallbacks, UpdateOpacityText)
     
-    -- ==========================================
-    -- 4. RAINBOW (Y = 170)
-    -- ==========================================
+    -- RAINBOW TOGGLE
     local rainbowFrame = Instance.new("Frame")
     rainbowFrame.Size = UDim2.new(1, 0, 0, 45)
-    rainbowFrame.Position = UDim2.new(0, 0, 0, 170)
+    rainbowFrame.Position = UDim2.new(0, 0, 0, 120)
     rainbowFrame.BackgroundTransparency = 1
-    rainbowFrame.Parent = settingsPage
+    rainbowFrame.Parent = settingsContainer
     
     local rainbowLabel = Instance.new("TextLabel")
     rainbowLabel.Size = UDim2.new(0.6, 0, 0, 20)
@@ -2093,14 +2028,12 @@ if settingsPage then
     end
     table.insert(langUpdateCallbacks, UpdateRainbowText)
     
-    -- ==========================================
-    -- 5. SCALING (Y = 220)
-    -- ==========================================
+    -- SCALING SLIDER
     local scaleFrame = Instance.new("Frame")
     scaleFrame.Size = UDim2.new(1, -20, 0, 55)
-    scaleFrame.Position = UDim2.new(0, 10, 0, 220)
+    scaleFrame.Position = UDim2.new(0, 10, 0, 170)
     scaleFrame.BackgroundTransparency = 1
-    scaleFrame.Parent = settingsPage
+    scaleFrame.Parent = settingsContainer
     
     local scaleLabel = Instance.new("TextLabel")
     scaleLabel.Size = UDim2.new(0.6, 0, 0, 20)
@@ -2207,9 +2140,7 @@ if settingsPage then
     end
     table.insert(langUpdateCallbacks, UpdateScaleText)
     
-    -- ==========================================
-    -- 6. FLYING DOTS (Y = 280)
-    -- ==========================================
+    -- FLYING DOTS
     local flyingFrame = Instance.new("Frame")
     flyingFrame.Name = "Effects"
     flyingFrame.Size = UDim2.new(1, 0, 1, 0)
@@ -2302,9 +2233,9 @@ if settingsPage then
     
     local flyingToggleFrame = Instance.new("Frame")
     flyingToggleFrame.Size = UDim2.new(1, 0, 0, 45)
-    flyingToggleFrame.Position = UDim2.new(0, 0, 0, 280)
+    flyingToggleFrame.Position = UDim2.new(0, 0, 0, 230)
     flyingToggleFrame.BackgroundTransparency = 1
-    flyingToggleFrame.Parent = settingsPage
+    flyingToggleFrame.Parent = settingsContainer
     
     local flyingLabel = Instance.new("TextLabel")
     flyingLabel.Size = UDim2.new(0.6, 0, 0, 20)
@@ -2373,14 +2304,12 @@ if settingsPage then
     end
     table.insert(langUpdateCallbacks, UpdateFlyingText)
     
-    -- ==========================================
-    -- 7. RESET (Y = 330)
-    -- ==========================================
+    -- RESET
     local resetFrame = Instance.new("Frame")
     resetFrame.Size = UDim2.new(1, 0, 0, 45)
-    resetFrame.Position = UDim2.new(0, 0, 0, 330)
+    resetFrame.Position = UDim2.new(0, 0, 0, 280)
     resetFrame.BackgroundTransparency = 1
-    resetFrame.Parent = settingsPage
+    resetFrame.Parent = settingsContainer
     
     local resetLabel = Instance.new("TextLabel")
     resetLabel.Size = UDim2.new(0.6, 0, 0, 20)
@@ -2499,10 +2428,6 @@ if settingsPage then
     table.insert(langUpdateCallbacks, UpdateResetText)
 end
 
--- ============================================
--- ИКОНКА
--- ============================================
-
 local IconButton = Instance.new("ImageButton")
 IconButton.Name = "MetaIcon"
 IconButton.Size = UDim2.new(0, 55, 0, 55)
@@ -2557,16 +2482,14 @@ IconButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- ============================================
--- ФИНАЛЬНЫЕ ОБНОВЛЕНИЯ
--- ============================================
-
 local function UpdateAllTexts()
-    local lang = GetLang()
-    for i, btn in ipairs(TabButtons) do
-        btn.Text = lang.Tabs[i]
-    end
+    UpdateTabsLanguage()
     for _, cb in ipairs(langUpdateCallbacks) do pcall(cb) end
+end
+
+local function UpdateTabsLanguage()
+    local lang = GetLang()
+    for i, btn in ipairs(TabButtons) do btn.Text = lang.Tabs[i] end
 end
 
 UpdateAllTexts()
@@ -2583,9 +2506,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] META v7.0.43 FULLY WORKING")
-print("[META] Tabs: switch smoothly, indicator moves")
-print("[META] Language: buttons under UI Color, works")
-print("[META] Search: highlights with wide square, 'ui' finds both")
-print("[META] Chams: fixed, Tracers: fixed, Skeleton: white")
+print("[META] META v7.0.40 FINAL - Chams Ghost/Glass, Tracers, Skeleton White, HealthBar, Search")
 print("[META] Press Insert or click icon")
+print("[META] Commands: _G.ChamsMode = 'Default' | 'Ghost' | 'Glass'")
