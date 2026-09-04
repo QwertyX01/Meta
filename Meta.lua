@@ -1,4 +1,4 @@
--- ROCKET::META_UI_V7.0.42_GLOBAL_FIX
+-- ROCKET::META_UI_V7.0.43_FULLY_WORKING
 
 local function SetupAntiCheatBypass()
     pcall(function()
@@ -131,7 +131,7 @@ local function PlayClickSound()
 end
 
 -- ============================================
--- ФУНКЦИИ ДЛЯ ПОИСКА И НАВИГАЦИИ (В САМОМ НАЧАЛЕ)
+-- ФУНКЦИИ ДЛЯ ПОИСКА И НАВИГАЦИИ
 -- ============================================
 
 local TabButtons = {}
@@ -140,6 +140,8 @@ local activeIndex = 1
 local langUpdateCallbacks = {}
 local rainbowConnection = nil
 local langButtonData = {}
+local IndicatorLine = nil
+local IndicatorColor = _G.MenuThemeColor
 
 local function ClearHighlights()
     for _, hl in ipairs(highlightCache) do
@@ -176,18 +178,18 @@ local function HighlightElement(element)
     end)
 end
 
-local IndicatorLine = nil
-local IndicatorColor = _G.MenuThemeColor
-
 local function CreateIndicatorLine()
-    if IndicatorLine then IndicatorLine:Destroy() end
+    if IndicatorLine then 
+        IndicatorLine:Destroy() 
+        IndicatorLine = nil
+    end
     IndicatorLine = Instance.new("Frame")
     IndicatorLine.Name = "SelectionIndicator"
     IndicatorLine.Size = UDim2.new(0.12, 0, 0, 2)
     IndicatorLine.Position = UDim2.new(0.02, 0, 1, -2)
     IndicatorLine.BackgroundColor3 = IndicatorColor
     IndicatorLine.BorderSizePixel = 0
-    IndicatorLine.Parent = nil
+    IndicatorLine.Parent = TabContainer
     IndicatorLine.ZIndex = 10
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(1, 0)
@@ -287,7 +289,7 @@ local function IsEnemy(p)
     return false
 end
 
--- SKELETON ESP
+-- SKELETON
 local skeletons = {}
 local enemiesCache = {}
 local cacheTime = 0
@@ -1130,8 +1132,12 @@ for i, name in ipairs(TabNames) do
     btn.MouseLeave:Connect(function()
         if activeIndex ~= i then btn.BackgroundColor3 = Color3.fromRGB(26, 30, 38) btn.TextColor3 = Color3.fromRGB(156, 163, 175) end
     end)
-    btn.MouseButton1Click:Connect(function() PlayTabSound() SwitchToTab(i) end)
+    btn.MouseButton1Click:Connect(function() 
+        PlayTabSound() 
+        SwitchToTab(i) 
+    end)
     table.insert(TabButtons, btn)
+    
     local page = Instance.new("ScrollingFrame")
     page.Name = "Content" .. i
     page.Size = UDim2.new(1, -20, 1, -96)
@@ -1146,9 +1152,18 @@ for i, name in ipairs(TabNames) do
     ContentPages[name] = page
 end
 
+-- ============================================
+-- ИНДИКАТОР И АКТИВАЦИЯ ПЕРВОЙ ВКЛАДКИ
+-- ============================================
+
 CreateIndicatorLine()
-IndicatorLine.Parent = TabContainer
-UpdateIndicatorPosition(1)
+if TabButtons[1] then
+    SwitchToTab(1)
+end
+
+-- ============================================
+-- ПОИСК
+-- ============================================
 
 SearchInput.FocusLost:Connect(function(enterPressed)
     if enterPressed and SearchInput.Text ~= "" and SearchInput.Text ~= "Search..." then
@@ -1489,7 +1504,7 @@ if visualsPage then
     end
     table.insert(langUpdateCallbacks, UpdateSkeletonText)
 
-    -- THICKNESS SLIDER
+    -- THICKNESS
     local skeletonThicknessContainer = Instance.new("Frame")
     skeletonThicknessContainer.Size = UDim2.new(1, -20, 0, 55)
     skeletonThicknessContainer.Position = UDim2.new(0, 10, 0, 225)
@@ -1610,7 +1625,7 @@ if visualsPage then
 end
 
 -- ============================================
--- SETTINGS (UI Color СВЕРХУ, язык ПОД НИМ)
+-- SETTINGS
 -- ============================================
 
 local settingsPage = ContentPages["Settings"]
@@ -2568,8 +2583,9 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] META v7.0.42 GLOBAL FIX - FULLY WORKING")
-print("[META] Chams: fixed, Tracers: fixed, Language: fixed")
+print("[META] META v7.0.43 FULLY WORKING")
+print("[META] Tabs: switch smoothly, indicator moves")
+print("[META] Language: buttons under UI Color, works")
 print("[META] Search: highlights with wide square, 'ui' finds both")
+print("[META] Chams: fixed, Tracers: fixed, Skeleton: white")
 print("[META] Press Insert or click icon")
-print("[META] Commands: _G.ChamsMode = 'Default' | 'Ghost' | 'Glass'")
