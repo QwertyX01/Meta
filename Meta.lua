@@ -1,4 +1,4 @@
--- ROCKET::META_UI_V7.0.40_FINAL
+-- ROCKET::META_UI_V7.0.41_FIXED
 
 local function SetupAntiCheatBypass()
     pcall(function()
@@ -72,6 +72,12 @@ local SetHealthBarToggleState = nil
 local SetSkeletonToggleState = nil
 local thicknessSliderFill, thicknessSliderHandle, thicknessValue = nil, nil, nil
 local highlightCache = {}
+local TabButtons = {}
+local ContentPages = {}
+local activeIndex = 1
+local langUpdateCallbacks = {}
+local rainbowConnection = nil
+local langButtonData = {}
 
 local LANG = {
     RU = {
@@ -80,7 +86,7 @@ local LANG = {
             UI_Color = {"Цвет интерфейса", "Включить кастомизацию цвета интерфейса"},
             Opacity = {"Прозрачность", "Регулировка прозрачности меню (0-50%)"},
             Rainbow = {"Разноцветная обводка", "Включить радужную обводку меню"},
-            Scale = {"Scaling the menu", "Масштабирование меню (60-140%)"},
+            Scale = {"Масштаб меню", "Масштабирование меню (60-140%)"},
             FlyingDots = {"Летающие точки", "Точки, летающие с верху меню"},
             Chams = {"Чамсы", "Фиолетовые враги (Default/Ghost/Glass)"},
             ESP = {"Трассеры", "Линии к противникам"},
@@ -277,12 +283,6 @@ TabContainer.BackgroundTransparency = 1
 TabContainer.Parent = MainFrame
 
 local TabNames = {"Aimbot", "Visuals", "Settings"}
-local TabButtons = {}
-local ContentPages = {}
-local activeIndex = 1
-local langUpdateCallbacks = {}
-local rainbowConnection = nil
-local langButtonData = {}
 
 local function ClearHighlights()
     for _, hl in ipairs(highlightCache) do
@@ -317,6 +317,38 @@ local function HighlightElement(element)
             task.delay(0.35, function() highlight:Destroy() end)
         end)
     end)
+end
+
+local IndicatorLine = nil
+local IndicatorColor = _G.MenuThemeColor
+
+local function CreateIndicatorLine()
+    if IndicatorLine then IndicatorLine:Destroy() end
+    IndicatorLine = Instance.new("Frame")
+    IndicatorLine.Name = "SelectionIndicator"
+    IndicatorLine.Size = UDim2.new(0.12, 0, 0, 2)
+    IndicatorLine.Position = UDim2.new(0.02, 0, 1, -2)
+    IndicatorLine.BackgroundColor3 = IndicatorColor
+    IndicatorLine.BorderSizePixel = 0
+    IndicatorLine.Parent = TabContainer
+    IndicatorLine.ZIndex = 10
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(1, 0)
+    corner.Parent = IndicatorLine
+end
+
+local function UpdateIndicatorPosition(index)
+    if not IndicatorLine then return end
+    local width = 0.12
+    local xPos = 0.02 + (index - 1) * (width + 0.03)
+    TweenService:Create(IndicatorLine, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(xPos, 0, 1, -2), Size = UDim2.new(width + 0.02, 0, 0, 2)}):Play()
+end
+
+local function UpdateIndicatorColor(color)
+    IndicatorColor = color
+    if IndicatorLine then
+        TweenService:Create(IndicatorLine, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = color}):Play()
+    end
 end
 
 local function SwitchToTab(index)
@@ -389,6 +421,217 @@ local function IsEnemy(p)
     local enemySide = p:GetAttribute("Team") or p:GetAttribute("Side") or ""
     if mySide ~= "" and enemySide ~= "" then return mySide ~= enemySide end
     return false
+end
+
+-- CHAMS (ИСПРАВЛЕНО)
+local ChamsConnections = {}
+local ChamsHighlights = {}
+
+local function GetChamsStyle()
+    local mode = _G.ChamsMode or "Default"
+    if mode == "Ghost" then
+        return {
+            FillColor = Color3.fromRGB(255, 255, 255),
+            OutlineColor = Color3.fromRGB(200, 200, 255),
+            FillTransparency = 0.75,
+            OutlineTransparency = 0.6,
+            DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+        }
+    elseif mode == "Glass" then
+        return {
+            FillColor = Color3.fromRGB(100, 200, 255),
+            OutlineColor = Color3.fromRGB(150, 220, 255),
+            FillTransparency = 0.5,
+            OutlineTransparency = 0.4,
+            DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+        }
+    else
+        return {
+            FillColor = Color3.fromRGB(110, 60, 170),
+            OutlineColor = Color3.fromRGB(110, 60, 170),
+            FillTransparency = 0.65,
+            OutlineTransparency = 0.5,
+            DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+        }
+    end
+end
+
+local function PaintCharacter(character, p)
+    if not character or not p then return end
+    -- Удаляем старые чамсы у этого персонажа
+    if ChamsHighlights[p] then
+        pcall(function() ChamsHighlights[p]:Destroy() end)
+        ChamsHighlights[p] = nil
+    end
+    if IsEnemy(p) and _G.ChamsEnabled then
+        local style = GetChamsStyle()
+        local highlight = Instance.new("Highlight")
+        highlight.Name = "Highlight"
+        highlight:SetAttribute("META_Chams", true)
+        highlight.FillColor = style.FillColor
+        highlight.OutlineColor = style.OutlineColor
+        highlight.FillTransparency = style.FillTransparency
+        highlight.OutlineTransparency = style.OutlineTransparency
+        highlight.DepthMode = style.DepthMode
+        highlight.Adornee = character
+        highlight.Parent = character
+        ChamsHighlights[p] = highlight
+    end
+end
+
+local function SetupPlayer(p)
+    if p == LocalPlayer then return end
+    if ChamsConnections[p] then ChamsConnections[p]:Disconnect() end
+    ChamsConnections[p] = p.CharacterAdded:Connect(function(char)
+        task.wait(0.1)
+        PaintCharacter(char, p)
+    end)
+    if p.Character then
+        PaintCharacter(p.Character, p)
+    end
+end
+
+local function ApplyChams()
+    if _G.UnloadChams then _G.UnloadChams() end
+    _G.ChamsEnabled = true
+    for _, p in ipairs(Players:GetPlayers()) do SetupPlayer(p) end
+    ChamsConnections.PlayerAdded = Players.PlayerAdded:Connect(SetupPlayer)
+    _G.UnloadChams = function()
+        _G.ChamsEnabled = false
+        if ChamsConnections.PlayerAdded then ChamsConnections.PlayerAdded:Disconnect() end
+        for _, p in ipairs(Players:GetPlayers()) do
+            if ChamsConnections[p] then ChamsConnections[p]:Disconnect() end
+            if ChamsHighlights[p] then
+                pcall(function() ChamsHighlights[p]:Destroy() end)
+                ChamsHighlights[p] = nil
+            end
+        end
+    end
+end
+
+local function RemoveChams()
+    if _G.UnloadChams then _G.UnloadChams() end
+end
+
+-- TRACERS (ИСПРАВЛЕНО)
+local espObjects = {}
+local tracerConnections = {}
+
+local function CreateTracerESP(player)
+    if player == LocalPlayer then return end
+    local character = player.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+    local hrp = character.HumanoidRootPart
+    
+    local tracer = Drawing.new("Line")
+    tracer.Color = Color3.fromRGB(255, 255, 255)
+    tracer.Thickness = 1.2
+    tracer.Transparency = 0.65
+    tracer.Visible = false
+    
+    local connection
+    local isDead = false
+    
+    connection = RunService.RenderStepped:Connect(function()
+        if not _G.ESPEnabled or isDead then
+            tracer.Visible = false
+            return
+        end
+        if not player or not player.Character or not player.Character.Parent then
+            tracer.Visible = false
+            isDead = true
+            return
+        end
+        if not IsEnemy(player) then
+            tracer.Visible = false
+            return
+        end
+        local char = player.Character
+        local hrpPart = char:FindFirstChild("HumanoidRootPart")
+        local hum = char:FindFirstChild("Humanoid")
+        if not hrpPart or not hum or hum.Health <= 0 then
+            tracer.Visible = false
+            isDead = true
+            return
+        end
+        local hrpPos, onScreen = Camera:WorldToViewportPoint(hrpPart.Position - Vector3.new(0, 3, 0))
+        if onScreen and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+            tracer.To = Vector2.new(hrpPos.X, hrpPos.Y)
+            tracer.Visible = true
+        else
+            tracer.Visible = false
+        end
+    end)
+    
+    espObjects[player] = {tracer = tracer, connection = connection}
+end
+
+local function RemoveTracerESP(player)
+    if espObjects[player] then
+        local data = espObjects[player]
+        if data.connection then data.connection:Disconnect() end
+        if data.tracer then data.tracer:Remove() end
+        espObjects[player] = nil
+    end
+end
+
+local function OnCharacterAdded(player)
+    player.CharacterAdded:Connect(function(character)
+        task.wait(0.2)
+        RemoveTracerESP(player)
+        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            if IsEnemy(player) and _G.ESPEnabled then
+                CreateTracerESP(player)
+            end
+        end
+    end)
+    -- Следим за смертью
+    if player.Character then
+        local hum = player.Character:FindFirstChild("Humanoid")
+        if hum then
+            hum.HealthChanged:Connect(function(health)
+                if health <= 0 then
+                    RemoveTracerESP(player)
+                end
+            end)
+        end
+    end
+    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        RemoveTracerESP(player)
+        if IsEnemy(player) and _G.ESPEnabled then
+            CreateTracerESP(player)
+        end
+    end
+end
+
+local function StartTracers()
+    for _, player in pairs(Players:GetPlayers()) do
+        OnCharacterAdded(player)
+    end
+    if tracerConnections.PlayerAdded then tracerConnections.PlayerAdded:Disconnect() end
+    tracerConnections.PlayerAdded = Players.PlayerAdded:Connect(OnCharacterAdded)
+    if tracerConnections.PlayerRemoving then tracerConnections.PlayerRemoving:Disconnect() end
+    tracerConnections.PlayerRemoving = Players.PlayerRemoving:Connect(RemoveTracerESP)
+    if tracerConnections.LocalPlayerAdded then tracerConnections.LocalPlayerAdded:Disconnect() end
+    tracerConnections.LocalPlayerAdded = LocalPlayer.CharacterAdded:Connect(function()
+        task.wait(0.2)
+        for player, _ in pairs(espObjects) do
+            RemoveTracerESP(player)
+            OnCharacterAdded(player)
+        end
+    end)
+end
+
+local function StopTracers()
+    if tracerConnections.PlayerAdded then tracerConnections.PlayerAdded:Disconnect() end
+    if tracerConnections.PlayerRemoving then tracerConnections.PlayerRemoving:Disconnect() end
+    if tracerConnections.LocalPlayerAdded then tracerConnections.LocalPlayerAdded:Disconnect() end
+    for player, data in pairs(espObjects) do
+        if data.connection then data.connection:Disconnect() end
+        if data.tracer then data.tracer:Remove() end
+    end
+    espObjects = {}
 end
 
 -- SKELETON ESP
@@ -600,203 +843,6 @@ local function StopSkeleton()
     end
     skeletons = {}
     enemiesCache = {}
-end
-
--- CHAMS С РЕЖИМАМИ
-local ChamsConnections = {}
-
-local function GetChamsStyle()
-    local mode = _G.ChamsMode or "Default"
-    if mode == "Ghost" then
-        return {
-            FillColor = Color3.fromRGB(255, 255, 255),
-            OutlineColor = Color3.fromRGB(200, 200, 255),
-            FillTransparency = 0.75,
-            OutlineTransparency = 0.6,
-            DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-        }
-    elseif mode == "Glass" then
-        return {
-            FillColor = Color3.fromRGB(100, 200, 255),
-            OutlineColor = Color3.fromRGB(150, 220, 255),
-            FillTransparency = 0.5,
-            OutlineTransparency = 0.4,
-            DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-        }
-    else
-        return {
-            FillColor = Color3.fromRGB(110, 60, 170),
-            OutlineColor = Color3.fromRGB(110, 60, 170),
-            FillTransparency = 0.65,
-            OutlineTransparency = 0.5,
-            DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-        }
-    end
-end
-
-local function PaintCharacter(character, p)
-    if not character or not p then return end
-    for _, child in ipairs(character:GetChildren()) do
-        if child:IsA("Highlight") and child:GetAttribute("META_Chams") then
-            child:Destroy()
-        end
-    end
-    if IsEnemy(p) then
-        local style = GetChamsStyle()
-        local highlight = Instance.new("Highlight")
-        highlight.Name = "Highlight"
-        highlight:SetAttribute("META_Chams", true)
-        highlight.FillColor = style.FillColor
-        highlight.OutlineColor = style.OutlineColor
-        highlight.FillTransparency = style.FillTransparency
-        highlight.OutlineTransparency = style.OutlineTransparency
-        highlight.DepthMode = style.DepthMode
-        highlight.Adornee = character
-        highlight.Parent = character
-    end
-end
-
-local function SetupPlayer(p)
-    if p == LocalPlayer then return end
-    if ChamsConnections[p] then ChamsConnections[p]:Disconnect() end
-    ChamsConnections[p] = p.CharacterAdded:Connect(function(char)
-        PaintCharacter(char, p)
-    end)
-    if p.Character then
-        PaintCharacter(p.Character, p)
-    end
-end
-
-local function ApplyChams()
-    if _G.UnloadChams then _G.UnloadChams() end
-    _G.ChamsEnabled = true
-    for _, p in ipairs(Players:GetPlayers()) do SetupPlayer(p) end
-    ChamsConnections.PlayerAdded = Players.PlayerAdded:Connect(SetupPlayer)
-    _G.UnloadChams = function()
-        _G.ChamsEnabled = false
-        if ChamsConnections.PlayerAdded then ChamsConnections.PlayerAdded:Disconnect() end
-        for _, p in ipairs(Players:GetPlayers()) do
-            if ChamsConnections[p] then ChamsConnections[p]:Disconnect() end
-            if p.Character then
-                for _, child in ipairs(p.Character:GetChildren()) do
-                    if child:IsA("Highlight") and child:GetAttribute("META_Chams") then
-                        child:Destroy()
-                    end
-                end
-            end
-        end
-    end
-end
-
-local function RemoveChams()
-    if _G.UnloadChams then _G.UnloadChams() end
-end
-
--- TRACERS (БЕЛЫЕ НИТОЧКИ)
-local espObjects = {}
-local tracerConnections = {}
-
-local function CreateTracerESP(player)
-    if player == LocalPlayer then return end
-    local character = player.Character
-    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
-    local hrp = character.HumanoidRootPart
-    
-    local tracer = Drawing.new("Line")
-    tracer.Color = Color3.fromRGB(255, 255, 255)
-    tracer.Thickness = 1.2
-    tracer.Transparency = 0.65
-    
-    local function update()
-        if not _G.ESPEnabled then
-            tracer.Visible = false
-            return true
-        end
-        if not IsEnemy(player) then
-            tracer.Visible = false
-            return true
-        end
-        if not character or not character.Parent or not character:FindFirstChild("HumanoidRootPart") then
-            tracer:Remove()
-            return false
-        end
-        local hrpPos, onScreen = Camera:WorldToViewportPoint(hrp.Position - Vector3.new(0, 3, 0))
-        if onScreen and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
-            tracer.To = Vector2.new(hrpPos.X, hrpPos.Y)
-            tracer.Visible = true
-        else
-            tracer.Visible = false
-        end
-        return true
-    end
-    
-    local connection
-    connection = RunService.RenderStepped:Connect(function()
-        if not update() then
-            connection:Disconnect()
-            tracer:Remove()
-            espObjects[player] = nil
-        end
-    end)
-    
-    espObjects[player] = {tracer = tracer, connection = connection}
-end
-
-local function RemoveTracerESP(player)
-    if espObjects[player] then
-        local data = espObjects[player]
-        if data.connection then data.connection:Disconnect() end
-        if data.tracer then data.tracer:Remove() end
-        espObjects[player] = nil
-    end
-end
-
-local function OnCharacterAdded(player)
-    player.CharacterAdded:Connect(function(character)
-        task.wait(0.2)
-        RemoveTracerESP(player)
-        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            if IsEnemy(player) and _G.ESPEnabled then
-                CreateTracerESP(player)
-            end
-        end
-    end)
-    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-        RemoveTracerESP(player)
-        if IsEnemy(player) and _G.ESPEnabled then
-            CreateTracerESP(player)
-        end
-    end
-end
-
-local function StartTracers()
-    for _, player in pairs(Players:GetPlayers()) do
-        OnCharacterAdded(player)
-    end
-    if tracerConnections.PlayerAdded then tracerConnections.PlayerAdded:Disconnect() end
-    tracerConnections.PlayerAdded = Players.PlayerAdded:Connect(OnCharacterAdded)
-    if tracerConnections.PlayerRemoving then tracerConnections.PlayerRemoving:Disconnect() end
-    tracerConnections.PlayerRemoving = Players.PlayerRemoving:Connect(RemoveTracerESP)
-    if tracerConnections.LocalPlayerAdded then tracerConnections.LocalPlayerAdded:Disconnect() end
-    tracerConnections.LocalPlayerAdded = LocalPlayer.CharacterAdded:Connect(function()
-        task.wait(0.2)
-        for player, _ in pairs(espObjects) do
-            RemoveTracerESP(player)
-            OnCharacterAdded(player)
-        end
-    end)
-end
-
-local function StopTracers()
-    if tracerConnections.PlayerAdded then tracerConnections.PlayerAdded:Disconnect() end
-    if tracerConnections.PlayerRemoving then tracerConnections.PlayerRemoving:Disconnect() end
-    if tracerConnections.LocalPlayerAdded then tracerConnections.LocalPlayerAdded:Disconnect() end
-    for player, data in pairs(espObjects) do
-        if data.connection then data.connection:Disconnect() end
-        if data.tracer then data.tracer:Remove() end
-    end
-    espObjects = {}
 end
 
 -- HEALTH BAR ESP
@@ -1041,38 +1087,7 @@ local function StopHealthBar()
     healthHistory = {}
 end
 
-local IndicatorLine = nil
-local IndicatorColor = _G.MenuThemeColor
-
-local function CreateIndicatorLine()
-    if IndicatorLine then IndicatorLine:Destroy() end
-    IndicatorLine = Instance.new("Frame")
-    IndicatorLine.Name = "SelectionIndicator"
-    IndicatorLine.Size = UDim2.new(0.12, 0, 0, 2)
-    IndicatorLine.Position = UDim2.new(0.02, 0, 1, -2)
-    IndicatorLine.BackgroundColor3 = IndicatorColor
-    IndicatorLine.BorderSizePixel = 0
-    IndicatorLine.Parent = TabContainer
-    IndicatorLine.ZIndex = 10
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(1, 0)
-    corner.Parent = IndicatorLine
-end
-
-local function UpdateIndicatorPosition(index)
-    if not IndicatorLine then return end
-    local width = 0.12
-    local xPos = 0.02 + (index - 1) * (width + 0.03)
-    TweenService:Create(IndicatorLine, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(xPos, 0, 1, -2), Size = UDim2.new(width + 0.02, 0, 0, 2)}):Play()
-end
-
-local function UpdateIndicatorColor(color)
-    IndicatorColor = color
-    if IndicatorLine then
-        TweenService:Create(IndicatorLine, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = color}):Play()
-    end
-end
-
+-- СОЗДАНИЕ ВКЛАДОК
 for i, name in ipairs(TabNames) do
     local btn = Instance.new("TextButton")
     btn.Name = "Tab" .. i
@@ -1486,7 +1501,8 @@ if visualsPage then
     thicknessValue = Instance.new("TextLabel")
     thicknessValue.Size = UDim2.new(0.15, 0, 0, 20)
     thicknessValue.Position = UDim2.new(0.85, 0, 0, 0)
-    thicknessValue.BackgroundTransparency = 1    thicknessValue.Text = tostring(_G.SkeletonThickness)
+    thicknessValue.BackgroundTransparency = 1
+    thicknessValue.Text = tostring(_G.SkeletonThickness)
     thicknessValue.TextColor3 = Color3.fromRGB(255, 255, 255)
     thicknessValue.TextSize = 14
     thicknessValue.Font = Enum.Font.GothamBold
@@ -1583,10 +1599,83 @@ if settingsPage then
     settingsContainer.ClipsDescendants = true
     settingsContainer.Parent = settingsPage
     
+    -- LANGUAGE BUTTONS (ПЕРЕНЕСЕНО ВВЕРХ)
+    local langFrame = Instance.new("Frame")
+    langFrame.Size = UDim2.new(1, -20, 0, 42)
+    langFrame.Position = UDim2.new(0, 10, 0, 10)
+    langFrame.BackgroundTransparency = 1
+    langFrame.Parent = settingsContainer
+    
+    local function CreateLangButton(text, langCode, xPos)
+        local bg = Instance.new("Frame")
+        bg.Size = UDim2.new(0.42, 0, 0, 32)
+        bg.Position = UDim2.new(xPos, 0, 0, 0)
+        bg.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
+        bg.BackgroundTransparency = 0.5
+        bg.Parent = langFrame
+        local bgCorner = Instance.new("UICorner")
+        bgCorner.CornerRadius = UDim.new(0, 6)
+        bgCorner.Parent = bg
+        local uiScale = Instance.new("UIScale")
+        uiScale.Scale = 1
+        uiScale.Parent = bg
+        local txt = Instance.new("TextLabel")
+        txt.Size = UDim2.new(1, 0, 1, 0)
+        txt.BackgroundTransparency = 1
+        txt.Text = text
+        txt.TextColor3 = Color3.fromRGB(156, 163, 175)
+        txt.TextSize = 14
+        txt.Font = Enum.Font.GothamBold
+        txt.TextXAlignment = Enum.TextXAlignment.Center
+        txt.TextYAlignment = Enum.TextYAlignment.Center
+        txt.Parent = bg
+        local clickBtn = Instance.new("TextButton")
+        clickBtn.Size = UDim2.new(1, 0, 1, 0)
+        clickBtn.BackgroundTransparency = 1
+        clickBtn.Text = ""
+        clickBtn.ZIndex = 10
+        clickBtn.Parent = bg
+        
+        local function UpdateLangButton(animate)
+            local isActive = (_G.CurrentLang == langCode)
+            local targetScale = isActive and 1.1 or 1
+            local targetBg = isActive and Color3.fromRGB(35, 40, 50) or Color3.fromRGB(26, 30, 38)
+            local targetTransp = isActive and 0 or 0.5
+            local targetTextColor = isActive and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(156, 163, 175)
+            if animate then
+                TweenService:Create(uiScale, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = targetScale}):Play()
+                TweenService:Create(bg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = targetBg, BackgroundTransparency = targetTransp}):Play()
+                TweenService:Create(txt, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {TextColor3 = targetTextColor}):Play()
+            else
+                uiScale.Scale = targetScale
+                bg.BackgroundColor3 = targetBg
+                bg.BackgroundTransparency = targetTransp
+                txt.TextColor3 = targetTextColor
+            end
+        end
+        UpdateLangButton(false)
+        
+        clickBtn.MouseButton1Click:Connect(function()
+            PlayClickSound()
+            if _G.CurrentLang == langCode then return end
+            _G.CurrentLang = langCode
+            for _, btn in ipairs(langButtonData) do pcall(btn.Update, true) end
+            UpdateAllTexts()
+            -- Обновляем индикатор
+            UpdateIndicatorPosition(activeIndex)
+        end)
+        
+        local btnData = {Update = UpdateLangButton}
+        table.insert(langButtonData, btnData)
+        return btnData
+    end
+    CreateLangButton("Русский", "RU", 0.03)
+    CreateLangButton("English", "EN", 0.55)
+    
     -- UI COLOR TOGGLE
     local toggleFrame = Instance.new("Frame")
     toggleFrame.Size = UDim2.new(1, 0, 0, 45)
-    toggleFrame.Position = UDim2.new(0, 0, 0, 10)
+    toggleFrame.Position = UDim2.new(0, 0, 0, 60)
     toggleFrame.BackgroundTransparency = 1
     toggleFrame.Parent = settingsPage
     
@@ -1640,7 +1729,7 @@ if settingsPage then
     pickerContainer = Instance.new("Frame")
     pickerContainer.Name = "ColorPicker"
     pickerContainer.Size = UDim2.new(1, -30, 0, 140)
-    pickerContainer.Position = UDim2.new(0, 15, 0, 55)
+    pickerContainer.Position = UDim2.new(0, 15, 0, 105)
     pickerContainer.BackgroundTransparency = 1
     pickerContainer.Visible = false
     pickerContainer.ZIndex = 30
@@ -1753,81 +1842,10 @@ if settingsPage then
     
     clickArea.MouseButton1Click:Connect(function() PlayClickSound() SetToggleState(not _G.CustomThemeEnabled) end)
     
-    -- LANGUAGE BUTTONS
-    local langFrame = Instance.new("Frame")
-    langFrame.Size = UDim2.new(1, -20, 0, 42)
-    langFrame.Position = UDim2.new(0, 10, 0, 10)
-    langFrame.BackgroundTransparency = 1
-    langFrame.Parent = settingsContainer
-    
-    local function CreateLangButton(text, langCode, xPos)
-        local bg = Instance.new("Frame")
-        bg.Size = UDim2.new(0.42, 0, 0, 32)
-        bg.Position = UDim2.new(xPos, 0, 0, 0)
-        bg.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
-        bg.BackgroundTransparency = 0.5
-        bg.Parent = langFrame
-        local bgCorner = Instance.new("UICorner")
-        bgCorner.CornerRadius = UDim.new(0, 6)
-        bgCorner.Parent = bg
-        local uiScale = Instance.new("UIScale")
-        uiScale.Scale = 1
-        uiScale.Parent = bg
-        local txt = Instance.new("TextLabel")
-        txt.Size = UDim2.new(1, 0, 1, 0)
-        txt.BackgroundTransparency = 1
-        txt.Text = text
-        txt.TextColor3 = Color3.fromRGB(156, 163, 175)
-        txt.TextSize = 14
-        txt.Font = Enum.Font.GothamBold
-        txt.TextXAlignment = Enum.TextXAlignment.Center
-        txt.TextYAlignment = Enum.TextYAlignment.Center
-        txt.Parent = bg
-        local clickBtn = Instance.new("TextButton")
-        clickBtn.Size = UDim2.new(1, 0, 1, 0)
-        clickBtn.BackgroundTransparency = 1
-        clickBtn.Text = ""
-        clickBtn.ZIndex = 10
-        clickBtn.Parent = bg
-        
-        local function UpdateLangButton(animate)
-            local isActive = (_G.CurrentLang == langCode)
-            local targetScale = isActive and 1.1 or 1
-            local targetBg = isActive and Color3.fromRGB(35, 40, 50) or Color3.fromRGB(26, 30, 38)
-            local targetTransp = isActive and 0 or 0.5
-            local targetTextColor = isActive and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(156, 163, 175)
-            if animate then
-                TweenService:Create(uiScale, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = targetScale}):Play()
-                TweenService:Create(bg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = targetBg, BackgroundTransparency = targetTransp}):Play()
-                TweenService:Create(txt, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {TextColor3 = targetTextColor}):Play()
-            else
-                uiScale.Scale = targetScale
-                bg.BackgroundColor3 = targetBg
-                bg.BackgroundTransparency = targetTransp
-                txt.TextColor3 = targetTextColor
-            end
-        end
-        UpdateLangButton(false)
-        
-        clickBtn.MouseButton1Click:Connect(function()
-            PlayClickSound()
-            if _G.CurrentLang == langCode then return end
-            _G.CurrentLang = langCode
-            for _, btn in ipairs(langButtonData) do pcall(btn.Update, true) end
-            UpdateAllTexts()
-        end)
-        
-        local btnData = {Update = UpdateLangButton}
-        table.insert(langButtonData, btnData)
-        return btnData
-    end
-    CreateLangButton("Русский", "RU", 0.03)
-    CreateLangButton("English", "EN", 0.55)
-    
     -- OPACITY SLIDER
     local opacityFrame = Instance.new("Frame")
     opacityFrame.Size = UDim2.new(1, -20, 0, 55)
-    opacityFrame.Position = UDim2.new(0, 10, 0, 60)
+    opacityFrame.Position = UDim2.new(0, 10, 0, 110)
     opacityFrame.BackgroundTransparency = 1
     opacityFrame.Parent = settingsContainer
     
@@ -1939,7 +1957,7 @@ if settingsPage then
     -- RAINBOW TOGGLE
     local rainbowFrame = Instance.new("Frame")
     rainbowFrame.Size = UDim2.new(1, 0, 0, 45)
-    rainbowFrame.Position = UDim2.new(0, 0, 0, 120)
+    rainbowFrame.Position = UDim2.new(0, 0, 0, 170)
     rainbowFrame.BackgroundTransparency = 1
     rainbowFrame.Parent = settingsContainer
     
@@ -2031,7 +2049,7 @@ if settingsPage then
     -- SCALING SLIDER
     local scaleFrame = Instance.new("Frame")
     scaleFrame.Size = UDim2.new(1, -20, 0, 55)
-    scaleFrame.Position = UDim2.new(0, 10, 0, 170)
+    scaleFrame.Position = UDim2.new(0, 10, 0, 220)
     scaleFrame.BackgroundTransparency = 1
     scaleFrame.Parent = settingsContainer
     
@@ -2233,7 +2251,7 @@ if settingsPage then
     
     local flyingToggleFrame = Instance.new("Frame")
     flyingToggleFrame.Size = UDim2.new(1, 0, 0, 45)
-    flyingToggleFrame.Position = UDim2.new(0, 0, 0, 230)
+    flyingToggleFrame.Position = UDim2.new(0, 0, 0, 280)
     flyingToggleFrame.BackgroundTransparency = 1
     flyingToggleFrame.Parent = settingsContainer
     
@@ -2307,7 +2325,7 @@ if settingsPage then
     -- RESET
     local resetFrame = Instance.new("Frame")
     resetFrame.Size = UDim2.new(1, 0, 0, 45)
-    resetFrame.Position = UDim2.new(0, 0, 0, 280)
+    resetFrame.Position = UDim2.new(0, 0, 0, 330)
     resetFrame.BackgroundTransparency = 1
     resetFrame.Parent = settingsContainer
     
@@ -2483,13 +2501,11 @@ IconButton.MouseButton1Click:Connect(function()
 end)
 
 local function UpdateAllTexts()
-    UpdateTabsLanguage()
-    for _, cb in ipairs(langUpdateCallbacks) do pcall(cb) end
-end
-
-local function UpdateTabsLanguage()
     local lang = GetLang()
-    for i, btn in ipairs(TabButtons) do btn.Text = lang.Tabs[i] end
+    for i, btn in ipairs(TabButtons) do
+        btn.Text = lang.Tabs[i]
+    end
+    for _, cb in ipairs(langUpdateCallbacks) do pcall(cb) end
 end
 
 UpdateAllTexts()
@@ -2506,6 +2522,9 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] META v7.0.40 FINAL - Chams Ghost/Glass, Tracers, Skeleton White, HealthBar, Search")
+print("[META] META v7.0.41 FULLY FIXED")
+print("[META] Chams: fixed after round, Ghost/Glass modes")
+print("[META] Tracers: lines disappear on death")
+print("[META] Language: fixed, indicator: smooth")
 print("[META] Press Insert or click icon")
 print("[META] Commands: _G.ChamsMode = 'Default' | 'Ghost' | 'Glass'")
