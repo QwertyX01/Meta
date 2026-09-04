@@ -952,6 +952,7 @@ if aimbotPage then aimbotPage.CanvasSize = UDim2.new(0, 0, 0, 10) end
 -- ============================================================
 -- VISUALS PAGE (ИСПРАВЛЕННЫЙ)
 -- ============================================================
+-- VISUALS PAGE (ИСПРАВЛЕННЫЙ - СТРАНИЦА НЕ ПОДНИМАЕТСЯ)
 local visualsPage = ContentPages["Visuals"]
 if visualsPage then
     visualsPage.CanvasSize = UDim2.new(0, 0, 0, 400)
@@ -966,14 +967,434 @@ if visualsPage then
 
     ShiftVisualsContainer = function(shiftDown)
         local targetY = shiftDown and 150 or 0
+        local targetHeight = shiftDown and 550 or 400
+        
+        -- Сдвигаем контейнер
         TweenService:Create(visualsContainer, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
             Position = UDim2.new(0, 0, 0, targetY)
         }):Play()
-        local newHeight = shiftDown and 550 or 400
+        
+        -- Меняем CanvasSize чтобы страница НЕ поднималась
         TweenService:Create(visualsPage, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-            CanvasSize = UDim2.new(0, 0, 0, newHeight)
+            CanvasSize = UDim2.new(0, 0, 0, targetHeight)
         }):Play()
     end
+
+    -- CHAMS
+    local chamsFrame = Instance.new("Frame")
+    chamsFrame.Size = UDim2.new(1, 0, 0, 45)
+    chamsFrame.Position = UDim2.new(0, 0, 0, 10)
+    chamsFrame.BackgroundTransparency = 1
+    chamsFrame.Parent = visualsContainer
+
+    local chamsLabel = Instance.new("TextLabel")
+    chamsLabel.Size = UDim2.new(0.6, 0, 0, 20)
+    chamsLabel.BackgroundTransparency = 1
+    chamsLabel.Text = "Chams"
+    chamsLabel.TextColor3 = Color3.fromRGB(209, 213, 219)
+    chamsLabel.TextSize = 13
+    chamsLabel.Font = Enum.Font.GothamBold
+    chamsLabel.TextXAlignment = Enum.TextXAlignment.Left
+    chamsLabel.Parent = chamsFrame
+
+    local chamsDesc = Instance.new("TextLabel")
+    chamsDesc.Size = UDim2.new(0.7, 0, 0, 16)
+    chamsDesc.Position = UDim2.new(0, 0, 0, 22)
+    chamsDesc.BackgroundTransparency = 1
+    chamsDesc.Text = "Makes enemies purple"
+    chamsDesc.TextColor3 = Color3.fromRGB(113, 113, 122)
+    chamsDesc.TextSize = 11
+    chamsDesc.Font = Enum.Font.Gotham
+    chamsDesc.TextXAlignment = Enum.TextXAlignment.Left
+    chamsDesc.Parent = chamsFrame
+
+    local chamsToggleBg = Instance.new("Frame")
+    chamsToggleBg.Size = UDim2.new(0, 44, 0, 24)
+    chamsToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
+    chamsToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
+    chamsToggleBg.BorderSizePixel = 0
+    chamsToggleBg.Parent = chamsFrame
+
+    local chamsToggleCorner = Instance.new("UICorner")
+    chamsToggleCorner.CornerRadius = UDim.new(1, 0)
+    chamsToggleCorner.Parent = chamsToggleBg
+
+    local chamsHandle = Instance.new("Frame")
+    chamsHandle.Size = UDim2.new(0, 18, 0, 18)
+    chamsHandle.Position = UDim2.new(0, 3, 0.5, -9)
+    chamsHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    chamsHandle.BorderSizePixel = 0
+    chamsHandle.Parent = chamsToggleBg
+
+    local chamsHandleCorner = Instance.new("UICorner")
+    chamsHandleCorner.CornerRadius = UDim.new(1, 0)
+    chamsHandleCorner.Parent = chamsHandle
+
+    local chamsClickArea = Instance.new("TextButton")
+    chamsClickArea.Size = UDim2.new(0, 44, 0, 24)
+    chamsClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
+    chamsClickArea.BackgroundTransparency = 1
+    chamsClickArea.Text = ""
+    chamsClickArea.ZIndex = 10
+    chamsClickArea.Parent = chamsFrame
+
+    -- КРУГ (БЕЗ ФОНА, СКРЫТ ПО УМОЛЧАНИЮ)
+    chamsPickerContainer = Instance.new("Frame")
+    chamsPickerContainer.Name = "ChamsColorPicker"
+    chamsPickerContainer.Size = UDim2.new(1, -30, 0, 140)
+    chamsPickerContainer.Position = UDim2.new(0, 15, 0, 55)
+    chamsPickerContainer.BackgroundTransparency = 1
+    chamsPickerContainer.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    chamsPickerContainer.Visible = false
+    chamsPickerContainer.ZIndex = 30
+    chamsPickerContainer.Parent = visualsContainer
+
+    local chamsWheelImage = Instance.new("ImageLabel")
+    chamsWheelImage.Size = UDim2.new(0, 120, 0, 120)
+    chamsWheelImage.Position = UDim2.new(0.3, -60, 0.5, -60)
+    chamsWheelImage.BackgroundTransparency = 1
+    chamsWheelImage.Image = "rbxassetid://7393858625"
+    chamsWheelImage.ZIndex = 31
+    chamsWheelImage.Parent = chamsPickerContainer
+
+    chamsPickerDot = Instance.new("Frame")
+    chamsPickerDot.Size = UDim2.new(0, 10, 0, 10)
+    chamsPickerDot.Position = UDim2.new(0.3, -5, 0.5, -5)
+    chamsPickerDot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    chamsPickerDot.ZIndex = 32
+    chamsPickerDot.Parent = chamsWheelImage
+
+    local chamsDotCorner = Instance.new("UICorner")
+    chamsDotCorner.CornerRadius = UDim.new(1, 0)
+    chamsDotCorner.Parent = chamsPickerDot
+
+    local chamsDragArea = Instance.new("TextButton")
+    chamsDragArea.Size = UDim2.new(1, 0, 1, 0)
+    chamsDragArea.BackgroundTransparency = 1
+    chamsDragArea.Text = ""
+    chamsDragArea.ZIndex = 33
+    chamsDragArea.Parent = chamsWheelImage
+
+    local isDraggingChamsColor = false
+
+    local function UpdateChamsColorFromInput(inputPosition)
+        local wheelCenter = chamsWheelImage.AbsolutePosition + (chamsWheelImage.AbsoluteSize / 2)
+        local delta = Vector2.new(inputPosition.X, inputPosition.Y) - wheelCenter
+        local distance = delta.Magnitude
+        local radius = chamsWheelImage.AbsoluteSize.X / 2
+        local clampedDistance = math.clamp(distance, 0, radius)
+        local angle = math.atan2(delta.Y, delta.X)
+        local xPos = clampedDistance * math.cos(angle)
+        local yPos = clampedDistance * math.sin(angle)
+        chamsPickerDot.Position = UDim2.new(0.3, xPos - 5 + 60, 0.5, yPos - 5)
+        if angle < 0 then angle = angle + (math.pi * 2) end
+        local hue = angle / (math.pi * 2)
+        local saturation = clampedDistance / radius
+        _G.ChamsColor = Color3.fromHSV(hue, saturation, 1)
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p.Character then
+                for _, child in ipairs(p.Character:GetChildren()) do
+                    if child:IsA("Highlight") and child:GetAttribute("META_Chams") then
+                        child.FillColor = _G.ChamsColor
+                        child.OutlineColor = _G.ChamsColor
+                    end
+                end
+            end
+        end
+    end
+
+    chamsDragArea.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isDraggingChamsColor = true
+            MainFrame.Draggable = false
+            UpdateChamsColorFromInput(input.Position)
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if isDraggingChamsColor and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
+            UpdateChamsColorFromInput(input.Position)
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isDraggingChamsColor = false
+            MainFrame.Draggable = true
+        end
+    end)
+
+    SetChamsToggleState = function(value)
+        if value then
+            chamsToggleBg.BackgroundColor3 = Color3.fromRGB(59, 130, 246)
+            chamsHandle.Position = UDim2.new(0, 23, 0.5, -9)
+            chamsPickerContainer.Visible = true
+            chamsPickerContainer.BackgroundTransparency = 0
+            ShiftVisualsContainer(true)
+            ApplyChams()
+        else
+            chamsToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
+            chamsHandle.Position = UDim2.new(0, 3, 0.5, -9)
+            chamsPickerContainer.Visible = false
+            chamsPickerContainer.BackgroundTransparency = 1
+            ShiftVisualsContainer(false)
+            RemoveChams()
+        end
+        _G.ChamsEnabled = value
+    end
+
+    SetChamsToggleState(false)
+    
+    chamsClickArea.MouseButton1Click:Connect(function()
+        PlayClickSound()
+        SetChamsToggleState(not _G.ChamsEnabled)
+    end)
+
+    -- ESP
+    local espFrame = Instance.new("Frame")
+    espFrame.Size = UDim2.new(1, 0, 0, 45)
+    espFrame.Position = UDim2.new(0, 0, 0, 200)
+    espFrame.BackgroundTransparency = 1
+    espFrame.Parent = visualsContainer
+
+    local espLabel = Instance.new("TextLabel")
+    espLabel.Size = UDim2.new(0.6, 0, 0, 20)
+    espLabel.BackgroundTransparency = 1
+    espLabel.Text = "Tracers and 3D Box"
+    espLabel.TextColor3 = Color3.fromRGB(209, 213, 219)
+    espLabel.TextSize = 13
+    espLabel.Font = Enum.Font.GothamBold
+    espLabel.TextXAlignment = Enum.TextXAlignment.Left
+    espLabel.Parent = espFrame
+
+    local espDesc = Instance.new("TextLabel")
+    espDesc.Size = UDim2.new(0.7, 0, 0, 16)
+    espDesc.Position = UDim2.new(0, 0, 0, 22)
+    espDesc.BackgroundTransparency = 1
+    espDesc.Text = "Lines with boxes leading to enemies"
+    espDesc.TextColor3 = Color3.fromRGB(113, 113, 122)
+    espDesc.TextSize = 11
+    espDesc.Font = Enum.Font.Gotham
+    espDesc.TextXAlignment = Enum.TextXAlignment.Left
+    espDesc.Parent = espFrame
+
+    local espToggleBg = Instance.new("Frame")
+    espToggleBg.Size = UDim2.new(0, 44, 0, 24)
+    espToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
+    espToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
+    espToggleBg.BorderSizePixel = 0
+    espToggleBg.Parent = espFrame
+
+    local espToggleCorner = Instance.new("UICorner")
+    espToggleCorner.CornerRadius = UDim.new(1, 0)
+    espToggleCorner.Parent = espToggleBg
+
+    local espHandle = Instance.new("Frame")
+    espHandle.Size = UDim2.new(0, 18, 0, 18)
+    espHandle.Position = UDim2.new(0, 3, 0.5, -9)
+    espHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    espHandle.BorderSizePixel = 0
+    espHandle.Parent = espToggleBg
+
+    local espHandleCorner = Instance.new("UICorner")
+    espHandleCorner.CornerRadius = UDim.new(1, 0)
+    espHandleCorner.Parent = espHandle
+
+    local espClickArea = Instance.new("TextButton")
+    espClickArea.Size = UDim2.new(0, 44, 0, 24)
+    espClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
+    espClickArea.BackgroundTransparency = 1
+    espClickArea.Text = ""
+    espClickArea.ZIndex = 10
+    espClickArea.Parent = espFrame
+
+    SetESPToggleState = function(value)
+        if value then
+            TweenService:Create(espToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
+            TweenService:Create(espHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 23, 0.5, -9)}):Play()
+            ApplyESP()
+        else
+            TweenService:Create(espToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(42, 47, 58)}):Play()
+            TweenService:Create(espHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 3, 0.5, -9)}):Play()
+            RemoveESP()
+        end
+        _G.ESPEnabled = value
+    end
+
+    SetESPToggleState(_G.ESPEnabled)
+    espClickArea.MouseButton1Click:Connect(function()
+        PlayClickSound()
+        SetESPToggleState(not _G.ESPEnabled)
+    end)
+
+    -- HEALTH BAR
+    local healthFrame = Instance.new("Frame")
+    healthFrame.Size = UDim2.new(1, 0, 0, 45)
+    healthFrame.Position = UDim2.new(0, 0, 0, 255)
+    healthFrame.BackgroundTransparency = 1
+    healthFrame.Parent = visualsContainer
+
+    local healthLabel = Instance.new("TextLabel")
+    healthLabel.Size = UDim2.new(0.6, 0, 0, 20)
+    healthLabel.BackgroundTransparency = 1
+    healthLabel.Text = "Health Bar"
+    healthLabel.TextColor3 = Color3.fromRGB(209, 213, 219)
+    healthLabel.TextSize = 13
+    healthLabel.Font = Enum.Font.GothamBold
+    healthLabel.TextXAlignment = Enum.TextXAlignment.Left
+    healthLabel.Parent = healthFrame
+
+    local healthDesc = Instance.new("TextLabel")
+    healthDesc.Size = UDim2.new(0.7, 0, 0, 16)
+    healthDesc.Position = UDim2.new(0, 0, 0, 22)
+    healthDesc.BackgroundTransparency = 1
+    healthDesc.Text = "Health bar above head"
+    healthDesc.TextColor3 = Color3.fromRGB(113, 113, 122)
+    healthDesc.TextSize = 11
+    healthDesc.Font = Enum.Font.Gotham
+    healthDesc.TextXAlignment = Enum.TextXAlignment.Left
+    healthDesc.Parent = healthFrame
+
+    local healthToggleBg = Instance.new("Frame")
+    healthToggleBg.Size = UDim2.new(0, 44, 0, 24)
+    healthToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
+    healthToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
+    healthToggleBg.BorderSizePixel = 0
+    healthToggleBg.Parent = healthFrame
+
+    local healthToggleCorner = Instance.new("UICorner")
+    healthToggleCorner.CornerRadius = UDim.new(1, 0)
+    healthToggleCorner.Parent = healthToggleBg
+
+    local healthHandle = Instance.new("Frame")
+    healthHandle.Size = UDim2.new(0, 18, 0, 18)
+    healthHandle.Position = UDim2.new(0, 3, 0.5, -9)
+    healthHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    healthHandle.BorderSizePixel = 0
+    healthHandle.Parent = healthToggleBg
+
+    local healthHandleCorner = Instance.new("UICorner")
+    healthHandleCorner.CornerRadius = UDim.new(1, 0)
+    healthHandleCorner.Parent = healthHandle
+
+    local healthClickArea = Instance.new("TextButton")
+    healthClickArea.Size = UDim2.new(0, 44, 0, 24)
+    healthClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
+    healthClickArea.BackgroundTransparency = 1
+    healthClickArea.Text = ""
+    healthClickArea.ZIndex = 10
+    healthClickArea.Parent = healthFrame
+
+    SetHealthBarToggleState = function(value)
+        if value then
+            TweenService:Create(healthToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
+            TweenService:Create(healthHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 23, 0.5, -9)}):Play()
+            ApplyHealthBar()
+        else
+            TweenService:Create(healthToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(42, 47, 58)}):Play()
+            TweenService:Create(healthHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 3, 0.5, -9)}):Play()
+            RemoveHealthBar()
+        end
+        _G.HealthBarEnabled = value
+    end
+
+    SetHealthBarToggleState(_G.HealthBarEnabled)
+    healthClickArea.MouseButton1Click:Connect(function()
+        PlayClickSound()
+        SetHealthBarToggleState(not _G.HealthBarEnabled)
+    end)
+
+    -- SKELETON (БЕЗ КРУГА, НЕ СДВИГАЕТ)
+    local skeletonFrame = Instance.new("Frame")
+    skeletonFrame.Size = UDim2.new(1, 0, 0, 45)
+    skeletonFrame.Position = UDim2.new(0, 0, 0, 310)
+    skeletonFrame.BackgroundTransparency = 1
+    skeletonFrame.Parent = visualsContainer
+
+    local skeletonLabel = Instance.new("TextLabel")
+    skeletonLabel.Size = UDim2.new(0.6, 0, 0, 20)
+    skeletonLabel.BackgroundTransparency = 1
+    skeletonLabel.Text = "Skeleton"
+    skeletonLabel.TextColor3 = Color3.fromRGB(209, 213, 219)
+    skeletonLabel.TextSize = 13
+    skeletonLabel.Font = Enum.Font.GothamBold
+    skeletonLabel.TextXAlignment = Enum.TextXAlignment.Left
+    skeletonLabel.Parent = skeletonFrame
+
+    local skeletonDesc = Instance.new("TextLabel")
+    skeletonDesc.Size = UDim2.new(0.7, 0, 0, 16)
+    skeletonDesc.Position = UDim2.new(0, 0, 0, 22)
+    skeletonDesc.BackgroundTransparency = 1
+    skeletonDesc.Text = "Full body enemy skeleton ESP"
+    skeletonDesc.TextColor3 = Color3.fromRGB(113, 113, 122)
+    skeletonDesc.TextSize = 11
+    skeletonDesc.Font = Enum.Font.Gotham
+    skeletonDesc.TextXAlignment = Enum.TextXAlignment.Left
+    skeletonDesc.Parent = skeletonFrame
+
+    local skeletonToggleBg = Instance.new("Frame")
+    skeletonToggleBg.Size = UDim2.new(0, 44, 0, 24)
+    skeletonToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
+    skeletonToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
+    skeletonToggleBg.BorderSizePixel = 0
+    skeletonToggleBg.Parent = skeletonFrame
+
+    local skeletonToggleCorner = Instance.new("UICorner")
+    skeletonToggleCorner.CornerRadius = UDim.new(1, 0)
+    skeletonToggleCorner.Parent = skeletonToggleBg
+
+    local skeletonHandle = Instance.new("Frame")
+    skeletonHandle.Size = UDim2.new(0, 18, 0, 18)
+    skeletonHandle.Position = UDim2.new(0, 3, 0.5, -9)
+    skeletonHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    skeletonHandle.BorderSizePixel = 0
+    skeletonHandle.Parent = skeletonToggleBg
+
+    local skeletonHandleCorner = Instance.new("UICorner")
+    skeletonHandleCorner.CornerRadius = UDim.new(1, 0)
+    skeletonHandleCorner.Parent = skeletonHandle
+
+    local skeletonClickArea = Instance.new("TextButton")
+    skeletonClickArea.Size = UDim2.new(0, 44, 0, 24)
+    skeletonClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
+    skeletonClickArea.BackgroundTransparency = 1
+    skeletonClickArea.Text = ""
+    skeletonClickArea.ZIndex = 10
+    skeletonClickArea.Parent = skeletonFrame
+
+    SetSkeletonToggleState = function(value)
+        if value then
+            TweenService:Create(skeletonToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
+            TweenService:Create(skeletonHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 23, 0.5, -9)}):Play()
+            ApplySkeleton()
+        else
+            TweenService:Create(skeletonToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(42, 47, 58)}):Play()
+            TweenService:Create(skeletonHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 3, 0.5, -9)}):Play()
+            RemoveSkeleton()
+        end
+        _G.SkeletonEnabled = value
+    end
+
+    SetSkeletonToggleState(_G.SkeletonEnabled)
+    skeletonClickArea.MouseButton1Click:Connect(function()
+        PlayClickSound()
+        SetSkeletonToggleState(not _G.SkeletonEnabled)
+    end)
+
+    -- Языковые обновления
+    local function UpdateVisualsTexts()
+        local lang = GetLang()
+        chamsLabel.Text = lang.Toggles.Chams[1]
+        chamsDesc.Text = lang.Toggles.Chams[2]
+        espLabel.Text = lang.Toggles.ESP[1]
+        espDesc.Text = lang.Toggles.ESP[2]
+        healthLabel.Text = lang.Toggles.HealthBar[1]
+        healthDesc.Text = lang.Toggles.HealthBar[2]
+        skeletonLabel.Text = lang.Toggles.Skeleton[1]
+        skeletonDesc.Text = lang.Toggles.Skeleton[2]
+    end
+    table.insert(langUpdateCallbacks, UpdateVisualsTexts)
+end
 
     -- CHAMS
     local chamsFrame = Instance.new("Frame")
