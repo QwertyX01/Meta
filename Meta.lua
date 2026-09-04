@@ -950,7 +950,7 @@ local aimbotPage = ContentPages["Aimbot"]
 if aimbotPage then aimbotPage.CanvasSize = UDim2.new(0, 0, 0, 10) end
 
 -- ============================================================
--- VISUALS PAGE (ТОЧНАЯ КОПИЯ МЕХАНИКИ ИЗ SETTINGS)
+-- VISUALS PAGE (ИСПРАВЛЕННЫЙ)
 -- ============================================================
 local visualsPage = ContentPages["Visuals"]
 if visualsPage then
@@ -966,12 +966,16 @@ if visualsPage then
 
     ShiftVisualsContainer = function(shiftDown)
         local targetY = shiftDown and 150 or 0
-        TweenService:Create(visualsContainer, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {
+        TweenService:Create(visualsContainer, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
             Position = UDim2.new(0, 0, 0, targetY)
+        }):Play()
+        local newHeight = shiftDown and 550 or 400
+        TweenService:Create(visualsPage, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+            CanvasSize = UDim2.new(0, 0, 0, newHeight)
         }):Play()
     end
 
-    -- CHAMS (с кругом, точная копия UI Color)
+    -- CHAMS
     local chamsFrame = Instance.new("Frame")
     chamsFrame.Size = UDim2.new(1, 0, 0, 45)
     chamsFrame.Position = UDim2.new(0, 0, 0, 10)
@@ -1029,7 +1033,7 @@ if visualsPage then
     chamsClickArea.ZIndex = 10
     chamsClickArea.Parent = chamsFrame
 
-    -- КРУГ CHAMS (СКРЫТ ПО УМОЛЧАНИЮ, БЕЗ ФОНА)
+    -- КРУГ (БЕЗ ФОНА, СКРЫТ ПО УМОЛЧАНИЮ)
     chamsPickerContainer = Instance.new("Frame")
     chamsPickerContainer.Name = "ChamsColorPicker"
     chamsPickerContainer.Size = UDim2.new(1, -30, 0, 140)
@@ -1097,6 +1101,7 @@ if visualsPage then
     chamsDragArea.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
             isDraggingChamsColor = true
+            MainFrame.Draggable = false
             UpdateChamsColorFromInput(input.Position)
         end
     end)
@@ -1110,33 +1115,32 @@ if visualsPage then
     UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
             isDraggingChamsColor = false
+            MainFrame.Draggable = true
         end
     end)
 
+    -- ВКЛЮЧЕНИЕ CHAMS (МГНОВЕННО, БЕЗ ЗАДЕРЖЕК)
     SetChamsToggleState = function(value)
         if value then
-            TweenService:Create(chamsToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
-            TweenService:Create(chamsHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 23, 0.5, -9)}):Play()
+            chamsToggleBg.BackgroundColor3 = Color3.fromRGB(59, 130, 246)
+            chamsHandle.Position = UDim2.new(0, 23, 0.5, -9)
             chamsPickerContainer.Visible = true
-            chamsPickerContainer.BackgroundTransparency = 1
-            TweenService:Create(chamsPickerContainer, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundTransparency = 0}):Play()
+            chamsPickerContainer.BackgroundTransparency = 0
             ShiftVisualsContainer(true)
-            TweenService:Create(visualsPage, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {CanvasSize = UDim2.new(0, 0, 0, 550)}):Play()
             ApplyChams()
         else
-            TweenService:Create(chamsToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(42, 47, 58)}):Play()
-            TweenService:Create(chamsHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 3, 0.5, -9)}):Play()
-            TweenService:Create(chamsPickerContainer, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {BackgroundTransparency = 1}):Play()
-            task.wait(0.15)
+            chamsToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
+            chamsHandle.Position = UDim2.new(0, 3, 0.5, -9)
             chamsPickerContainer.Visible = false
+            chamsPickerContainer.BackgroundTransparency = 1
             ShiftVisualsContainer(false)
-            TweenService:Create(visualsPage, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {CanvasSize = UDim2.new(0, 0, 0, 400)}):Play()
             RemoveChams()
         end
         _G.ChamsEnabled = value
     end
 
     SetChamsToggleState(false)
+    
     chamsClickArea.MouseButton1Click:Connect(function()
         PlayClickSound()
         SetChamsToggleState(not _G.ChamsEnabled)
@@ -1403,7 +1407,7 @@ if settingsPage then
     settingsContainer.ClipsDescendants = true
     settingsContainer.Parent = settingsPage
 
-    -- UI Color (с пикером)
+    -- UI Color
     local toggleFrame = Instance.new("Frame")
     toggleFrame.Size = UDim2.new(1, 0, 0, 45)
     toggleFrame.Position = UDim2.new(0, 0, 0, 10)
@@ -1526,6 +1530,7 @@ if settingsPage then
         if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
             isDraggingColor = true
             scrollFrame.ScrollingEnabled = false
+            MainFrame.Draggable = false
             UpdateWheelColor(input.Position)
         end
     end)
@@ -1540,6 +1545,7 @@ if settingsPage then
         if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
             isDraggingColor = false
             scrollFrame.ScrollingEnabled = true
+            MainFrame.Draggable = true
         end
     end)
 
@@ -1742,6 +1748,7 @@ if settingsPage then
     opacitySliderHandle.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             isDraggingOpacity = true
+            MainFrame.Draggable = false
             UpdateOpacity(input.Position.X)
         end
     end)
@@ -1749,6 +1756,7 @@ if settingsPage then
     opacitySliderBg.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             isDraggingOpacity = true
+            MainFrame.Draggable = false
             UpdateOpacity(input.Position.X)
         end
     end)
@@ -1756,6 +1764,7 @@ if settingsPage then
     UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             isDraggingOpacity = false
+            MainFrame.Draggable = true
         end
     end)
 
@@ -1947,6 +1956,7 @@ if settingsPage then
     scaleSliderHandle.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             isDraggingScale = true
+            MainFrame.Draggable = false
             UpdateScale(input.Position.X)
         end
     end)
@@ -1954,6 +1964,7 @@ if settingsPage then
     scaleSliderBg.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             isDraggingScale = true
+            MainFrame.Draggable = false
             UpdateScale(input.Position.X)
         end
     end)
@@ -1961,6 +1972,7 @@ if settingsPage then
     UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             isDraggingScale = false
+            MainFrame.Draggable = true
         end
     end)
 
