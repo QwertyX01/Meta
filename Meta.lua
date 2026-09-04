@@ -430,6 +430,9 @@ task.spawn(function()
 end)
 
 -- SKELETON ESP (ПОЛНЫЙ РОСТ)
+-- ЗАМЕНИТЕ ВЕСЬ БЛОК SKELETON НА ЭТОТ:
+
+-- SKELETON ESP (ПОЛНЫЙ РОСТ)
 local SkeletonConnections = {}
 local function SetupSkeleton()
     local function createLine()
@@ -609,7 +612,6 @@ local function SetupSkeleton()
     return ApplySkeleton, RemoveSkeleton
 end
 local ApplySkeleton, RemoveSkeleton = SetupSkeleton()
-
 -- HEALTH BAR ESP (НАД ГОЛОВОЙ, БЕЗ РАЗДЕЛИТЕЛЕЙ, ПРОЗРАЧНЫЙ)
 local healthBars = {}
 local enemiesCache = {}
