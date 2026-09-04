@@ -2379,5 +2379,3 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 print("[META] META v7.0.40 - Search Highlight + Skeleton + HealthBar Fixed")
 print("[META] Press Insert or click icon")
-]]
-)()
