@@ -2327,5 +2327,3 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 print("[META] META v7.0.40 - Skeleton + Thickness Integrated")
 print("[META] Press Insert or click icon")
-]]
-)()
