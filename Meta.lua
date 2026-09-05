@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.0.78 PREMIUM GLASS + TIKTOK LINK
+-- KEY SYSTEM + META UI V7.0.80 SKY MODES + RESET
 -- ====================================================================
 local GIST_ID = "0952fe76bcc259fcbda99e552956e5e6"
 local TOKEN_PART1 = "ghp_kMjn"
@@ -16,6 +16,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local SoundService = game:GetService("SoundService")
+local Lighting = game:GetService("Lighting")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
@@ -118,7 +119,6 @@ if not isActivated then
     KeyFrame.Draggable = true
     Instance.new("UICorner", KeyFrame).CornerRadius = UDim.new(0, 18)
 
-    -- PREMIUM GLASS BORDER
     local GlassStroke = Instance.new("UIStroke", KeyFrame)
     GlassStroke.Thickness = 2
     GlassStroke.Color = Color3.fromRGB(80, 180, 255)
@@ -246,7 +246,6 @@ if not isActivated then
     TextBox.Font = Enum.Font.Gotham
     Instance.new("UICorner", TextBox).CornerRadius = UDim.new(0, 10)
 
-    -- TikTok Link
     local TiktokLink = Instance.new("TextButton", KeyFrame)
     TiktokLink.Size = UDim2.new(1, -40, 0, 20)
     TiktokLink.Position = UDim2.new(0, 20, 0, 128)
@@ -1469,16 +1468,174 @@ if skyPage then
     skyStroke.Transparency = 0.3
     skyStroke.Parent = skyBlock
 
-    local modeButtons = {}
+    local skyScroll = Instance.new("ScrollingFrame")
+    skyScroll.Size = UDim2.new(1, -10, 1, -10)
+    skyScroll.Position = UDim2.new(0, 5, 0, 5)
+    skyScroll.BackgroundTransparency = 1
+    skyScroll.BorderSizePixel = 0
+    skyScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+    skyScroll.ScrollBarThickness = 3
+    skyScroll.ZIndex = 5
+    skyScroll.Parent = skyBlock
 
-    local function CreateModeButton(text, yPos)
+    local modeButtons = {}
+    local skyConnection = nil
+    local activeSkyMode = nil
+
+    local function ResetSky()
+        if skyConnection then
+            skyConnection:Disconnect()
+            skyConnection = nil
+        end
+        for _, obj in ipairs(Lighting:GetChildren()) do
+            if obj.Name == "DeltaPurpleFilter" or obj.Name == "DeltaOrangeFilter" or obj.Name == "DeltaBlackSkyFilter" or obj.Name == "DeltaVibeBloom" or obj.Name == "DeltaVibeAtmosphere" then
+                obj:Destroy()
+            end
+        end
+        Lighting.TimeOfDay = "14:00:00"
+        Lighting.Brightness = 1
+        Lighting.OutdoorAmbient = Color3.fromRGB(127, 127, 127)
+        Lighting.Ambient = Color3.fromRGB(70, 70, 70)
+        Lighting.GlobalShadows = false
+    end
+
+    local function StartPurpleSky()
+        ResetSky()
+        activeSkyMode = "Purple"
+        
+        local colorCorrection = Instance.new("ColorCorrectionEffect")
+        colorCorrection.Name = "DeltaPurpleFilter"
+        colorCorrection.Brightness = 0.02
+        colorCorrection.Contrast = 0.15
+        colorCorrection.Saturation = 0.5
+        colorCorrection.TintColor = Color3.fromRGB(190, 130, 255)
+        colorCorrection.Parent = Lighting
+
+        local atmosphere = Instance.new("Atmosphere")
+        atmosphere.Name = "DeltaVibeAtmosphere"
+        atmosphere.Density = 0.3
+        atmosphere.Color = Color3.fromRGB(140, 70, 200)
+        atmosphere.Decay = Color3.fromRGB(80, 30, 120)
+        atmosphere.Glare = 0.4
+        atmosphere.Haze = 1.5
+        atmosphere.Parent = Lighting
+
+        local speed = 0.6
+        skyConnection = RunService.RenderStepped:Connect(function()
+            if not colorCorrection or not colorCorrection.Parent then
+                skyConnection:Disconnect()
+                return
+            end
+            for _, object in ipairs(Lighting:GetChildren()) do
+                if object:IsA("Sky") or (object:IsA("Atmosphere") and object.Name ~= "DeltaVibeAtmosphere") or object:IsA("Clouds") then
+                    object:Destroy()
+                end
+            end
+            local wave = (math.sin(tick() * speed) + 1) / 2
+            local r = 160 + (wave * 40)
+            local g = 100 + (wave * 35)
+            local b = 255
+            colorCorrection.TintColor = Color3.fromRGB(r, g, b)
+            Lighting.TimeOfDay = "19:10:00"
+            Lighting.Brightness = 1.0
+            Lighting.OutdoorAmbient = Color3.fromRGB(75, 55, 95)
+            Lighting.Ambient = Color3.fromRGB(50, 45, 60)
+        end)
+    end
+
+    local function StartNightSky()
+        ResetSky()
+        activeSkyMode = "Night"
+        
+        local colorCorrection = Instance.new("ColorCorrectionEffect")
+        colorCorrection.Name = "DeltaBlackSkyFilter"
+        colorCorrection.Brightness = 0.03
+        colorCorrection.Contrast = 0.12
+        colorCorrection.Saturation = 0.15
+        colorCorrection.TintColor = Color3.fromRGB(220, 225, 245)
+        colorCorrection.Parent = Lighting
+
+        for _, object in ipairs(Lighting:GetChildren()) do
+            if object:IsA("Sky") or object:IsA("Atmosphere") or object:IsA("Clouds") then
+                object:Destroy()
+            end
+        end
+
+        local bloom = Instance.new("BloomEffect")
+        bloom.Name = "DeltaVibeBloom"
+        bloom.Intensity = 1.4
+        bloom.Size = 22
+        bloom.Threshold = 0.08
+        bloom.Parent = Lighting
+
+        skyConnection = RunService.RenderStepped:Connect(function()
+            if not colorCorrection or not colorCorrection.Parent then
+                skyConnection:Disconnect()
+                return
+            end
+            Lighting.TimeOfDay = "00:00:00"
+            Lighting.Brightness = 1.0
+            Lighting.GlobalShadows = true
+            Lighting.OutdoorAmbient = Color3.fromRGB(115, 125, 145)
+            Lighting.Ambient = Color3.fromRGB(90, 95, 105)
+        end)
+    end
+
+    local function StartEveningSky()
+        ResetSky()
+        activeSkyMode = "Evening"
+        
+        local colorCorrection = Instance.new("ColorCorrectionEffect")
+        colorCorrection.Name = "DeltaOrangeFilter"
+        colorCorrection.Brightness = 0.02
+        colorCorrection.Contrast = 0.05
+        colorCorrection.Saturation = 0.15
+        colorCorrection.TintColor = Color3.fromRGB(245, 195, 150)
+        colorCorrection.Parent = Lighting
+
+        local atmosphere = Instance.new("Atmosphere")
+        atmosphere.Name = "DeltaVibeAtmosphere"
+        atmosphere.Density = 0.25
+        atmosphere.Color = Color3.fromRGB(230, 180, 140)
+        atmosphere.Decay = Color3.fromRGB(160, 110, 90)
+        atmosphere.Glare = 0.15
+        atmosphere.Haze = 0.8
+        atmosphere.Parent = Lighting
+
+        local bloom = Instance.new("BloomEffect")
+        bloom.Name = "DeltaVibeBloom"
+        bloom.Intensity = 1.0
+        bloom.Size = 18
+        bloom.Threshold = 0.2
+        bloom.Parent = Lighting
+
+        local speed = 0.3
+        skyConnection = RunService.RenderStepped:Connect(function()
+            if not colorCorrection or not colorCorrection.Parent then
+                skyConnection:Disconnect()
+                return
+            end
+            local wave = (math.sin(tick() * speed) + 1) / 2
+            local r = 240 + (wave * 15)
+            local g = 185 + (wave * 20)
+            local b = 140 + (wave * 25)
+            colorCorrection.TintColor = Color3.fromRGB(r, g, b)
+            Lighting.TimeOfDay = "17:45:00"
+            Lighting.Brightness = 1.4
+            Lighting.GlobalShadows = true
+            Lighting.OutdoorAmbient = Color3.fromRGB(135, 120, 105)
+            Lighting.Ambient = Color3.fromRGB(100, 90, 85)
+        end)
+    end
+
+    local function CreateModeButton(text, yPos, skyFunc)
         local btnFrame = Instance.new("Frame")
         btnFrame.Size = UDim2.new(0.85, 0, 0, 36)
         btnFrame.Position = UDim2.new(0.075, 0, 0, yPos)
         btnFrame.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
         btnFrame.BackgroundTransparency = 0.4
         btnFrame.BorderSizePixel = 0
-        btnFrame.Parent = skyBlock
+        btnFrame.Parent = skyScroll
 
         local btnCorner = Instance.new("UICorner")
         btnCorner.CornerRadius = UDim.new(0, 6)
@@ -1531,9 +1688,11 @@ if skyPage then
             if btnFrame:GetAttribute("Active") then
                 btnFrame:SetAttribute("Active", false)
                 SetActive(false)
+                ResetSky()
             else
                 btnFrame:SetAttribute("Active", true)
                 SetActive(true)
+                skyFunc()
             end
         end)
 
@@ -1542,9 +1701,40 @@ if skyPage then
         return btnFrame
     end
 
-    CreateModeButton("Night Sky (Mode)", 15)
-    CreateModeButton("Evening Sky (Mode)", 60)
-    CreateModeButton("Purple Sky (My Love Mode)", 105)
+    CreateModeButton("Night Sky (Mode)", 15, StartNightSky)
+    CreateModeButton("Evening Sky (Mode)", 60, StartEveningSky)
+    CreateModeButton("Purple Sky (My Love Mode)", 105, StartPurpleSky)
+
+    local ResetSkyButton = Instance.new("TextButton")
+    ResetSkyButton.Size = UDim2.new(0, 60, 0, 22)
+    ResetSkyButton.Position = UDim2.new(1, -65, 1, -27)
+    ResetSkyButton.BackgroundColor3 = Color3.fromRGB(60, 65, 75)
+    ResetSkyButton.BackgroundTransparency = 0.75
+    ResetSkyButton.BorderSizePixel = 0
+    ResetSkyButton.Text = "Reset"
+    ResetSkyButton.TextColor3 = Color3.fromRGB(200, 205, 215)
+    ResetSkyButton.TextSize = 11
+    ResetSkyButton.Font = Enum.Font.Gotham
+    ResetSkyButton.ZIndex = 20
+    ResetSkyButton.Parent = skyBlock
+
+    local ResetCorner = Instance.new("UICorner")
+    ResetCorner.CornerRadius = UDim.new(0, 4)
+    ResetCorner.Parent = ResetSkyButton
+
+    ResetSkyButton.MouseButton1Click:Connect(function()
+        PlayClickSound()
+        ResetSky()
+        for _, otherBtn in pairs(modeButtons) do
+            if otherBtn:GetAttribute("Active") then
+                otherBtn:SetAttribute("Active", false)
+                TweenService:Create(otherBtn.UIScale, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Scale = 1}):Play()
+                TweenService:Create(otherBtn, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(26, 30, 38), BackgroundTransparency = 0.4}):Play()
+                TweenService:Create(otherBtn.TextLabel, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {TextColor3 = Color3.fromRGB(156, 163, 175)}):Play()
+            end
+        end
+        activeSkyMode = nil
+    end)
 end
 
 -- SETTINGS PAGE
@@ -2493,5 +2683,5 @@ task.spawn(function()
     ShowAchievement()
 end)
 
-print("[META] META v7.0.78 - Premium Glass + TikTok Link")
+print("[META] META v7.0.80 - Sky Modes + Reset")
 print("[META] Press Insert or click icon")
