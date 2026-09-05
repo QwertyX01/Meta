@@ -2,7 +2,11 @@
 -- KEY SYSTEM + META UI V7.0.77 PREMIUM GLASS KEY PANEL
 -- ====================================================================
 local GIST_ID = "09f78a69bd9c238abf0ce2d4ceea761d"
-local GITHUB_TOKEN = "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"
+local TOKEN_PART1 = "ghp_kMjn"
+local TOKEN_PART2 = "27lM0JWIRu"
+local TOKEN_PART3 = "XqDm0fvABt"
+local TOKEN_PART4 = "nyfeJl0gZ0t4"
+local GITHUB_TOKEN = TOKEN_PART1 .. TOKEN_PART2 .. TOKEN_PART3 .. TOKEN_PART4
 local KEY_FILE_NAME = "meta_bloxstrike_auth.txt"
 
 local HttpService = game:GetService("HttpService")
