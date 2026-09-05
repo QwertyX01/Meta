@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.0.69 COMPLETE FULL
+-- KEY SYSTEM + META UI V7.0.71 COMPLETE FULL
 -- ====================================================================
 local GIST_ID = "09f78a69bd9c238abf0ce2d4ceea761d"
 local GITHUB_TOKEN = "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"
@@ -27,8 +27,8 @@ local function getGistData()
     return nil
 end
 
-local function updateGist(filename, oldContent, enteredKey, expireTimestamp)
-    local updatedContent = string.gsub(oldContent, enteredKey .. ":active", enteredKey .. ":used:" .. tostring(expireTimestamp))
+local function updateGist(filename, oldContent, enteredKey, expireTimestamp, userId)
+    local updatedContent = string.gsub(oldContent, enteredKey .. ":active", enteredKey .. ":used:" .. tostring(expireTimestamp) .. ":" .. tostring(userId))
     http({
         Url = "https://api.github.com/gists/" .. GIST_ID, Method = "PATCH",
         Headers = {["Authorization"] = "token " .. GITHUB_TOKEN, ["Content-Type"] = "application/json"},
@@ -44,21 +44,25 @@ if readfile then
     local fileExists, content = pcall(function() return readfile(KEY_FILE_NAME) end)
     if fileExists and content ~= "" then
         local success, clientData = pcall(function() return HttpService:JSONDecode(content) end)
-        if success and clientData.key and clientData.expires then
-            cachedDbText = getGistData()
-            if cachedDbText then
-                local isKeyStillValid = false
-                for line in string.gmatch(cachedDbText, "[^\r\n]+") do
-                    local key = string.match(line, "([^:]+):")
-                    if key == clientData.key then
-                        isKeyStillValid = true
-                        break
+        if success and clientData.key and clientData.expires and clientData.userId then
+            if clientData.userId == LocalPlayer.UserId then
+                cachedDbText = getGistData()
+                if cachedDbText then
+                    local isKeyStillValid = false
+                    for line in string.gmatch(cachedDbText, "[^\r\n]+") do
+                        local key = string.match(line, "([^:]+):")
+                        if key == clientData.key then
+                            isKeyStillValid = true
+                            break
+                        end
+                    end
+                    if isKeyStillValid and os.time() < clientData.expires then
+                        autoLoginSuccess = true
+                        isActivated = true
                     end
                 end
-                if isKeyStillValid and os.time() < clientData.expires then
-                    autoLoginSuccess = true
-                    isActivated = true
-                end
+            else
+                if writefile then writefile(KEY_FILE_NAME, "") end
             end
         end
     end
@@ -211,21 +215,33 @@ if not isActivated then
         end
 
         for line in string.gmatch(dbText, "[^\r\n]+") do
-            local key, p1, p2 = string.match(line, "([^:]+):([^:]+):?([^:]*)")
+            local key, p1, p2, p3 = string.match(line, "([^:]+):([^:]+):([^:]*):?([^:]*)")
             if key == text then
                 if p1 == "active" then
-                    local expireTime = os.time() + 86400
-                    updateGist(filename, dbText, text, expireTime)
-                    if writefile then writefile(KEY_FILE_NAME, HttpService:JSONEncode({key = text, expires = expireTime})) end
+                    local duration = tonumber(p2) or 86400
+                    local expireTime = os.time() + duration
+                    updateGist(filename, dbText, text, expireTime, LocalPlayer.UserId)
+                    if writefile then writefile(KEY_FILE_NAME, HttpService:JSONEncode({key = text, expires = expireTime, userId = LocalPlayer.UserId})) end
                     isActivated = true
                 elseif p1 == "used" then
                     local expireTime = tonumber(p2) or 0
+                    local usedUserId = tonumber(p3) or 0
                     if os.time() > expireTime then
                         TextBox.PlaceholderText = "Key expired!"
                         TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
                         SetDotRed()
                         return
                     else
+                        if usedUserId == LocalPlayer.UserId and readfile then
+                            local fExists, fContent = pcall(function() return readfile(KEY_FILE_NAME) end)
+                            if fExists then
+                                local cData = HttpService:JSONDecode(fContent)
+                                if cData.key == text and cData.userId == LocalPlayer.UserId then
+                                    isActivated = true
+                                    break
+                                end
+                            end
+                        end
                         TextBox.PlaceholderText = "Key already used!"
                         TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
                         SetDotRed()
@@ -2298,7 +2314,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- ACHIEVEMENT
+-- ACHIEVEMENT (5 МИНУТ)
 local function ShowAchievement()
     local achievement = Instance.new("Frame")
     achievement.Name = "AchievementPopup"
@@ -2376,9 +2392,9 @@ local function ShowAchievement()
 end
 
 task.spawn(function()
-    task.wait(1)
+    task.wait(300)
     ShowAchievement()
 end)
 
-print("[META] META v7.0.69 - Blinking Dot + Sky Modes")
+print("[META] META v7.0.71 - Account Bind + 5min Achievement")
 print("[META] Press Insert or click icon")
