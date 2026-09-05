@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.0.76 COMPLETE FULL (LIMIT + DIAGNOSTICS)
+-- KEY SYSTEM + META UI V7.0.77 PREMIUM GLASS KEY PANEL
 -- ====================================================================
 local GIST_ID = "09f78a69bd9c238abf0ce2d4ceea761d"
 local GITHUB_TOKEN = "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"
@@ -114,15 +114,42 @@ if not isActivated then
     KeyFrame.Draggable = true
     Instance.new("UICorner", KeyFrame).CornerRadius = UDim.new(0, 18)
 
-    local KeyStroke = Instance.new("UIStroke", KeyFrame)
-    KeyStroke.Thickness = 1
-    KeyStroke.Color = Color3.fromRGB(255, 255, 255)
-    KeyStroke.Transparency = 0.4
+    -- PREMIUM GLASS BORDER
+    local GlassStroke = Instance.new("UIStroke", KeyFrame)
+    GlassStroke.Thickness = 2
+    GlassStroke.Color = Color3.fromRGB(80, 180, 255)
+    GlassStroke.Transparency = 0.2
 
-    local KeyBloomStroke = Instance.new("UIStroke", KeyFrame)
-    KeyBloomStroke.Thickness = 3
-    KeyBloomStroke.Color = Color3.fromRGB(255, 255, 255)
-    KeyBloomStroke.Transparency = 0.7
+    local GlassGlow = Instance.new("UIStroke", KeyFrame)
+    GlassGlow.Thickness = 4
+    GlassGlow.Color = Color3.fromRGB(40, 120, 255)
+    GlassGlow.Transparency = 0.7
+
+    local GlassConnection = nil
+    local function StartGlassAnimation()
+        if GlassConnection then GlassConnection:Disconnect() end
+        GlassConnection = RunService.Heartbeat:Connect(function()
+            local t = tick()
+            local hueShift = (math.sin(t * 1.5) + 1) / 2
+            local r = 60 + hueShift * 40
+            local g = 140 + hueShift * 60
+            local b = 255
+            GlassStroke.Color = Color3.fromRGB(r, g, b)
+            GlassGlow.Color = Color3.fromRGB(r * 0.6, g * 0.6, b)
+            GlassGlow.Transparency = 0.6 + (math.sin(t * 2) + 1) / 2 * 0.3
+        end)
+    end
+
+    local function StopGlassAnimation()
+        if GlassConnection then
+            GlassConnection:Disconnect()
+            GlassConnection = nil
+        end
+        TweenService:Create(GlassStroke, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {Color = Color3.fromRGB(80, 180, 255), Transparency = 0.2}):Play()
+        TweenService:Create(GlassGlow, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {Color = Color3.fromRGB(40, 120, 255), Transparency = 0.7}):Play()
+    end
+
+    StartGlassAnimation()
 
     local StatusDot = Instance.new("Frame", KeyFrame)
     StatusDot.Size = UDim2.new(0, 16, 0, 16)
@@ -223,6 +250,11 @@ if not isActivated then
     TextBox.Font = Enum.Font.Gotham
     Instance.new("UICorner", TextBox).CornerRadius = UDim.new(0, 10)
 
+    local TextBoxStroke = Instance.new("UIStroke", TextBox)
+    TextBoxStroke.Thickness = 1
+    TextBoxStroke.Color = Color3.fromRGB(80, 180, 255)
+    TextBoxStroke.Transparency = 0.5
+
     TextBox.FocusLost:Connect(function(enterPressed)
         if not enterPressed then return end
         local text = TextBox.Text
@@ -257,15 +289,15 @@ if not isActivated then
                     local expireTime = os.time() + duration
                     local remainingLimit = limit - 1
                     if remainingLimit <= 0 then
-                        updateGist(filename, dbText, text, expireTime, LocalPlayer.UserId, nil)
+                        updateGist(filename, dbText, text, expireTime, LocalPlayer.Name, nil)
                     else
-                        updateGist(filename, dbText, text, expireTime, LocalPlayer.UserId, remainingLimit)
+                        updateGist(filename, dbText, text, expireTime, LocalPlayer.Name, remainingLimit)
                     end
                     if writefile then writefile(KEY_FILE_NAME, HttpService:JSONEncode({key = text, expires = expireTime, userId = LocalPlayer.UserId})) end
                     isActivated = true
                 elseif p1 == "used" then
                     local expireTime = tonumber(p2) or 0
-                    local usedUserId = tonumber(p3) or 0
+                    local usedUserId = tostring(p3) or ""
                     local remainingLimit = tonumber(p4)
                     if os.time() > expireTime then
                         TextBox.PlaceholderText = "Key expired!"
@@ -273,7 +305,7 @@ if not isActivated then
                         SetDotRed()
                         return
                     end
-                    if usedUserId ~= LocalPlayer.UserId then
+                    if usedUserId ~= LocalPlayer.Name then
                         TextBox.PlaceholderText = "Key already used!"
                         TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
                         SetDotRed()
@@ -313,6 +345,7 @@ if not isActivated then
             TextBox.PlaceholderText = "Success!"
             TextBox.PlaceholderColor3 = Color3.fromRGB(0, 255, 0)
             SetDotGreen()
+            StopGlassAnimation()
             TweenService:Create(KeyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Position = UDim2.new(0.5, -225, 0, -180)}):Play()
             TweenService:Create(KeyFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
             for _, child in pairs(KeyFrame:GetDescendants()) do
@@ -2450,5 +2483,5 @@ task.spawn(function()
     ShowAchievement()
 end)
 
-print("[META] META v7.0.76 - Key Limit + Diagnostics Added")
+print("[META] META v7.0.77 - Premium Glass Key Panel")
 print("[META] Press Insert or click icon")
