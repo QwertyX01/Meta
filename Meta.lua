@@ -1,10 +1,8 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.0.75 COMPLETE FULL
+-- KEY SYSTEM + META UI V7.0.75 COMPLETE FULL (LIMIT SUPPORT)
 -- ====================================================================
-local GITHUB_TOKEN = "09f78a69bd9c238abf0ce2d4ceea761d"
-local REPO_OWNER = "QwertyX01"
-local REPO_NAME = "Meta"
-local FILE_PATH = "keys.txt"
+local GIST_ID = "09f78a69bd9c238abf0ce2d4ceea761d"
+local GITHUB_TOKEN = "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"
 local KEY_FILE_NAME = "meta_bloxstrike_auth.txt"
 
 local HttpService = game:GetService("HttpService")
@@ -16,148 +14,84 @@ local UserInputService = game:GetService("UserInputService")
 local SoundService = game:GetService("SoundService")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
-local userId = tostring(LocalPlayer.UserId)
-
-local API_URL = string.format("https://api.github.com/repos/%s/%s/contents/%s", REPO_OWNER, REPO_NAME, FILE_PATH)
 
 local http = (syn and syn.request) or (http and http.request) or http_request
 if not http then return print("Дельта не поддерживает http_request!") end
 
-local function toBase64(data)
-    local b = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
-    return ((data:gsub('.', function(x) 
-        local r,b='',x:byte()
-        for i=8,1,-1 do r=r..(b%2^i-b%2^(i-1)>0 and '1' or '0') end
-        return r;
-    end)..'0000'):gsub('%d%d%d?%d?%d?%d?', function(x)
-        if (#x < 6) then return '' end
-        local c=0
-        for i=1,6 do c=c+(x:sub(i,i)=='1' and 2^(6-i) or 0) end
-        return b:sub(c+1,c+1)
-    end)..({ '', '==', '=' })[#data%3+1])
+local function getGistData()
+    local res = http({Url = "https://api.github.com/gists/" .. GIST_ID, Method = "GET"})
+    if res.StatusCode == 200 then
+        local data = HttpService:JSONDecode(res.Body)
+        for filename, fileInfo in pairs(data.files) do return fileInfo.content, filename end
+    end
+    return nil
 end
 
-local function fromBase64(data)
-    local b = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
-    data = string.gsub(data, '[^'..b..'=]', '')
-    return (data:gsub('.', function(x)
-        if (x == '=') then return '' end
-        local r,f='',(b:find(x)-1)
-        for i=6,1,-1 do r=r..(f%2^i-f%2^(i-1)>0 and '1' or '0') end
-        return r;
-    end):gsub('%d%d%d%d%d%d%d%d', function(x)
-        local c=0
-        for i=1,8 do c=c+(x:sub(i,i)=='1' and 2^(8-i) or 0) end
-        return string.char(c)
-    end))
-end
+local function updateGist(filename, oldContent, enteredKey, expireTimestamp, userId, remainingLimit)
+    local updatedContent = oldContent
+    local newLine
+    if remainingLimit and remainingLimit > 0 then
+        newLine = enteredKey .. ":used:" .. tostring(expireTimestamp) .. ":" .. tostring(userId) .. ":" .. tostring(remainingLimit)
+    else
+        newLine = enteredKey .. ":expired:" .. tostring(expireTimestamp) .. ":" .. tostring(userId)
+    end
 
-local function checkAndUpdateKey(enteredCode)
-    local success, response = pcall(function()
-        return http({Url = API_URL, Method = "GET", Headers = {["Authorization"] = GITHUB_TOKEN}})
-    end)
-    
-    if not success then return "Ошибка сети" end
-    
-    local fileData = HttpService:JSONDecode(response.Body)
-    local fileSha = fileData.sha
-    local contentText = fromBase64(fileData.content)
-    
-    local lines = string.split(contentText, "\n")
-    local codeFound = false
-    local errorMessage = nil
-    local updatedContent = ""
-    
-    for _, line in ipairs(lines) do
-        line = string.gsub(line, "%s+$", "")
-        if line == "" then continue end
-        
-        local parts = string.split(line, ":")
-        local codeName = parts[1]
-        local remainingUses = tonumber(parts[2]) or 0
-        local usedUsersList = parts[3] or ""
-        
-        if codeName == enteredCode then
-            codeFound = true
-            
-            local ids = string.split(usedUsersList, ",")
-            local hasUsed = false
-            for _, id in ipairs(ids) do
-                if id == userId then
-                    hasUsed = true
-                    break
-                end
-            end
-            
-            if hasUsed then
-                errorMessage = "User Already Used"
-                updatedContent = updatedContent .. line .. "\n"
-                continue
-            end
-            
-            if remainingUses <= 0 then
-                errorMessage = "Code Expired"
-                updatedContent = updatedContent .. line .. "\n"
-                continue
-            end
-            
-            local newUses = remainingUses - 1
-            local newUsers = usedUsersList == "" and userId or usedUsersList .. "," .. userId
-            
-            local updatedLine = string.format("%s:%d:%s", codeName, newUses, newUsers)
-            updatedContent = updatedContent .. updatedLine .. "\n"
+    local found = false
+    local lines = {}
+    for line in string.gmatch(oldContent, "[^\r\n]+") do
+        local key = string.match(line, "([^:]+):")
+        if key == enteredKey then
+            table.insert(lines, newLine)
+            found = true
         else
-            updatedContent = updatedContent .. line .. "\n"
+            table.insert(lines, line)
         end
     end
-    
-    if not codeFound then return "Invalid Code" end
-    if errorMessage then return errorMessage end
-    
-    local patchBody = HttpService:JSONEncode({
-        message = "Code " .. enteredCode .. " used by " .. LocalPlayer.Name,
-        content = toBase64(updatedContent),
-        sha = fileSha
+    if not found then table.insert(lines, newLine) end
+
+    updatedContent = table.concat(lines, "\n")
+
+    http({
+        Url = "https://api.github.com/gists/" .. GIST_ID, Method = "PATCH",
+        Headers = {["Authorization"] = "token " .. GITHUB_TOKEN, ["Content-Type"] = "application/json"},
+        Body = HttpService:JSONEncode({files = {[filename] = {content = updatedContent}}})
     })
-    
-    local patchSuccess = pcall(function()
-        return http({
-            Url = API_URL,
-            Method = "PATCH",
-            Headers = {
-                ["Authorization"] = GITHUB_TOKEN,
-                ["Content-Type"] = "application/json"
-            },
-            Body = patchBody
-        })
-    end)
-    
-    if patchSuccess then
-        return "Success"
-    else
-        return "Ошибка сохранения"
-    end
 end
 
 local isActivated = false
+local autoLoginSuccess = false
+local cachedDbText = nil
 
 if readfile then
     local fileExists, content = pcall(function() return readfile(KEY_FILE_NAME) end)
     if fileExists and content ~= "" then
         local success, clientData = pcall(function() return HttpService:JSONDecode(content) end)
-        if success and clientData.key and clientData.userId then
+        if success and clientData.key and clientData.expires and clientData.userId then
             if clientData.userId == LocalPlayer.UserId then
-                local checkResult = checkAndUpdateKey(clientData.key)
-                if checkResult == "User Already Used" or checkResult == "Success" then
-                    isActivated = true
-                else
-                    if writefile then writefile(KEY_FILE_NAME, "") end
+                cachedDbText = getGistData()
+                if cachedDbText then
+                    local isKeyStillValid = false
+                    for line in string.gmatch(cachedDbText, "[^\r\n]+") do
+                        local key = string.match(line, "([^:]+):")
+                        if key == clientData.key then
+                            isKeyStillValid = true
+                            break
+                        end
+                    end
+                    if isKeyStillValid and os.time() < clientData.expires then
+                        autoLoginSuccess = true
+                        isActivated = true
+                    end
                 end
             else
                 if writefile then writefile(KEY_FILE_NAME, "") end
             end
         end
     end
+end
+
+if not autoLoginSuccess then
+    if writefile then writefile(KEY_FILE_NAME, "") end
 end
 
 if not isActivated then
@@ -294,11 +228,78 @@ if not isActivated then
         TextBox.PlaceholderColor3 = Color3.fromRGB(255, 255, 255)
         task.wait(0.3)
 
-        local result = checkAndUpdateKey(text)
-        
-        if result == "Success" then
-            if writefile then writefile(KEY_FILE_NAME, HttpService:JSONEncode({key = text, userId = LocalPlayer.UserId})) end
-            isActivated = true
+        local dbText, filename = getGistData()
+        if not dbText then
+            TextBox.PlaceholderText = "Network error!"
+            TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
+            SetDotRed()
+            return
+        end
+
+        local keyFound = false
+        for line in string.gmatch(dbText, "[^\r\n]+") do
+            local key, p1, p2, p3, p4 = string.match(line, "([^:]+):([^:]+):([^:]*):?([^:]*)")
+            if key == text then
+                keyFound = true
+                if p1 == "active" then
+                    local duration = tonumber(p2) or 86400
+                    local limit = tonumber(p3) or 1
+                    local expireTime = os.time() + duration
+                    local remainingLimit = limit - 1
+                    if remainingLimit <= 0 then
+                        updateGist(filename, dbText, text, expireTime, LocalPlayer.UserId, nil)
+                    else
+                        updateGist(filename, dbText, text, expireTime, LocalPlayer.UserId, remainingLimit)
+                    end
+                    if writefile then writefile(KEY_FILE_NAME, HttpService:JSONEncode({key = text, expires = expireTime, userId = LocalPlayer.UserId})) end
+                    isActivated = true
+                elseif p1 == "used" then
+                    local expireTime = tonumber(p2) or 0
+                    local usedUserId = tonumber(p3) or 0
+                    local remainingLimit = tonumber(p4)
+                    if os.time() > expireTime then
+                        TextBox.PlaceholderText = "Key expired!"
+                        TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
+                        SetDotRed()
+                        return
+                    end
+                    if usedUserId ~= LocalPlayer.UserId then
+                        TextBox.PlaceholderText = "Key already used!"
+                        TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
+                        SetDotRed()
+                        return
+                    end
+                    if readfile then
+                        local fExists, fContent = pcall(function() return readfile(KEY_FILE_NAME) end)
+                        if fExists and fContent ~= "" then
+                            local cData = HttpService:JSONDecode(fContent)
+                            if cData.key == text and cData.userId == LocalPlayer.UserId then
+                                isActivated = true
+                                break
+                            end
+                        end
+                    end
+                    TextBox.PlaceholderText = "Key already used!"
+                    TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
+                    SetDotRed()
+                    return
+                elseif p1 == "expired" then
+                    TextBox.PlaceholderText = "Key expired!"
+                    TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
+                    SetDotRed()
+                    return
+                end
+            end
+        end
+
+        if not keyFound then
+            TextBox.PlaceholderText = "Invalid key!"
+            TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
+            SetDotRed()
+            return
+        end
+
+        if isActivated then
             TextBox.PlaceholderText = "Success!"
             TextBox.PlaceholderColor3 = Color3.fromRGB(0, 255, 0)
             SetDotGreen()
@@ -311,22 +312,6 @@ if not isActivated then
             end
             task.wait(0.5)
             KeyScreenGui:Destroy()
-        elseif result == "User Already Used" then
-            TextBox.PlaceholderText = "Key already used!"
-            TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
-            SetDotRed()
-        elseif result == "Code Expired" then
-            TextBox.PlaceholderText = "Key expired!"
-            TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
-            SetDotRed()
-        elseif result == "Invalid Code" then
-            TextBox.PlaceholderText = "Invalid key!"
-            TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
-            SetDotRed()
-        else
-            TextBox.PlaceholderText = result
-            TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
-            SetDotRed()
         end
     end)
 
@@ -337,7 +322,7 @@ if not isActivated then
 end
 
 -- ====================================================================
--- META UI (полный код из v7.0.73)
+-- META UI
 -- ====================================================================
 local function SetupAntiCheatBypass()
     pcall(function()
@@ -1509,14 +1494,951 @@ if skyPage then
     CreateModeButton("Purple Sky (My Love Mode)", 105)
 end
 
--- SETTINGS PAGE (остальной код идентичен v7.0.73)
--- Вставьте весь код Settings Page из v7.0.73 сюда
+-- SETTINGS PAGE
+local settingsPage = ContentPages["Settings"]
+if settingsPage then
+    settingsPage.CanvasSize = UDim2.new(0, 0, 0, 600)
+    local settingsContainer = Instance.new("Frame")
+    settingsContainer.Size = UDim2.new(1, 0, 0, 500)
+    settingsContainer.Position = UDim2.new(0, 0, 0, 55)
+    settingsContainer.BackgroundTransparency = 1
+    settingsContainer.ClipsDescendants = true
+    settingsContainer.Parent = settingsPage
 
--- ICON BUTTON WITH M LETTER (идентичен v7.0.73)
--- Вставьте код IconButton из v7.0.73 сюда
+    local toggleFrame = Instance.new("Frame")
+    toggleFrame.Size = UDim2.new(1, 0, 0, 45)
+    toggleFrame.Position = UDim2.new(0, 0, 0, 10)
+    toggleFrame.BackgroundTransparency = 1
+    toggleFrame.Parent = settingsPage
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0.6, 0, 0, 20)
+    label.BackgroundTransparency = 1
+    label.Text = "UI Color"
+    label.TextColor3 = Color3.fromRGB(209, 213, 219)
+    label.TextSize = 13
+    label.Font = Enum.Font.GothamBold
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = toggleFrame
+    local desc = Instance.new("TextLabel")
+    desc.Size = UDim2.new(0.7, 0, 0, 16)
+    desc.Position = UDim2.new(0, 0, 0, 22)
+    desc.BackgroundTransparency = 1
+    desc.Text = "Enable interface color customization"
+    desc.TextColor3 = Color3.fromRGB(113, 113, 122)
+    desc.TextSize = 11
+    desc.Font = Enum.Font.Gotham
+    desc.TextXAlignment = Enum.TextXAlignment.Left
+    desc.Parent = toggleFrame
+    local toggleBg = Instance.new("Frame")
+    toggleBg.Size = UDim2.new(0, 44, 0, 24)
+    toggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
+    toggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
+    toggleBg.BorderSizePixel = 0
+    toggleBg.Parent = toggleFrame
+    local toggleCorner = Instance.new("UICorner")
+    toggleCorner.CornerRadius = UDim.new(1, 0)
+    toggleCorner.Parent = toggleBg
+    local handle = Instance.new("Frame")
+    handle.Size = UDim2.new(0, 18, 0, 18)
+    handle.Position = UDim2.new(0, 3, 0.5, -9)
+    handle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    handle.BorderSizePixel = 0
+    handle.Parent = toggleBg
+    local handleCorner = Instance.new("UICorner")
+    handleCorner.CornerRadius = UDim.new(1, 0)
+    handleCorner.Parent = handle
+    local clickArea = Instance.new("TextButton")
+    clickArea.Size = UDim2.new(0, 44, 0, 24)
+    clickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
+    clickArea.BackgroundTransparency = 1
+    clickArea.Text = ""
+    clickArea.ZIndex = 10
+    clickArea.Parent = toggleFrame
 
--- ACHIEVEMENT (5 МИНУТ) (идентичен v7.0.73)
--- Вставьте код Achievement из v7.0.73 сюда
+    pickerContainer = Instance.new("Frame")
+    pickerContainer.Name = "ColorPicker"
+    pickerContainer.Size = UDim2.new(1, -30, 0, 140)
+    pickerContainer.Position = UDim2.new(0, 15, 0, 55)
+    pickerContainer.BackgroundTransparency = 1
+    pickerContainer.Visible = false
+    pickerContainer.ZIndex = 30
+    pickerContainer.Parent = settingsPage
+    local wheelImage = Instance.new("ImageLabel")
+    wheelImage.Size = UDim2.new(0, 120, 0, 120)
+    wheelImage.Position = UDim2.new(0.5, -60, 0.5, -60)
+    wheelImage.BackgroundTransparency = 1
+    wheelImage.Image = "rbxassetid://7393858625"
+    wheelImage.ZIndex = 31
+    wheelImage.Parent = pickerContainer
+    pickerDot = Instance.new("Frame")
+    pickerDot.Size = UDim2.new(0, 10, 0, 10)
+    pickerDot.Position = UDim2.new(0.5, -5, 0.5, -5)
+    pickerDot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    pickerDot.ZIndex = 32
+    pickerDot.Parent = wheelImage
+    local dotCorner = Instance.new("UICorner")
+    dotCorner.CornerRadius = UDim.new(1, 0)
+    dotCorner.Parent = pickerDot
+    local dragArea = Instance.new("TextButton")
+    dragArea.Size = UDim2.new(1, 0, 1, 0)
+    dragArea.BackgroundTransparency = 1
+    dragArea.Text = ""
+    dragArea.ZIndex = 33
+    dragArea.Parent = wheelImage
+    local isDraggingColor = false
+    local scrollFrame = settingsPage
+    local function UpdateWheelColor(inputPosition)
+        if not _G.CustomThemeEnabled then return end
+        local wheelCenter = wheelImage.AbsolutePosition + (wheelImage.AbsoluteSize / 2)
+        local delta = Vector2.new(inputPosition.X, inputPosition.Y) - wheelCenter
+        local distance = delta.Magnitude
+        local radius = wheelImage.AbsoluteSize.X / 2
+        local clampedDistance = math.clamp(distance, 0, radius)
+        local angle = math.atan2(delta.Y, delta.X)
+        local xPos = clampedDistance * math.cos(angle)
+        local yPos = clampedDistance * math.sin(angle)
+        pickerDot.Position = UDim2.new(0, xPos + radius - 5, 0, yPos + radius - 5)
+        if angle < 0 then angle = angle + (math.pi * 2) end
+        local hue = angle / (math.pi * 2)
+        local saturation = clampedDistance / radius
+        local pickedColor = Color3.fromHSV(hue, saturation, 1)
+        if not _G.RainbowEnabled then
+            MainStroke.Color = pickedColor
+            UpdateIndicatorColor(pickedColor)
+            SearchStroke.Color = pickedColor
+            if skyStroke then skyStroke.Color = pickedColor end
+        end
+        _G.MenuThemeColor = pickedColor
+    end
+    dragArea.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isDraggingColor = true
+            scrollFrame.ScrollingEnabled = false
+            UpdateWheelColor(input.Position)
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if isDraggingColor and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
+            UpdateWheelColor(input.Position)
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isDraggingColor = false
+            scrollFrame.ScrollingEnabled = true
+        end
+    end)
+    ShiftContainer = function(shiftDown)
+        local targetY = shiftDown and 150 or 0
+        TweenService:Create(settingsContainer, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 55 + targetY)}):Play()
+    end
+    SetToggleState = function(value)
+        if value then
+            TweenService:Create(toggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
+            TweenService:Create(handle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 23, 0.5, -9)}):Play()
+            pickerContainer.Visible = true
+            ShiftContainer(true)
+        else
+            TweenService:Create(toggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(42, 47, 58)}):Play()
+            TweenService:Create(handle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 3, 0.5, -9)}):Play()
+            pickerContainer.Visible = false
+            ShiftContainer(false)
+        end
+        _G.CustomThemeEnabled = value
+        if not value and not _G.RainbowEnabled then
+            MainStroke.Color = _G.MenuThemeColor
+            UpdateIndicatorColor(_G.MenuThemeColor)
+            SearchStroke.Color = _G.MenuThemeColor
+            if skyStroke then skyStroke.Color = _G.MenuThemeColor end
+        end
+    end
+    SetToggleState(_G.CustomThemeEnabled)
+    local function UpdateUIColorText()
+        local lang = GetLang()
+        label.Text = lang.Toggles.UI_Color[1]
+        desc.Text = lang.Toggles.UI_Color[2]
+    end
+    table.insert(langUpdateCallbacks, UpdateUIColorText)
+    clickArea.MouseButton1Click:Connect(function() PlayClickSound() SetToggleState(not _G.CustomThemeEnabled) end)
 
-print("[META] META v7.0.75 - Limit System + Full UI")
+    local langFrame = Instance.new("Frame")
+    langFrame.Size = UDim2.new(1, -20, 0, 42)
+    langFrame.Position = UDim2.new(0, 10, 0, 10)
+    langFrame.BackgroundTransparency = 1
+    langFrame.Parent = settingsContainer
+    local function CreateLangButton(text, langCode, xPos)
+        local bg = Instance.new("Frame")
+        bg.Size = UDim2.new(0.42, 0, 0, 32)
+        bg.Position = UDim2.new(xPos, 0, 0, 0)
+        bg.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
+        bg.BackgroundTransparency = 0.5
+        bg.Parent = langFrame
+        local bgCorner = Instance.new("UICorner")
+        bgCorner.CornerRadius = UDim.new(0, 6)
+        bgCorner.Parent = bg
+        local uiScale = Instance.new("UIScale")
+        uiScale.Scale = 1
+        uiScale.Parent = bg
+        local txt = Instance.new("TextLabel")
+        txt.Size = UDim2.new(1, 0, 1, 0)
+        txt.BackgroundTransparency = 1
+        txt.Text = text
+        txt.TextColor3 = Color3.fromRGB(156, 163, 175)
+        txt.TextSize = 14
+        txt.Font = Enum.Font.GothamBold
+        txt.TextXAlignment = Enum.TextXAlignment.Center
+        txt.TextYAlignment = Enum.TextYAlignment.Center
+        txt.Parent = bg
+        local clickBtn = Instance.new("TextButton")
+        clickBtn.Size = UDim2.new(1, 0, 1, 0)
+        clickBtn.BackgroundTransparency = 1
+        clickBtn.Text = ""
+        clickBtn.ZIndex = 10
+        clickBtn.Parent = bg
+        local function UpdateLangButton(animate)
+            local isActive = (_G.CurrentLang == langCode)
+            local targetScale = isActive and 1.1 or 1
+            local targetBg = isActive and Color3.fromRGB(35, 40, 50) or Color3.fromRGB(26, 30, 38)
+            local targetTransp = isActive and 0 or 0.5
+            local targetTextColor = isActive and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(156, 163, 175)
+            if animate then
+                TweenService:Create(uiScale, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = targetScale}):Play()
+                TweenService:Create(bg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = targetBg, BackgroundTransparency = targetTransp}):Play()
+                TweenService:Create(txt, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {TextColor3 = targetTextColor}):Play()
+            else
+                uiScale.Scale = targetScale
+                bg.BackgroundColor3 = targetBg
+                bg.BackgroundTransparency = targetTransp
+                txt.TextColor3 = targetTextColor
+            end
+        end
+        UpdateLangButton(false)
+        clickBtn.MouseButton1Click:Connect(function()
+            PlayClickSound()
+            if _G.CurrentLang == langCode then return end
+            _G.CurrentLang = langCode
+            for _, btn in ipairs(langButtonData) do pcall(btn.Update, true) end
+            UpdateAllTexts()
+        end)
+        local btnData = {Update = UpdateLangButton}
+        table.insert(langButtonData, btnData)
+        return btnData
+    end
+    CreateLangButton("Русский", "RU", 0.03)
+    CreateLangButton("English", "EN", 0.55)
+
+    local opacityFrame = Instance.new("Frame")
+    opacityFrame.Size = UDim2.new(1, -20, 0, 55)
+    opacityFrame.Position = UDim2.new(0, 10, 0, 60)
+    opacityFrame.BackgroundTransparency = 1
+    opacityFrame.Parent = settingsContainer
+    local opacityLabel = Instance.new("TextLabel")
+    opacityLabel.Size = UDim2.new(0.5, 0, 0, 20)
+    opacityLabel.BackgroundTransparency = 1
+    opacityLabel.Text = "Opacity"
+    opacityLabel.TextColor3 = Color3.fromRGB(209, 213, 219)
+    opacityLabel.TextSize = 13
+    opacityLabel.Font = Enum.Font.GothamBold
+    opacityLabel.TextXAlignment = Enum.TextXAlignment.Left
+    opacityLabel.Parent = opacityFrame
+    local opacityDesc = Instance.new("TextLabel")
+    opacityDesc.Size = UDim2.new(0.5, 0, 0, 16)
+    opacityDesc.Position = UDim2.new(0, 0, 0, 22)
+    opacityDesc.BackgroundTransparency = 1
+    opacityDesc.Text = "Adjust menu transparency (0-50%)"
+    opacityDesc.TextColor3 = Color3.fromRGB(113, 113, 122)
+    opacityDesc.TextSize = 11
+    opacityDesc.Font = Enum.Font.Gotham
+    opacityDesc.TextXAlignment = Enum.TextXAlignment.Left
+    opacityDesc.Parent = opacityFrame
+    opacityValue = Instance.new("TextLabel")
+    opacityValue.Size = UDim2.new(0.15, 0, 0, 20)
+    opacityValue.Position = UDim2.new(0.85, 0, 0, 0)
+    opacityValue.BackgroundTransparency = 1
+    opacityValue.Text = "12%"
+    opacityValue.TextColor3 = Color3.fromRGB(255, 255, 255)
+    opacityValue.TextSize = 14
+    opacityValue.Font = Enum.Font.GothamBold
+    opacityValue.TextXAlignment = Enum.TextXAlignment.Right
+    opacityValue.Parent = opacityFrame
+    local opacitySliderBg = Instance.new("Frame")
+    opacitySliderBg.Size = UDim2.new(0.5, 0, 0, 6)
+    opacitySliderBg.Position = UDim2.new(0, 0, 0, 40)
+    opacitySliderBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
+    opacitySliderBg.BorderSizePixel = 0
+    opacitySliderBg.Parent = opacityFrame
+    local opacitySliderCorner = Instance.new("UICorner")
+    opacitySliderCorner.CornerRadius = UDim.new(1, 0)
+    opacitySliderCorner.Parent = opacitySliderBg
+    opacitySliderFill = Instance.new("Frame")
+    opacitySliderFill.Size = UDim2.new(0.24, 0, 1, 0)
+    opacitySliderFill.BackgroundColor3 = Color3.fromRGB(59, 130, 246)
+    opacitySliderFill.BorderSizePixel = 0
+    opacitySliderFill.Parent = opacitySliderBg
+    local opacityFillCorner = Instance.new("UICorner")
+    opacityFillCorner.CornerRadius = UDim.new(1, 0)
+    opacityFillCorner.Parent = opacitySliderFill
+    opacitySliderHandle = Instance.new("Frame")
+    opacitySliderHandle.Size = UDim2.new(0, 16, 0, 16)
+    opacitySliderHandle.Position = UDim2.new(0.24, -8, 0.5, -8)
+    opacitySliderHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    opacitySliderHandle.BorderSizePixel = 0
+    opacitySliderHandle.Parent = opacitySliderBg
+    local opacityHandleCorner = Instance.new("UICorner")
+    opacityHandleCorner.CornerRadius = UDim.new(1, 0)
+    opacityHandleCorner.Parent = opacitySliderHandle
+    local isDraggingOpacity = false
+    local function UpdateOpacity(mouseX)
+        local absPos = opacitySliderBg.AbsolutePosition.X
+        local width = opacitySliderBg.AbsoluteSize.X
+        if width <= 0 then return end
+        local percent = math.clamp((mouseX - absPos) / width, 0, 1)
+        local val = math.round(percent * 50)
+        val = math.clamp(val, 0, 50)
+        local p = val / 50
+        opacitySliderFill.Size = UDim2.new(p, 0, 1, 0)
+        opacitySliderHandle.Position = UDim2.new(p, -8, 0.5, -8)
+        opacityValue.Text = tostring(val) .. "%"
+        _G.MenuOpacity = val
+        MainFrame.BackgroundTransparency = val / 100
+    end
+    opacitySliderHandle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isDraggingOpacity = true
+            UpdateOpacity(input.Position.X)
+        end
+    end)
+    opacitySliderBg.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isDraggingOpacity = true
+            UpdateOpacity(input.Position.X)
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isDraggingOpacity = false
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if isDraggingOpacity and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            UpdateOpacity(input.Position.X)
+        end
+    end)
+    local function UpdateOpacityText()
+        local lang = GetLang()
+        opacityLabel.Text = lang.Toggles.Opacity[1]
+        opacityDesc.Text = lang.Toggles.Opacity[2]
+    end
+    table.insert(langUpdateCallbacks, UpdateOpacityText)
+
+    local rainbowFrame = Instance.new("Frame")
+    rainbowFrame.Size = UDim2.new(1, 0, 0, 45)
+    rainbowFrame.Position = UDim2.new(0, 0, 0, 120)
+    rainbowFrame.BackgroundTransparency = 1
+    rainbowFrame.Parent = settingsContainer
+    local rainbowLabel = Instance.new("TextLabel")
+    rainbowLabel.Size = UDim2.new(0.6, 0, 0, 20)
+    rainbowLabel.BackgroundTransparency = 1
+    rainbowLabel.Text = "UI Rainbow Color"
+    rainbowLabel.TextColor3 = Color3.fromRGB(209, 213, 219)
+    rainbowLabel.TextSize = 13
+    rainbowLabel.Font = Enum.Font.GothamBold
+    rainbowLabel.TextXAlignment = Enum.TextXAlignment.Left
+    rainbowLabel.Parent = rainbowFrame
+    local rainbowDesc = Instance.new("TextLabel")
+    rainbowDesc.Size = UDim2.new(0.7, 0, 0, 16)
+    rainbowDesc.Position = UDim2.new(0, 0, 0, 22)
+    rainbowDesc.BackgroundTransparency = 1
+    rainbowDesc.Text = "Enable rainbow menu outline"
+    rainbowDesc.TextColor3 = Color3.fromRGB(113, 113, 122)
+    rainbowDesc.TextSize = 11
+    rainbowDesc.Font = Enum.Font.Gotham
+    rainbowDesc.TextXAlignment = Enum.TextXAlignment.Left
+    rainbowDesc.Parent = rainbowFrame
+    local rainbowToggleBg = Instance.new("Frame")
+    rainbowToggleBg.Size = UDim2.new(0, 44, 0, 24)
+    rainbowToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
+    rainbowToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
+    rainbowToggleBg.BorderSizePixel = 0
+    rainbowToggleBg.Parent = rainbowFrame
+    local rainbowToggleCorner = Instance.new("UICorner")
+    rainbowToggleCorner.CornerRadius = UDim.new(1, 0)
+    rainbowToggleCorner.Parent = rainbowToggleBg
+    local rainbowHandle = Instance.new("Frame")
+    rainbowHandle.Size = UDim2.new(0, 18, 0, 18)
+    rainbowHandle.Position = UDim2.new(0, 3, 0.5, -9)
+    rainbowHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    rainbowHandle.BorderSizePixel = 0
+    rainbowHandle.Parent = rainbowToggleBg
+    local rainbowHandleCorner = Instance.new("UICorner")
+    rainbowHandleCorner.CornerRadius = UDim.new(1, 0)
+    rainbowHandleCorner.Parent = rainbowHandle
+    local rainbowClickArea = Instance.new("TextButton")
+    rainbowClickArea.Size = UDim2.new(0, 44, 0, 24)
+    rainbowClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
+    rainbowClickArea.BackgroundTransparency = 1
+    rainbowClickArea.Text = ""
+    rainbowClickArea.ZIndex = 10
+    rainbowClickArea.Parent = rainbowFrame
+    SetRainbowToggleState = function(value)
+        if value then
+            TweenService:Create(rainbowToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
+            TweenService:Create(rainbowHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 23, 0.5, -9)}):Play()
+        else
+            TweenService:Create(rainbowToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(42, 47, 58)}):Play()
+            TweenService:Create(rainbowHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 3, 0.5, -9)}):Play()
+        end
+        _G.RainbowEnabled = value
+        if value then
+            if rainbowConnection then rainbowConnection:Disconnect() end
+            rainbowConnection = RunService.Heartbeat:Connect(function()
+                local hue = (tick() * 0.1) % 1
+                local color = Color3.fromHSV(hue, 1, 1)
+                MainStroke.Color = color
+                UpdateIndicatorColor(color)
+                SearchStroke.Color = color
+                if skyStroke then skyStroke.Color = color end
+            end)
+        else
+            if rainbowConnection then
+                rainbowConnection:Disconnect()
+                rainbowConnection = nil
+                MainStroke.Color = _G.MenuThemeColor
+                UpdateIndicatorColor(_G.MenuThemeColor)
+                SearchStroke.Color = _G.MenuThemeColor
+                if skyStroke then skyStroke.Color = _G.MenuThemeColor end
+            end
+        end
+    end
+    SetRainbowToggleState(_G.RainbowEnabled)
+    rainbowClickArea.MouseButton1Click:Connect(function() PlayClickSound() SetRainbowToggleState(not _G.RainbowEnabled) end)
+    local function UpdateRainbowText()
+        local lang = GetLang()
+        rainbowLabel.Text = lang.Toggles.Rainbow[1]
+        rainbowDesc.Text = lang.Toggles.Rainbow[2]
+    end
+    table.insert(langUpdateCallbacks, UpdateRainbowText)
+
+    local scaleFrame = Instance.new("Frame")
+    scaleFrame.Size = UDim2.new(1, -20, 0, 55)
+    scaleFrame.Position = UDim2.new(0, 10, 0, 170)
+    scaleFrame.BackgroundTransparency = 1
+    scaleFrame.Parent = settingsContainer
+    local scaleLabel = Instance.new("TextLabel")
+    scaleLabel.Size = UDim2.new(0.6, 0, 0, 20)
+    scaleLabel.BackgroundTransparency = 1
+    scaleLabel.Text = "Scaling the menu"
+    scaleLabel.TextColor3 = Color3.fromRGB(209, 213, 219)
+    scaleLabel.TextSize = 13
+    scaleLabel.Font = Enum.Font.GothamBold
+    scaleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    scaleLabel.Parent = scaleFrame
+    local scaleDesc = Instance.new("TextLabel")
+    scaleDesc.Size = UDim2.new(0.6, 0, 0, 16)
+    scaleDesc.Position = UDim2.new(0, 0, 0, 22)
+    scaleDesc.BackgroundTransparency = 1
+    scaleDesc.Text = "Menu scaling (60-140%)"
+    scaleDesc.TextColor3 = Color3.fromRGB(113, 113, 122)
+    scaleDesc.TextSize = 11
+    scaleDesc.Font = Enum.Font.Gotham
+    scaleDesc.TextXAlignment = Enum.TextXAlignment.Left
+    scaleDesc.Parent = scaleFrame
+    scaleValue = Instance.new("TextLabel")
+    scaleValue.Size = UDim2.new(0.15, 0, 0, 20)
+    scaleValue.Position = UDim2.new(0.85, 0, 0, 0)
+    scaleValue.BackgroundTransparency = 1
+    scaleValue.Text = "100%"
+    scaleValue.TextColor3 = Color3.fromRGB(255, 255, 255)
+    scaleValue.TextSize = 14
+    scaleValue.Font = Enum.Font.GothamBold
+    scaleValue.TextXAlignment = Enum.TextXAlignment.Right
+    scaleValue.Parent = scaleFrame
+    local scaleSliderBg = Instance.new("Frame")
+    scaleSliderBg.Size = UDim2.new(0.5, 0, 0, 6)
+    scaleSliderBg.Position = UDim2.new(0, 0, 0, 40)
+    scaleSliderBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
+    scaleSliderBg.BorderSizePixel = 0
+    scaleSliderBg.Parent = scaleFrame
+    local scaleSliderCorner = Instance.new("UICorner")
+    scaleSliderCorner.CornerRadius = UDim.new(1, 0)
+    scaleSliderCorner.Parent = scaleSliderBg
+    scaleSliderFill = Instance.new("Frame")
+    scaleSliderFill.Size = UDim2.new(0.5, 0, 1, 0)
+    scaleSliderFill.BackgroundColor3 = Color3.fromRGB(59, 130, 246)
+    scaleSliderFill.BorderSizePixel = 0
+    scaleSliderFill.Parent = scaleSliderBg
+    local scaleFillCorner = Instance.new("UICorner")
+    scaleFillCorner.CornerRadius = UDim.new(1, 0)
+    scaleFillCorner.Parent = scaleSliderFill
+    scaleSliderHandle = Instance.new("Frame")
+    scaleSliderHandle.Size = UDim2.new(0, 16, 0, 16)
+    scaleSliderHandle.Position = UDim2.new(0.5, -8, 0.5, -8)
+    scaleSliderHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    scaleSliderHandle.BorderSizePixel = 0
+    scaleSliderHandle.Parent = scaleSliderBg
+    local scaleHandleCorner = Instance.new("UICorner")
+    scaleHandleCorner.CornerRadius = UDim.new(1, 0)
+    scaleHandleCorner.Parent = scaleSliderHandle
+    local isDraggingScale = false
+    local function UpdateScale(mouseX)
+        local absPos = scaleSliderBg.AbsolutePosition.X
+        local width = scaleSliderBg.AbsoluteSize.X
+        if width <= 0 then return end
+        local percent = math.clamp((mouseX - absPos) / width, 0, 1)
+        local val = math.round(27 + percent * 36)
+        val = math.clamp(val, 27, 63)
+        local p = (val - 27) / 36
+        scaleSliderFill.Size = UDim2.new(p, 0, 1, 0)
+        scaleSliderHandle.Position = UDim2.new(p, -8, 0.5, -8)
+        scaleValue.Text = tostring(math.round((val / 45) * 100)) .. "%"
+        _G.MenuScale = val
+        MainFrame.Size = UDim2.new(0, 640 * (val / 45), 0, 470 * (val / 45))
+    end
+    scaleSliderHandle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isDraggingScale = true
+            UpdateScale(input.Position.X)
+        end
+    end)
+    scaleSliderBg.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isDraggingScale = true
+            UpdateScale(input.Position.X)
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isDraggingScale = false
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if isDraggingScale and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            UpdateScale(input.Position.X)
+        end
+    end)
+    local function UpdateScaleText()
+        local lang = GetLang()
+        scaleLabel.Text = lang.Toggles.Scale[1]
+        scaleDesc.Text = lang.Toggles.Scale[2]
+    end
+    table.insert(langUpdateCallbacks, UpdateScaleText)
+
+    local flyingFrame = Instance.new("Frame")
+    flyingFrame.Name = "Effects"
+    flyingFrame.Size = UDim2.new(1, 0, 1, 0)
+    flyingFrame.BackgroundTransparency = 1
+    flyingFrame.ZIndex = 100
+    flyingFrame.Parent = MainFrame
+    local dotContainer = Instance.new("Frame")
+    dotContainer.Name = "Particles"
+    dotContainer.Size = UDim2.new(1, 0, 1, 0)
+    dotContainer.BackgroundTransparency = 1
+    dotContainer.ClipsDescendants = true
+    dotContainer.Parent = flyingFrame
+    local function RebuildDots()
+        for _, data in ipairs(Dots) do
+            if data and data.Frame then data.Frame:Destroy() end
+        end
+        Dots = {}
+        if not _G.FlyingDots then return end
+        local w = MainFrame.AbsoluteSize.X
+        local h = MainFrame.AbsoluteSize.Y
+        if w <= 0 then w = 640 end
+        if h <= 0 then h = 470 end
+        local scale = _G.MenuScale / 45
+        local count = math.floor(50 + scale * 30)
+        for i = 1, count do
+            local dot = Instance.new("Frame")
+            dot.Name = "Particle"
+            local size = math.random(15, 25) / 10
+            dot.Size = UDim2.new(0, size, 0, size)
+            dot.Position = UDim2.new(0, math.random(0, w), 0, math.random(0, h))
+            dot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            dot.BackgroundTransparency = 0.25
+            dot.BorderSizePixel = 0
+            local dotCorner = Instance.new("UICorner")
+            dotCorner.CornerRadius = UDim.new(1, 0)
+            dotCorner.Parent = dot
+            local glow = Instance.new("UIStroke")
+            glow.Thickness = 0.8
+            glow.Color = Color3.fromRGB(255, 255, 255)
+            glow.Transparency = 0.8
+            glow.Parent = dot
+            dot.Parent = dotContainer
+            dot.ZIndex = 101
+            local speed = 0.5 + scale * 0.4
+            local speedX = (math.random() - 0.5) * speed * 0.6
+            local speedY = math.random() * speed * 0.5 + speed * 0.15
+            local rotSpeed = (math.random() - 0.5) * 0.025
+            table.insert(Dots, {Frame = dot, SpeedX = speedX, SpeedY = speedY, RotSpeed = rotSpeed, Angle = math.random() * math.pi * 2, PosX = math.random(0, w), PosY = math.random(0, h)})
+        end
+    end
+    local function UpdateDots()
+        local w = MainFrame.AbsoluteSize.X
+        local h = MainFrame.AbsoluteSize.Y
+        if w <= 0 or h <= 0 then return end
+        for _, data in ipairs(Dots) do
+            if data and data.Frame then
+                data.PosX = data.PosX + data.SpeedX
+                data.PosY = data.PosY + data.SpeedY
+                data.Angle = data.Angle + data.RotSpeed
+                if data.PosX < 0 then data.PosX = w end
+                if data.PosX > w then data.PosX = 0 end
+                if data.PosY > h then data.PosY = 0 data.PosX = math.random(0, w) end
+                data.Frame.Position = UDim2.new(0, data.PosX, 0, data.PosY)
+                data.Frame.Rotation = math.deg(data.Angle)
+            end
+        end
+    end
+    MainFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+        if _G.FlyingDots then RebuildDots() end
+    end)
+    local function ToggleFlyingDots(state)
+        _G.FlyingDots = state
+        if state then
+            RebuildDots()
+            if DotConnection then DotConnection:Disconnect() end
+            DotConnection = RunService.Heartbeat:Connect(UpdateDots)
+        else
+            if DotConnection then DotConnection:Disconnect() DotConnection = nil end
+            for _, data in ipairs(Dots) do
+                if data and data.Frame then data.Frame:Destroy() end
+            end
+            Dots = {}
+        end
+    end
+    local flyingToggleFrame = Instance.new("Frame")
+    flyingToggleFrame.Size = UDim2.new(1, 0, 0, 45)
+    flyingToggleFrame.Position = UDim2.new(0, 0, 0, 230)
+    flyingToggleFrame.BackgroundTransparency = 1
+    flyingToggleFrame.Parent = settingsContainer
+    local flyingLabel = Instance.new("TextLabel")
+    flyingLabel.Size = UDim2.new(0.6, 0, 0, 20)
+    flyingLabel.BackgroundTransparency = 1
+    flyingLabel.Text = "Flying Dots"
+    flyingLabel.TextColor3 = Color3.fromRGB(209, 213, 219)
+    flyingLabel.TextSize = 13
+    flyingLabel.Font = Enum.Font.GothamBold
+    flyingLabel.TextXAlignment = Enum.TextXAlignment.Left
+    flyingLabel.Parent = flyingToggleFrame
+    local flyingDesc = Instance.new("TextLabel")
+    flyingDesc.Size = UDim2.new(0.7, 0, 0, 16)
+    flyingDesc.Position = UDim2.new(0, 0, 0, 22)
+    flyingDesc.BackgroundTransparency = 1
+    flyingDesc.Text = "Floating dots from the top of the menu"
+    flyingDesc.TextColor3 = Color3.fromRGB(113, 113, 122)
+    flyingDesc.TextSize = 11
+    flyingDesc.Font = Enum.Font.Gotham
+    flyingDesc.TextXAlignment = Enum.TextXAlignment.Left
+    flyingDesc.Parent = flyingToggleFrame
+    local flyingToggleBg = Instance.new("Frame")
+    flyingToggleBg.Size = UDim2.new(0, 44, 0, 24)
+    flyingToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
+    flyingToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
+    flyingToggleBg.BorderSizePixel = 0
+    flyingToggleBg.Parent = flyingToggleFrame
+    local flyingToggleCorner = Instance.new("UICorner")
+    flyingToggleCorner.CornerRadius = UDim.new(1, 0)
+    flyingToggleCorner.Parent = flyingToggleBg
+    local flyingHandle = Instance.new("Frame")
+    flyingHandle.Size = UDim2.new(0, 18, 0, 18)
+    flyingHandle.Position = UDim2.new(0, 3, 0.5, -9)
+    flyingHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    flyingHandle.BorderSizePixel = 0
+    flyingHandle.Parent = flyingToggleBg
+    local flyingHandleCorner = Instance.new("UICorner")
+    flyingHandleCorner.CornerRadius = UDim.new(1, 0)
+    flyingHandleCorner.Parent = flyingHandle
+    local flyingClickArea = Instance.new("TextButton")
+    flyingClickArea.Size = UDim2.new(0, 44, 0, 24)
+    flyingClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
+    flyingClickArea.BackgroundTransparency = 1
+    flyingClickArea.Text = ""
+    flyingClickArea.ZIndex = 10
+    flyingClickArea.Parent = flyingToggleFrame
+    SetFlyingToggleState = function(value)
+        if value then
+            TweenService:Create(flyingToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
+            TweenService:Create(flyingHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 23, 0.5, -9)}):Play()
+        else
+            TweenService:Create(flyingToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(42, 47, 58)}):Play()
+            TweenService:Create(flyingHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 3, 0.5, -9)}):Play()
+        end
+        ToggleFlyingDots(value)
+    end
+    SetFlyingToggleState(_G.FlyingDots)
+    flyingClickArea.MouseButton1Click:Connect(function() PlayClickSound() SetFlyingToggleState(not _G.FlyingDots) end)
+    local function UpdateFlyingText()
+        local lang = GetLang()
+        flyingLabel.Text = lang.Toggles.FlyingDots[1]
+        flyingDesc.Text = lang.Toggles.FlyingDots[2]
+    end
+    table.insert(langUpdateCallbacks, UpdateFlyingText)
+
+    local resetFrame = Instance.new("Frame")
+    resetFrame.Size = UDim2.new(1, 0, 0, 45)
+    resetFrame.Position = UDim2.new(0, 0, 0, 280)
+    resetFrame.BackgroundTransparency = 1
+    resetFrame.Parent = settingsContainer
+    local resetLabel = Instance.new("TextLabel")
+    resetLabel.Size = UDim2.new(0.6, 0, 0, 20)
+    resetLabel.BackgroundTransparency = 1
+    resetLabel.Text = "Reset Settings"
+    resetLabel.TextColor3 = Color3.fromRGB(209, 213, 219)
+    resetLabel.TextSize = 13
+    resetLabel.Font = Enum.Font.GothamBold
+    resetLabel.TextXAlignment = Enum.TextXAlignment.Left
+    resetLabel.Parent = resetFrame
+    local resetToggleBg = Instance.new("Frame")
+    resetToggleBg.Size = UDim2.new(0, 44, 0, 24)
+    resetToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
+    resetToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
+    resetToggleBg.BorderSizePixel = 0
+    resetToggleBg.Parent = resetFrame
+    local resetToggleCorner = Instance.new("UICorner")
+    resetToggleCorner.CornerRadius = UDim.new(1, 0)
+    resetToggleCorner.Parent = resetToggleBg
+    local resetHandle = Instance.new("Frame")
+    resetHandle.Size = UDim2.new(0, 18, 0, 18)
+    resetHandle.Position = UDim2.new(0, 3, 0.5, -9)
+    resetHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    resetHandle.BorderSizePixel = 0
+    resetHandle.Parent = resetToggleBg
+    local resetHandleCorner = Instance.new("UICorner")
+    resetHandleCorner.CornerRadius = UDim.new(1, 0)
+    resetHandleCorner.Parent = resetHandle
+    local resetClickArea = Instance.new("TextButton")
+    resetClickArea.Size = UDim2.new(0, 44, 0, 24)
+    resetClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
+    resetClickArea.BackgroundTransparency = 1
+    resetClickArea.Text = ""
+    resetClickArea.ZIndex = 10
+    resetClickArea.Parent = resetFrame
+    local function PerformReset()
+        _G.CustomThemeEnabled = false
+        _G.MenuThemeColor = Color3.fromRGB(59, 130, 246)
+        _G.CurrentLang = "EN"
+        _G.MenuOpacity = 12
+        _G.RainbowEnabled = false
+        _G.MenuScale = 45
+        _G.FlyingDots = false
+        _G.ChamsEnabled = false
+        _G.ESPEnabled = false
+        _G.SkeletonEnabled = false
+        _G.HealthBarEnabled = false
+        MainFrame.BackgroundTransparency = 0.12
+        MainFrame.Size = UDim2.new(0, 640, 0, 470)
+        MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+        MainFrame.Rotation = 0
+        MainScale.Scale = 1
+        MainStroke.Color = _G.MenuThemeColor
+        UpdateIndicatorColor(_G.MenuThemeColor)
+        SearchStroke.Color = _G.MenuThemeColor
+        if skyStroke then skyStroke.Color = _G.MenuThemeColor end
+        RemoveChams()
+        if SetChamsToggleState then SetChamsToggleState(false) end
+        RemoveESP()
+        if SetESPToggleState then SetESPToggleState(false) end
+        RemoveSkeleton()
+        if SetSkeletonToggleState then SetSkeletonToggleState(false) end
+        RemoveHealthBar()
+        if SetHealthBarToggleState then SetHealthBarToggleState(false) end
+        for _, btn in ipairs(langButtonData) do pcall(btn.Update, false) end
+        UpdateAllTexts()
+        if rainbowConnection then rainbowConnection:Disconnect() rainbowConnection = nil end
+        if SetRainbowToggleState then SetRainbowToggleState(false) end
+        if DotConnection then DotConnection:Disconnect() DotConnection = nil end
+        for _, data in ipairs(Dots) do if data and data.Frame then data.Frame:Destroy() end end
+        Dots = {}
+        _G.FlyingDots = false
+        if SetFlyingToggleState then SetFlyingToggleState(false) end
+        if SetToggleState then SetToggleState(false) end
+        if pickerContainer then pickerContainer.Visible = false end
+        if ShiftContainer then ShiftContainer(false) end
+        if opacitySliderFill and opacitySliderHandle and opacityValue then
+            opacitySliderFill.Size = UDim2.new(0.24, 0, 1, 0)
+            opacitySliderHandle.Position = UDim2.new(0.24, -8, 0.5, -8)
+            opacityValue.Text = "12%"
+        end
+        if scaleSliderFill and scaleSliderHandle and scaleValue then
+            scaleSliderFill.Size = UDim2.new(0.5, 0, 1, 0)
+            scaleSliderHandle.Position = UDim2.new(0.5, -8, 0.5, -8)
+            scaleValue.Text = "100%"
+        end
+        if pickerDot then pickerDot.Position = UDim2.new(0.5, -5, 0.5, -5) end
+        SwitchToTab(1)
+        SearchInput.Text = "Search..."
+        SearchClose.Visible = false
+        print("[RESET] All settings restored")
+        PlayClickSound()
+    end
+    resetClickArea.MouseButton1Click:Connect(function() PlayClickSound() PerformReset() end)
+    local function UpdateResetText()
+        local lang = GetLang()
+        resetLabel.Text = lang.Toggles.Reset[1]
+    end
+    table.insert(langUpdateCallbacks, UpdateResetText)
+end
+
+-- ICON BUTTON WITH M LETTER
+local IconButton = Instance.new("ImageButton")
+IconButton.Name = "MetaIcon"
+IconButton.Size = UDim2.new(0, 55, 0, 55)
+IconButton.Position = UDim2.new(0.01, 0, 0.92, 0)
+IconButton.AnchorPoint = Vector2.new(0, 1)
+IconButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+IconButton.BackgroundTransparency = 0.2
+IconButton.BorderSizePixel = 0
+IconButton.Image = "https://i.ibb.co/1JTnNKw1/IMG-20260902-120719.png"
+IconButton.ImageColor3 = Color3.fromRGB(255, 255, 255)
+IconButton.ZIndex = 999
+IconButton.Parent = ScreenGui
+IconButton.Draggable = true
+IconButton.Active = true
+IconButton.Selectable = true
+HideFromScanner(IconButton)
+local IconCorner = Instance.new("UICorner")
+IconCorner.CornerRadius = UDim.new(0, 12)
+IconCorner.Parent = IconButton
+
+local IconLetter = Instance.new("TextLabel", IconButton)
+IconLetter.Size = UDim2.new(1, 0, 1, 0)
+IconLetter.BackgroundTransparency = 1
+IconLetter.Text = "M"
+IconLetter.TextColor3 = Color3.fromRGB(59, 130, 246)
+IconLetter.TextTransparency = 0.5
+IconLetter.TextSize = 32
+IconLetter.Font = Enum.Font.GothamBold
+IconLetter.TextXAlignment = Enum.TextXAlignment.Center
+IconLetter.TextYAlignment = Enum.TextYAlignment.Center
+IconLetter.ZIndex = 1000
+
+IconButton.MouseButton1Click:Connect(function()
+    PlayClickSound()
+    if MainFrame.Visible then
+        TweenService:Create(MainScale, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.7}):Play()
+        TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Rotation = 10, BackgroundTransparency = 0.8}):Play()
+        task.wait(0.25)
+        TweenService:Create(MainScale, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.2}):Play()
+        TweenService:Create(MainFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
+        task.wait(0.2)
+        MainFrame.Visible = false
+        MainScale.Scale = 1
+        MainFrame.Rotation = 0
+        MainFrame.BackgroundTransparency = _G.MenuOpacity / 100
+    else
+        MainFrame.Visible = true
+        MainScale.Scale = 0.1
+        MainFrame.Rotation = -10
+        MainFrame.BackgroundTransparency = 1
+        MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+        task.wait(0.05)
+        TweenService:Create(MainScale, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 0.7}):Play()
+        TweenService:Create(MainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Rotation = -3, BackgroundTransparency = 0.5}):Play()
+        task.wait(0.5)
+        TweenService:Create(MainScale, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+        TweenService:Create(MainFrame, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Rotation = 0, BackgroundTransparency = _G.MenuOpacity / 100}):Play()
+        task.wait(0.6)
+        TweenService:Create(MainScale, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 0.98}):Play()
+        task.wait(0.05)
+        TweenService:Create(MainScale, TweenInfo.new(0.1, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+        MainFrame.Rotation = 0
+    end
+end)
+UpdateAllTexts()
+if TabButtons[1] then
+    TabButtons[1].BackgroundColor3 = Color3.fromRGB(35, 40, 50)
+    TabButtons[1].TextColor3 = Color3.fromRGB(255, 255, 255)
+    TabButtons[1].Size = UDim2.new(0.11, 0, 0, 36)
+end
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.Insert then
+        MainFrame.Visible = not MainFrame.Visible
+    end
+end)
+
+-- ACHIEVEMENT (5 МИНУТ)
+local function ShowAchievement()
+    local achievement = Instance.new("Frame")
+    achievement.Name = "AchievementPopup"
+    achievement.Size = UDim2.new(0, 260, 0, 75)
+    achievement.Position = UDim2.new(1, 260, 0.88, 0)
+    achievement.AnchorPoint = Vector2.new(0, 1)
+    achievement.BackgroundColor3 = Color3.fromRGB(17, 20, 26)
+    achievement.BackgroundTransparency = 0.15
+    achievement.BorderSizePixel = 0
+    achievement.ZIndex = 999
+    achievement.Parent = ScreenGui
+    HideFromScanner(achievement)
+
+    local achievementCorner = Instance.new("UICorner")
+    achievementCorner.CornerRadius = UDim.new(0, 10)
+    achievementCorner.Parent = achievement
+
+    local achievementStroke = Instance.new("UIStroke")
+    achievementStroke.Thickness = 2
+    achievementStroke.Color = Color3.fromRGB(59, 130, 246)
+    achievementStroke.Transparency = 0.3
+    achievementStroke.Parent = achievement
+
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Size = UDim2.new(1, -25, 0, 20)
+    titleLabel.Position = UDim2.new(0, 12, 0, 8)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = "META"
+    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titleLabel.TextSize = 15
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.Parent = achievement
+
+    local betaAchieveLabel = Instance.new("TextLabel")
+    betaAchieveLabel.Size = UDim2.new(0, 40, 0, 15)
+    betaAchieveLabel.Position = UDim2.new(0, 50, 0, 11)
+    betaAchieveLabel.BackgroundTransparency = 1
+    betaAchieveLabel.Text = "beta"
+    betaAchieveLabel.TextColor3 = Color3.fromRGB(120, 120, 120)
+    betaAchieveLabel.TextSize = 10
+    betaAchieveLabel.Font = Enum.Font.Gotham
+    betaAchieveLabel.TextXAlignment = Enum.TextXAlignment.Left
+    betaAchieveLabel.Parent = achievement
+
+    local descLabel = Instance.new("TextLabel")
+    descLabel.Size = UDim2.new(1, -25, 0, 35)
+    descLabel.Position = UDim2.new(0, 12, 0, 32)
+    descLabel.BackgroundTransparency = 1
+    descLabel.Text = "Did you like the script? Follow the updates in my tiktok) I'm glad you're using this."
+    descLabel.TextColor3 = Color3.fromRGB(156, 163, 175)
+    descLabel.TextSize = 10
+    descLabel.Font = Enum.Font.Gotham
+    descLabel.TextXAlignment = Enum.TextXAlignment.Left
+    descLabel.TextYAlignment = Enum.TextYAlignment.Top
+    descLabel.TextWrapped = true
+    descLabel.Parent = achievement
+
+    local function BounceIn()
+        achievement.Position = UDim2.new(1, 260, 0.88, 0)
+        TweenService:Create(achievement, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(1, -260, 0.88, 0)}):Play()
+        TweenService:Create(achievement, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.15}):Play()
+    end
+
+    local function BounceOut()
+        TweenService:Create(achievement, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Position = UDim2.new(1, 260, 0.88, 0)}):Play()
+        TweenService:Create(achievement, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
+        task.wait(0.5)
+        achievement:Destroy()
+    end
+
+    BounceIn()
+    task.wait(3)
+    BounceOut()
+end
+
+task.spawn(function()
+    task.wait(300)
+    ShowAchievement()
+end)
+
+print("[META] META v7.0.75 - Key Limit System Added")
 print("[META] Press Insert or click icon")
