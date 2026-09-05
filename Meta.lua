@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.0.71 COMPLETE FULL
+-- KEY SYSTEM + META UI V7.0.73 COMPLETE FULL
 -- ====================================================================
 local GIST_ID = "09f78a69bd9c238abf0ce2d4ceea761d"
 local GITHUB_TOKEN = "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"
@@ -232,13 +232,15 @@ if not isActivated then
                         SetDotRed()
                         return
                     else
-                        if usedUserId == LocalPlayer.UserId and readfile then
-                            local fExists, fContent = pcall(function() return readfile(KEY_FILE_NAME) end)
-                            if fExists then
-                                local cData = HttpService:JSONDecode(fContent)
-                                if cData.key == text and cData.userId == LocalPlayer.UserId then
-                                    isActivated = true
-                                    break
+                        if usedUserId == LocalPlayer.UserId then
+                            if readfile then
+                                local fExists, fContent = pcall(function() return readfile(KEY_FILE_NAME) end)
+                                if fExists and fContent ~= "" then
+                                    local cData = HttpService:JSONDecode(fContent)
+                                    if cData.key == text and cData.userId == LocalPlayer.UserId then
+                                        isActivated = true
+                                        break
+                                    end
                                 end
                             end
                         end
@@ -2396,5 +2398,5 @@ task.spawn(function()
     ShowAchievement()
 end)
 
-print("[META] META v7.0.71 - Account Bind + 5min Achievement")
+print("[META] META v7.0.73 - Account Bind Fixed")
 print("[META] Press Insert or click icon")
