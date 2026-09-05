@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.0.77 PREMIUM GLASS KEY PANEL
+-- KEY SYSTEM + META UI V7.0.78 PREMIUM GLASS + TIKTOK LINK
 -- ====================================================================
 local GIST_ID = "0952fe76bcc259fcbda99e552956e5e6"
 local TOKEN_PART1 = "ghp_kMjn"
@@ -109,7 +109,7 @@ if not isActivated then
     KeyScreenGui.IgnoreGuiInset = true
 
     local KeyFrame = Instance.new("Frame", KeyScreenGui)
-    KeyFrame.Size = UDim2.new(0, 450, 0, 150)
+    KeyFrame.Size = UDim2.new(0, 450, 0, 165)
     KeyFrame.Position = UDim2.new(0.5, -225, 0, -180)
     KeyFrame.BackgroundColor3 = Color3.fromRGB(22, 26, 34)
     KeyFrame.BackgroundTransparency = 0.06
@@ -190,17 +190,9 @@ if not isActivated then
         blinkConnection = RunService.Heartbeat:Connect(function()
             if not isBlinking then return end
             local pulse = (math.sin(tick() * 4) + 1) / 2
-            local dotScale = 1 + pulse * 0.25
-            local bloomScale = 1 + pulse * 0.2
-            StatusDot.Size = UDim2.new(0, 16 * dotScale, 0, 16 * dotScale)
-            StatusDot.Position = UDim2.new(0, 18 - (16 * dotScale - 16) / 2, 0, 16 - (16 * dotScale - 16) / 2)
-            BloomOuter.Size = UDim2.new(0, 40 * bloomScale, 0, 40 * bloomScale)
-            BloomOuter.Position = UDim2.new(0, 6 - (40 * bloomScale - 40) / 2, 0, 4 - (40 * bloomScale - 40) / 2)
-            BloomInner.Size = UDim2.new(0, 28 * bloomScale, 0, 28 * bloomScale)
-            BloomInner.Position = UDim2.new(0, 12 - (28 * bloomScale - 28) / 2, 0, 10 - (28 * bloomScale - 28) / 2)
-            StatusDot.BackgroundTransparency = 0.1 + pulse * 0.3
-            BloomOuter.BackgroundTransparency = 0.65 + pulse * 0.2
-            BloomInner.BackgroundTransparency = 0.45 + pulse * 0.25
+            StatusDot.BackgroundTransparency = 0.1 + pulse * 0.4
+            BloomOuter.BackgroundTransparency = 0.65 + pulse * 0.25
+            BloomInner.BackgroundTransparency = 0.45 + pulse * 0.3
         end)
     end
 
@@ -210,23 +202,23 @@ if not isActivated then
             blinkConnection:Disconnect()
             blinkConnection = nil
         end
-        TweenService:Create(StatusDot, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {Size = UDim2.new(0, 16, 0, 16), Position = UDim2.new(0, 18, 0, 16), BackgroundTransparency = 0}):Play()
-        TweenService:Create(BloomOuter, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {Size = UDim2.new(0, 40, 0, 40), Position = UDim2.new(0, 6, 0, 4), BackgroundTransparency = 0.75}):Play()
-        TweenService:Create(BloomInner, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {Size = UDim2.new(0, 28, 0, 28), Position = UDim2.new(0, 12, 0, 10), BackgroundTransparency = 0.55}):Play()
+        TweenService:Create(StatusDot, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {BackgroundTransparency = 0}):Play()
+        TweenService:Create(BloomOuter, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {BackgroundTransparency = 0.75}):Play()
+        TweenService:Create(BloomInner, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {BackgroundTransparency = 0.55}):Play()
     end
 
     local function SetDotRed()
-        StatusDot.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
-        BloomOuter.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
-        BloomInner.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+        StatusDot.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+        BloomOuter.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+        BloomInner.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
         StartBlinking()
     end
 
     local function SetDotGreen()
         StopBlinking()
-        TweenService:Create(StatusDot, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 12, 0, 12), Position = UDim2.new(0, 20, 0, 18), BackgroundColor3 = Color3.fromRGB(50, 255, 100), BackgroundTransparency = 0}):Play()
-        TweenService:Create(BloomOuter, TweenInfo.new(0.6, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(50, 255, 100), BackgroundTransparency = 0.6, Size = UDim2.new(0, 30, 0, 30), Position = UDim2.new(0, 11, 0, 9)}):Play()
-        TweenService:Create(BloomInner, TweenInfo.new(0.6, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(50, 255, 100), BackgroundTransparency = 0.4, Size = UDim2.new(0, 22, 0, 22), Position = UDim2.new(0, 15, 0, 13)}):Play()
+        TweenService:Create(StatusDot, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(50, 255, 100), BackgroundTransparency = 0}):Play()
+        TweenService:Create(BloomOuter, TweenInfo.new(0.6, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(50, 255, 100), BackgroundTransparency = 0.6}):Play()
+        TweenService:Create(BloomInner, TweenInfo.new(0.6, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(50, 255, 100), BackgroundTransparency = 0.4}):Play()
     end
 
     SetDotRed()
@@ -254,10 +246,24 @@ if not isActivated then
     TextBox.Font = Enum.Font.Gotham
     Instance.new("UICorner", TextBox).CornerRadius = UDim.new(0, 10)
 
-    local TextBoxStroke = Instance.new("UIStroke", TextBox)
-    TextBoxStroke.Thickness = 1
-    TextBoxStroke.Color = Color3.fromRGB(80, 180, 255)
-    TextBoxStroke.Transparency = 0.5
+    -- TikTok Link
+    local TiktokLink = Instance.new("TextButton", KeyFrame)
+    TiktokLink.Size = UDim2.new(1, -40, 0, 20)
+    TiktokLink.Position = UDim2.new(0, 20, 0, 128)
+    TiktokLink.BackgroundTransparency = 1
+    TiktokLink.Text = "Tiktok: tiktok.com/@qwertyx015"
+    TiktokLink.TextColor3 = Color3.fromRGB(120, 180, 255)
+    TiktokLink.TextSize = 12
+    TiktokLink.Font = Enum.Font.Gotham
+    TiktokLink.TextXAlignment = Enum.TextXAlignment.Center
+    TiktokLink.ZIndex = 10
+
+    TiktokLink.MouseButton1Click:Connect(function()
+        setclipboard("https://tiktok.com/@qwertyx015")
+        TiktokLink.Text = "Copied!"
+        task.wait(1)
+        TiktokLink.Text = "Tiktok: tiktok.com/@qwertyx015"
+    end)
 
     TextBox.FocusLost:Connect(function(enterPressed)
         if not enterPressed then return end
@@ -353,7 +359,7 @@ if not isActivated then
             TweenService:Create(KeyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Position = UDim2.new(0.5, -225, 0, -180)}):Play()
             TweenService:Create(KeyFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
             for _, child in pairs(KeyFrame:GetDescendants()) do
-                if child:IsA("TextLabel") or child:IsA("TextBox") or child:IsA("Frame") or child:IsA("UIStroke") then
+                if child:IsA("TextLabel") or child:IsA("TextBox") or child:IsA("Frame") or child:IsA("UIStroke") or child:IsA("TextButton") then
                     TweenService:Create(child, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {TextTransparency = 1, BackgroundTransparency = 1}):Play()
                 end
             end
@@ -362,7 +368,7 @@ if not isActivated then
         end
     end)
 
-    TweenService:Create(KeyFrame, TweenInfo.new(0.7, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -225, 0.35, -75)}):Play()
+    TweenService:Create(KeyFrame, TweenInfo.new(0.7, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -225, 0.35, -82)}):Play()
 
     while not isActivated do task.wait(0.5) end
     KeyScreenGui:Destroy()
@@ -2487,5 +2493,5 @@ task.spawn(function()
     ShowAchievement()
 end)
 
-print("[META] META v7.0.77 - Premium Glass Key Panel")
+print("[META] META v7.0.78 - Premium Glass + TikTok Link")
 print("[META] Press Insert or click icon")
