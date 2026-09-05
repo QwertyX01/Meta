@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.0.67 COMPLETE FULL
+-- KEY SYSTEM + META UI V7.0.69 COMPLETE FULL
 -- ====================================================================
 local GIST_ID = "09f78a69bd9c238abf0ce2d4ceea761d"
 local GITHUB_TOKEN = "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"
@@ -95,73 +95,81 @@ if not isActivated then
     KeyBloomStroke.Transparency = 0.7
 
     local StatusDot = Instance.new("Frame", KeyFrame)
-StatusDot.Size = UDim2.new(0, 16, 0, 16)
-StatusDot.Position = UDim2.new(0, 18, 0, 16)
-StatusDot.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
-StatusDot.BorderSizePixel = 0
-StatusDot.ZIndex = 5
-Instance.new("UICorner", StatusDot).CornerRadius = UDim.new(1, 0)
-
-local BloomOuter = Instance.new("Frame", KeyFrame)
-BloomOuter.Size = UDim2.new(0, 40, 0, 40)
-BloomOuter.Position = UDim2.new(0, 6, 0, 4)
-BloomOuter.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
-BloomOuter.BackgroundTransparency = 0.75
-BloomOuter.BorderSizePixel = 0
-BloomOuter.ZIndex = 3
-Instance.new("UICorner", BloomOuter).CornerRadius = UDim.new(1, 0)
-
-local BloomInner = Instance.new("Frame", KeyFrame)
-BloomInner.Size = UDim2.new(0, 28, 0, 28)
-BloomInner.Position = UDim2.new(0, 12, 0, 10)
-BloomInner.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
-BloomInner.BackgroundTransparency = 0.55
-BloomInner.BorderSizePixel = 0
-BloomInner.ZIndex = 4
-Instance.new("UICorner", BloomInner).CornerRadius = UDim.new(1, 0)
-
--- НЕРВНОЕ МИГАНИЕ
-local isBlinking = true
-local blinkConnection = nil
-
-local function StartBlinking()
-    if blinkConnection then blinkConnection:Disconnect() end
-    isBlinking = true
-    blinkConnection = RunService.Heartbeat:Connect(function()
-        if not isBlinking then return end
-        local alpha = (math.sin(tick() * 20) + 1) / 2
-        StatusDot.BackgroundTransparency = 0.2 + alpha * 0.6
-        BloomOuter.BackgroundTransparency = 0.55 + alpha * 0.35
-        BloomInner.BackgroundTransparency = 0.35 + alpha * 0.4
-    end)
-end
-
-local function StopBlinking()
-    isBlinking = false
-    if blinkConnection then
-        blinkConnection:Disconnect()
-        blinkConnection = nil
-    end
-    StatusDot.BackgroundTransparency = 0
-    BloomOuter.BackgroundTransparency = 0.75
-    BloomInner.BackgroundTransparency = 0.55
-end
-
-local function SetDotRed()
+    StatusDot.Size = UDim2.new(0, 16, 0, 16)
+    StatusDot.Position = UDim2.new(0, 18, 0, 16)
     StatusDot.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+    StatusDot.BorderSizePixel = 0
+    StatusDot.ZIndex = 5
+    Instance.new("UICorner", StatusDot).CornerRadius = UDim.new(1, 0)
+
+    local BloomOuter = Instance.new("Frame", KeyFrame)
+    BloomOuter.Size = UDim2.new(0, 40, 0, 40)
+    BloomOuter.Position = UDim2.new(0, 6, 0, 4)
     BloomOuter.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+    BloomOuter.BackgroundTransparency = 0.75
+    BloomOuter.BorderSizePixel = 0
+    BloomOuter.ZIndex = 3
+    Instance.new("UICorner", BloomOuter).CornerRadius = UDim.new(1, 0)
+
+    local BloomInner = Instance.new("Frame", KeyFrame)
+    BloomInner.Size = UDim2.new(0, 28, 0, 28)
+    BloomInner.Position = UDim2.new(0, 12, 0, 10)
     BloomInner.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
-    StartBlinking()
-end
+    BloomInner.BackgroundTransparency = 0.55
+    BloomInner.BorderSizePixel = 0
+    BloomInner.ZIndex = 4
+    Instance.new("UICorner", BloomInner).CornerRadius = UDim.new(1, 0)
 
-local function SetDotGreen()
-    StopBlinking()
-    TweenService:Create(StatusDot, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(50, 255, 100), BackgroundTransparency = 0}):Play()
-    TweenService:Create(BloomOuter, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(50, 255, 100), BackgroundTransparency = 0.6}):Play()
-    TweenService:Create(BloomInner, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(50, 255, 100), BackgroundTransparency = 0.4}):Play()
-end
+    local isBlinking = true
+    local blinkConnection = nil
 
-SetDotRed()
+    local function StartBlinking()
+        if blinkConnection then blinkConnection:Disconnect() end
+        isBlinking = true
+        blinkConnection = RunService.Heartbeat:Connect(function()
+            if not isBlinking then return end
+            local pulse = (math.sin(tick() * 4) + 1) / 2
+            local dotScale = 1 + pulse * 0.25
+            local bloomScale = 1 + pulse * 0.2
+            StatusDot.Size = UDim2.new(0, 16 * dotScale, 0, 16 * dotScale)
+            StatusDot.Position = UDim2.new(0, 18 - (16 * dotScale - 16) / 2, 0, 16 - (16 * dotScale - 16) / 2)
+            BloomOuter.Size = UDim2.new(0, 40 * bloomScale, 0, 40 * bloomScale)
+            BloomOuter.Position = UDim2.new(0, 6 - (40 * bloomScale - 40) / 2, 0, 4 - (40 * bloomScale - 40) / 2)
+            BloomInner.Size = UDim2.new(0, 28 * bloomScale, 0, 28 * bloomScale)
+            BloomInner.Position = UDim2.new(0, 12 - (28 * bloomScale - 28) / 2, 0, 10 - (28 * bloomScale - 28) / 2)
+            StatusDot.BackgroundTransparency = 0.1 + pulse * 0.3
+            BloomOuter.BackgroundTransparency = 0.65 + pulse * 0.2
+            BloomInner.BackgroundTransparency = 0.45 + pulse * 0.25
+        end)
+    end
+
+    local function StopBlinking()
+        isBlinking = false
+        if blinkConnection then
+            blinkConnection:Disconnect()
+            blinkConnection = nil
+        end
+        TweenService:Create(StatusDot, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {Size = UDim2.new(0, 16, 0, 16), Position = UDim2.new(0, 18, 0, 16), BackgroundTransparency = 0}):Play()
+        TweenService:Create(BloomOuter, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {Size = UDim2.new(0, 40, 0, 40), Position = UDim2.new(0, 6, 0, 4), BackgroundTransparency = 0.75}):Play()
+        TweenService:Create(BloomInner, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {Size = UDim2.new(0, 28, 0, 28), Position = UDim2.new(0, 12, 0, 10), BackgroundTransparency = 0.55}):Play()
+    end
+
+    local function SetDotRed()
+        StatusDot.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+        BloomOuter.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+        BloomInner.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+        StartBlinking()
+    end
+
+    local function SetDotGreen()
+        StopBlinking()
+        TweenService:Create(StatusDot, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 12, 0, 12), Position = UDim2.new(0, 20, 0, 18), BackgroundColor3 = Color3.fromRGB(50, 255, 100), BackgroundTransparency = 0}):Play()
+        TweenService:Create(BloomOuter, TweenInfo.new(0.6, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(50, 255, 100), BackgroundTransparency = 0.6, Size = UDim2.new(0, 30, 0, 30), Position = UDim2.new(0, 11, 0, 9)}):Play()
+        TweenService:Create(BloomInner, TweenInfo.new(0.6, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(50, 255, 100), BackgroundTransparency = 0.4, Size = UDim2.new(0, 22, 0, 22), Position = UDim2.new(0, 15, 0, 13)}):Play()
+    end
+
+    SetDotRed()
+
     local KeyTitle = Instance.new("TextLabel", KeyFrame)
     KeyTitle.Size = UDim2.new(1, 0, 0, 32)
     KeyTitle.Position = UDim2.new(0, 0, 0, 10)
@@ -2372,5 +2380,5 @@ task.spawn(function()
     ShowAchievement()
 end)
 
-print("[META] META v7.0.67 - Bloom Key + Sky Modes")
+print("[META] META v7.0.69 - Blinking Dot + Sky Modes")
 print("[META] Press Insert or click icon")
