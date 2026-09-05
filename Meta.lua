@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.0.62 COMPLETE FULL
+-- KEY SYSTEM + META UI V7.0.63 COMPLETE FULL
 -- ====================================================================
 local GIST_ID = "09f78a69bd9c238abf0ce2d4ceea761d"
 local GITHUB_TOKEN = "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"
@@ -75,83 +75,65 @@ if not isActivated then
     KeyScreenGui.IgnoreGuiInset = true
 
     local KeyFrame = Instance.new("Frame", KeyScreenGui)
-    KeyFrame.Size = UDim2.new(0, 360, 0, 110)
-    KeyFrame.Position = UDim2.new(0.5, -180, 0.4, -55)
+    KeyFrame.Size = UDim2.new(0, 400, 0, 130)
+    KeyFrame.Position = UDim2.new(0.5, -200, 0, -150)
     KeyFrame.BackgroundColor3 = Color3.fromRGB(22, 26, 34)
-    KeyFrame.BackgroundTransparency = 0.1
+    KeyFrame.BackgroundTransparency = 0.08
     KeyFrame.BorderSizePixel = 0
     KeyFrame.Active = true
     KeyFrame.Draggable = true
-    Instance.new("UICorner", KeyFrame).CornerRadius = UDim.new(0, 14)
+    Instance.new("UICorner", KeyFrame).CornerRadius = UDim.new(0, 16)
 
     local KeyStroke = Instance.new("UIStroke", KeyFrame)
-    KeyStroke.Thickness = 2
-    KeyStroke.Color = Color3.fromRGB(59, 130, 246)
-    KeyStroke.Transparency = 0.25
+    KeyStroke.Thickness = 1.5
+    KeyStroke.Color = Color3.fromRGB(45, 52, 65)
+    KeyStroke.Transparency = 0.4
 
     local StatusDot = Instance.new("Frame", KeyFrame)
-    StatusDot.Size = UDim2.new(0, 12, 0, 12)
-    StatusDot.Position = UDim2.new(0, 14, 0, 12)
-    StatusDot.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+    StatusDot.Size = UDim2.new(0, 14, 0, 14)
+    StatusDot.Position = UDim2.new(0, 16, 0, 14)
+    StatusDot.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
     StatusDot.BorderSizePixel = 0
     Instance.new("UICorner", StatusDot).CornerRadius = UDim.new(1, 0)
 
     local DotGlow = Instance.new("UIStroke", StatusDot)
-    DotGlow.Thickness = 3
-    DotGlow.Color = Color3.fromRGB(255, 60, 60)
-    DotGlow.Transparency = 0.3
-
-    local rgbConnection = nil
-    local function StartRgbGlow()
-        if rgbConnection then rgbConnection:Disconnect() end
-        rgbConnection = RunService.Heartbeat:Connect(function()
-            local hue = (tick() * 0.5) % 1
-            local color = Color3.fromHSV(hue, 1, 1)
-            DotGlow.Color = color
-        end)
-    end
+    DotGlow.Thickness = 4
+    DotGlow.Color = Color3.fromRGB(255, 80, 80)
+    DotGlow.Transparency = 0.55
 
     local function SetDotRed()
-        if rgbConnection then rgbConnection:Disconnect() rgbConnection = nil end
-        StatusDot.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
-        DotGlow.Color = Color3.fromRGB(255, 60, 60)
-        DotGlow.Transparency = 0.3
+        StatusDot.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+        DotGlow.Color = Color3.fromRGB(255, 80, 80)
+        DotGlow.Transparency = 0.55
     end
 
     local function SetDotGreen()
-        if rgbConnection then rgbConnection:Disconnect() rgbConnection = nil end
-        TweenService:Create(StatusDot, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(50, 255, 100)}):Play()
-        TweenService:Create(DotGlow, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {Color = Color3.fromRGB(50, 255, 100), Transparency = 0.15}):Play()
+        TweenService:Create(StatusDot, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(80, 255, 130)}):Play()
+        TweenService:Create(DotGlow, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {Color = Color3.fromRGB(80, 255, 130), Transparency = 0.35}):Play()
     end
 
-    StartRgbGlow()
-
     local KeyTitle = Instance.new("TextLabel", KeyFrame)
-    KeyTitle.Size = UDim2.new(1, 0, 0, 28)
-    KeyTitle.Position = UDim2.new(0, 0, 0, 6)
+    KeyTitle.Size = UDim2.new(1, 0, 0, 30)
+    KeyTitle.Position = UDim2.new(0, 0, 0, 8)
     KeyTitle.Text = "META"
     KeyTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-    KeyTitle.TextSize = 20
+    KeyTitle.TextSize = 22
     KeyTitle.Font = Enum.Font.GothamBold
     KeyTitle.TextXAlignment = Enum.TextXAlignment.Center
     KeyTitle.BackgroundTransparency = 1
 
     local TextBox = Instance.new("TextBox", KeyFrame)
-    TextBox.Size = UDim2.new(1, -30, 0, 36)
-    TextBox.Position = UDim2.new(0, 15, 0, 55)
+    TextBox.Size = UDim2.new(1, -40, 0, 40)
+    TextBox.Position = UDim2.new(0, 20, 0, 65)
     TextBox.BackgroundColor3 = Color3.fromRGB(35, 40, 52)
-    TextBox.BackgroundTransparency = 0.3
-    TextBox.TextColor3 = Color3.fromRGB(220, 225, 235)
+    TextBox.BackgroundTransparency = 0.25
+    TextBox.TextColor3 = Color3.fromRGB(225, 230, 240)
     TextBox.PlaceholderText = "Enter key and press Enter..."
-    TextBox.PlaceholderColor3 = Color3.fromRGB(130, 140, 155)
+    TextBox.PlaceholderColor3 = Color3.fromRGB(140, 150, 165)
     TextBox.Text = ""
-    TextBox.TextSize = 13
+    TextBox.TextSize = 14
     TextBox.Font = Enum.Font.Gotham
-    Instance.new("UICorner", TextBox).CornerRadius = UDim.new(0, 8)
-    local TextBoxStroke = Instance.new("UIStroke", TextBox)
-    TextBoxStroke.Thickness = 1
-    TextBoxStroke.Color = Color3.fromRGB(59, 130, 246)
-    TextBoxStroke.Transparency = 0.5
+    Instance.new("UICorner", TextBox).CornerRadius = UDim.new(0, 10)
 
     TextBox.FocusLost:Connect(function(enterPressed)
         if not enterPressed then return end
@@ -199,13 +181,8 @@ if not isActivated then
             TextBox.PlaceholderText = "Success!"
             TextBox.PlaceholderColor3 = Color3.fromRGB(0, 255, 0)
             SetDotGreen()
-            TweenService:Create(KeyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Position = UDim2.new(0.5, -180, 0.4, 150)}):Play()
-            TweenService:Create(KeyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
-            for _, child in pairs(KeyFrame:GetDescendants()) do
-                if child:IsA("TextLabel") or child:IsA("TextBox") or child:IsA("UIStroke") then
-                    TweenService:Create(child, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {TextTransparency = 1, BackgroundTransparency = 1}):Play()
-                end
-            end
+            TweenService:Create(KeyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Position = UDim2.new(0.5, -200, 0, -150)}):Play()
+            TweenService:Create(KeyFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
             task.wait(0.5)
             KeyScreenGui:Destroy()
         else
@@ -215,7 +192,11 @@ if not isActivated then
         end
     end)
 
+    -- Плавное появление сверху
+    TweenService:Create(KeyFrame, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -200, 0.35, -65)}):Play()
+
     while not isActivated do task.wait(0.5) end
+    KeyScreenGui:Destroy()
 end
 
 -- ====================================================================
@@ -1297,7 +1278,6 @@ if settingsPage then
     settingsContainer.ClipsDescendants = true
     settingsContainer.Parent = settingsPage
 
-    -- UI COLOR
     local toggleFrame = Instance.new("Frame")
     toggleFrame.Size = UDim2.new(1, 0, 0, 45)
     toggleFrame.Position = UDim2.new(0, 0, 0, 10)
@@ -1452,7 +1432,6 @@ if settingsPage then
     table.insert(langUpdateCallbacks, UpdateUIColorText)
     clickArea.MouseButton1Click:Connect(function() PlayClickSound() SetToggleState(not _G.CustomThemeEnabled) end)
 
-    -- LANGUAGE
     local langFrame = Instance.new("Frame")
     langFrame.Size = UDim2.new(1, -20, 0, 42)
     langFrame.Position = UDim2.new(0, 10, 0, 10)
@@ -1519,7 +1498,6 @@ if settingsPage then
     CreateLangButton("Русский", "RU", 0.03)
     CreateLangButton("English", "EN", 0.55)
 
-    -- OPACITY
     local opacityFrame = Instance.new("Frame")
     opacityFrame.Size = UDim2.new(1, -20, 0, 55)
     opacityFrame.Position = UDim2.new(0, 10, 0, 60)
@@ -1624,7 +1602,6 @@ if settingsPage then
     end
     table.insert(langUpdateCallbacks, UpdateOpacityText)
 
-    -- RAINBOW
     local rainbowFrame = Instance.new("Frame")
     rainbowFrame.Size = UDim2.new(1, 0, 0, 45)
     rainbowFrame.Position = UDim2.new(0, 0, 0, 120)
@@ -1711,7 +1688,6 @@ if settingsPage then
     end
     table.insert(langUpdateCallbacks, UpdateRainbowText)
 
-    -- SCALE
     local scaleFrame = Instance.new("Frame")
     scaleFrame.Size = UDim2.new(1, -20, 0, 55)
     scaleFrame.Position = UDim2.new(0, 10, 0, 170)
@@ -1816,7 +1792,6 @@ if settingsPage then
     end
     table.insert(langUpdateCallbacks, UpdateScaleText)
 
-    -- FLYING DOTS
     local flyingFrame = Instance.new("Frame")
     flyingFrame.Name = "Effects"
     flyingFrame.Size = UDim2.new(1, 0, 1, 0)
@@ -1969,7 +1944,6 @@ if settingsPage then
     end
     table.insert(langUpdateCallbacks, UpdateFlyingText)
 
-    -- RESET
     local resetFrame = Instance.new("Frame")
     resetFrame.Size = UDim2.new(1, 0, 0, 45)
     resetFrame.Position = UDim2.new(0, 0, 0, 280)
@@ -2074,7 +2048,7 @@ if settingsPage then
     table.insert(langUpdateCallbacks, UpdateResetText)
 end
 
--- ICON BUTTON
+-- ICON BUTTON WITH M LETTER
 local IconButton = Instance.new("ImageButton")
 IconButton.Name = "MetaIcon"
 IconButton.Size = UDim2.new(0, 55, 0, 55)
@@ -2094,6 +2068,19 @@ HideFromScanner(IconButton)
 local IconCorner = Instance.new("UICorner")
 IconCorner.CornerRadius = UDim.new(0, 12)
 IconCorner.Parent = IconButton
+
+local IconLetter = Instance.new("TextLabel", IconButton)
+IconLetter.Size = UDim2.new(1, 0, 1, 0)
+IconLetter.BackgroundTransparency = 1
+IconLetter.Text = "M"
+IconLetter.TextColor3 = Color3.fromRGB(59, 130, 246)
+IconLetter.TextTransparency = 0.5
+IconLetter.TextSize = 32
+IconLetter.Font = Enum.Font.GothamBold
+IconLetter.TextXAlignment = Enum.TextXAlignment.Center
+IconLetter.TextYAlignment = Enum.TextYAlignment.Center
+IconLetter.ZIndex = 1000
+
 IconButton.MouseButton1Click:Connect(function()
     PlayClickSound()
     if MainFrame.Visible then
@@ -2221,5 +2208,5 @@ task.spawn(function()
     ShowAchievement()
 end)
 
-print("[META] META v7.0.62 - Key System + RGB Dot")
+print("[META] META v7.0.63 - Key Panel Drop + M Letter")
 print("[META] Press Insert or click icon")
