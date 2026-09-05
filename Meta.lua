@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.0.73 COMPLETE FULL
+-- KEY SYSTEM + META UI V7.0.74 COMPLETE FULL
 -- ====================================================================
 local GIST_ID = "09f78a69bd9c238abf0ce2d4ceea761d"
 local GITHUB_TOKEN = "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"
@@ -28,7 +28,15 @@ local function getGistData()
 end
 
 local function updateGist(filename, oldContent, enteredKey, expireTimestamp, userId)
-    local updatedContent = string.gsub(oldContent, enteredKey .. ":active", enteredKey .. ":used:" .. tostring(expireTimestamp) .. ":" .. tostring(userId))
+    local updatedContent = oldContent
+    for line in string.gmatch(oldContent, "[^\r\n]+") do
+        local key, status = string.match(line, "([^:]+):([^:]+)")
+        if key == enteredKey and status == "active" then
+            local newLine = enteredKey .. ":used:" .. tostring(expireTimestamp) .. ":" .. tostring(userId)
+            updatedContent = string.gsub(oldContent, line, newLine, 1)
+            break
+        end
+    end
     http({
         Url = "https://api.github.com/gists/" .. GIST_ID, Method = "PATCH",
         Headers = {["Authorization"] = "token " .. GITHUB_TOKEN, ["Content-Type"] = "application/json"},
@@ -231,24 +239,27 @@ if not isActivated then
                         TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
                         SetDotRed()
                         return
-                    else
-                        if usedUserId == LocalPlayer.UserId then
-                            if readfile then
-                                local fExists, fContent = pcall(function() return readfile(KEY_FILE_NAME) end)
-                                if fExists and fContent ~= "" then
-                                    local cData = HttpService:JSONDecode(fContent)
-                                    if cData.key == text and cData.userId == LocalPlayer.UserId then
-                                        isActivated = true
-                                        break
-                                    end
-                                end
-                            end
-                        end
+                    end
+                    if usedUserId ~= LocalPlayer.UserId then
                         TextBox.PlaceholderText = "Key already used!"
                         TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
                         SetDotRed()
                         return
                     end
+                    if readfile then
+                        local fExists, fContent = pcall(function() return readfile(KEY_FILE_NAME) end)
+                        if fExists and fContent ~= "" then
+                            local cData = HttpService:JSONDecode(fContent)
+                            if cData.key == text and cData.userId == LocalPlayer.UserId then
+                                isActivated = true
+                                break
+                            end
+                        end
+                    end
+                    TextBox.PlaceholderText = "Key already used!"
+                    TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
+                    SetDotRed()
+                    return
                 end
             end
         end
@@ -2398,5 +2409,5 @@ task.spawn(function()
     ShowAchievement()
 end)
 
-print("[META] META v7.0.73 - Account Bind Fixed")
+print("[META] META v7.0.74 - Account Bind Fixed")
 print("[META] Press Insert or click icon")
