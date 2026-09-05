@@ -1,5 +1,173 @@
 -- ROCKET::META_UI_V7.0.55 FINAL COMPLETE
+-- ====================================================================
+-- НАСТРОЙКИ КЕЙ-СИСТЕМЫ (Вставь свои данные)
+-- ====================================================================
+local GIST_ID = "09f78a69bd9c238abf0ce2d4ceea761d" 
+local GITHUB_TOKEN = "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"
+local KEY_FILE_NAME = "meta_bloxstrike_auth.txt"
+-- ====================================================================
 
+local HttpService = game:GetService("HttpService")
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+
+local http = (syn and syn.request) or (http and http.request) or http_request
+if not http then return print("Дельта не поддерживает http_request!") end
+
+-- 1. АВТО-ВХОД (Если файл уже на телефоне, сразу пускаем в чит)
+if readfile then
+	local fileExists, content = pcall(function() return readfile(KEY_FILE_NAME) end)
+	if fileExists and content ~= "" then
+		local success, clientData = pcall(function() return HttpService:JSONDecode(content) end)
+		if success and clientData.key and clientData.expires then
+			if os.time() < clientData.expires then
+				goto run_main_script
+			end
+		end
+	end
+end
+
+-- Функции работы с сетью
+local function getGistData()
+	local res = http({Url = "https://github.com" .. GIST_ID, Method = "GET"})
+	if res.StatusCode == 200 then
+		local data = HttpService:JSONDecode(res.Body)
+		for filename, fileInfo in pairs(data.files) do return fileInfo.content, filename end
+	end
+	return nil
+end
+
+local function updateGist(filename, oldContent, enteredKey, expireTimestamp)
+	local updatedContent = string.gsub(oldContent, enteredKey .. ":active", enteredKey .. ":used:" .. tostring(expireTimestamp))
+	http({
+		Url = "https://github.com" .. GIST_ID, Method = "PATCH",
+		Headers = {["Authorization"] = "token " .. GITHUB_TOKEN, ["Content-Type"] = "application/json"},
+		Body = HttpService:JSONEncode({files = {[filename] = {content = updatedContent}}})
+	})
+end
+
+-- 2. СОЗДАЕМ КРАСИВЫЙ МАЛЕНЬКИЙ ШИРОКИЙ UI
+local ScreenGui = Instance.new("ScreenGui", CoreGui)
+ScreenGui.Name = "MetaCompactKeySystem"
+
+-- Главное окно: маленькое и широкое (ширина 340, высота всего 110)
+local Frame = Instance.new("Frame", ScreenGui)
+Frame.Size = UDim2.new(0, 340, 0, 110)
+Frame.Position = UDim2.new(0.5, -170, 0.4, -55) -- Выше центра, чтобы клавиатура не перекрывала
+Frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+Frame.BorderSizePixel = 0
+Frame.Active = true
+Frame.Draggable = true -- Можно двигать пальцем по экрану
+Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
+
+-- Тонкая красивая полоска под заголовок
+local TopLine = Instance.new("Frame", Frame)
+TopLine.Size = UDim2.new(1, 0, 0, 2)
+TopLine.Position = UDim2.new(0, 0, 0, 32)
+TopLine.BackgroundColor3 = Color3.fromRGB(0, 120, 255) -- Синий неоновый акцент
+TopLine.BorderSizePixel = 0
+
+-- Надпись сверху: Meta Key system.
+local Title = Instance.new("TextLabel", Frame)
+Title.Size = UDim2.new(1, -20, 0, 32)
+Title.Position = UDim2.new(0, 10, 0, 0)
+Title.Text = "Meta Key system."
+Title.TextColor3 = Color3.fromRGB(220, 220, 220)
+Title.TextSize = 15
+Title.Font = Enum.Font.SourceSansBold
+Title.TextXAlignment = Enum.TextXAlignment.Left -- По левому краю
+Title.BackgroundTransparency = 1
+
+-- Широкое поле ввода (при тапе сразу открывает клавиатуру смартфона)
+local TextBox = Instance.new("TextBox", Frame)
+TextBox.Size = UDim2.new(1, -20, 0, 38)
+TextBox.Position = UDim2.new(0, 10, 0, 48)
+TextBox.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+TextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+TextBox.PlaceholderText = "Введите промокод и нажмите Enter/Готово..."
+TextBox.PlaceholderColor3 = Color3.fromRGB(100, 100, 100)
+TextBox.Text = ""
+TextBox.TextSize = 14
+TextBox.Font = Enum.Font.SourceSans
+Instance.new("UICorner", TextBox).CornerRadius = UDim.new(0, 5)
+
+-- Логика активации по нажатию "Готово" на клавиатуре
+local isActivated = false
+
+TextBox.FocusLost:Connect(function(enterPressed)
+	if not enterPressed then return end -- Сработает только при нажатии Enter/Готово
+	
+	local text = TextBox.Text
+	if text == "" then TextBox.PlaceholderText = "Поле пустое!" return end
+	
+	TextBox.Text = ""
+	TextBox.PlaceholderText = "Проверка кода..."
+	TextBox.PlaceholderColor3 = Color3.fromRGB(255, 255, 255)
+	task.wait(0.3)
+	
+	local dbText, filename = getGistData()
+	if not dbText then TextBox.PlaceholderText = "Ошибка сети!" TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50) return end
+	
+	for line in string.gmatch(dbText, "[^\r\n]+") do
+		local key, p1, p2 = string.match(line, "([^:]+):([^:]+):?([^:]*)")
+		if key == text then
+			if p1 == "active" then
+				-- Успешно! Задаем время окончания на 24 часа (+86400 сек)
+				local expireTime = os.time() + 86400
+				updateGist(filename, dbText, text, expireTime)
+				if writefile then writefile(KEY_FILE_NAME, HttpService:JSONEncode({key = text, expires = expireTime})) end
+				isActivated = true
+			elseif p1 == "used" then
+				local expireTime = tonumber(p2) or 0
+				if os.time() > expireTime then
+					TextBox.PlaceholderText = "Срок действия кода истек!"
+					TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
+					return
+				else
+					if readfile then
+						local fExists, fContent = pcall(function() return readfile(KEY_FILE_NAME) end)
+						if fExists then
+							local cData = HttpService:JSONDecode(fContent)
+							if cData.key == text then isActivated = true break end
+						end
+					end
+					TextBox.PlaceholderText = "Код уже активирован другим!"
+					TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
+					return
+				end
+			end
+		end
+	end
+	
+	if isActivated then
+		TextBox.PlaceholderText = "Успешно!"
+		TextBox.PlaceholderColor3 = Color3.fromRGB(0, 255, 0)
+		
+		-- Плавное красивое схлопывание панели по высоте
+		local tweenInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+		local t = TweenService:Create(Frame, tweenInfo, {Size = UDim2.new(0, 340, 0, 0), Position = UDim2.new(0.5, -170, 0.4, 0)})
+		
+		for _, child in pairs(Frame:GetDescendants()) do 
+			if child:IsA("TextLabel") or child:IsA("TextBox") or child:IsA("Frame") then 
+				TweenService:Create(child, tweenInfo, {TextTransparency = 1, BackgroundTransparency = 1}):Play() 
+			end
+		end
+		
+		t:Play()
+		t.Completed:Connect(function() ScreenGui:Destroy() end)
+	else
+		TextBox.PlaceholderText = "Неверный промокод!"
+		TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
+	end
+end)
+
+-- Ждем, пока не введут верный ключ
+while not isActivated do task.wait(0.5) end
+
+::run_main_script::
+-- ====================================================================
+-- ТВОЙ СТАРЫЙ КОД (SetupAntiCheatBypass) НАЧИНАЕТСЯ НА СЛЕДУЮЩЕЙ СТРОКЕ:
+-- ====================================================================
 local function SetupAntiCheatBypass()
     pcall(function()
         local ReplicatedStorage = game:GetService("ReplicatedStorage")
