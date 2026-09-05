@@ -1,8 +1,8 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.0.75 COMPLETE FULL (LIMIT SUPPORT)
+-- KEY SYSTEM + META UI V7.0.76 COMPLETE FULL (LIMIT + DIAGNOSTICS)
 -- ====================================================================
 local GIST_ID = "09f78a69bd9c238abf0ce2d4ceea761d"
-local GITHUB_TOKEN = "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"
+local GITHUB_TOKEN = "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"
 local KEY_FILE_NAME = "meta_bloxstrike_auth.txt"
 
 local HttpService = game:GetService("HttpService")
@@ -51,11 +51,15 @@ local function updateGist(filename, oldContent, enteredKey, expireTimestamp, use
 
     updatedContent = table.concat(lines, "\n")
 
-    http({
-        Url = "https://api.github.com/gists/" .. GIST_ID, Method = "PATCH",
+    local res = http({
+        Url = "https://api.github.com/gists/" .. GIST_ID,
+        Method = "PATCH",
         Headers = {["Authorization"] = "token " .. GITHUB_TOKEN, ["Content-Type"] = "application/json"},
         Body = HttpService:JSONEncode({files = {[filename] = {content = updatedContent}}})
     })
+
+    print("[META UPDATE] Status:", res.StatusCode)
+    print("[META UPDATE] Body:", res.Body)
 end
 
 local isActivated = false
@@ -244,6 +248,12 @@ if not isActivated then
                 if p1 == "active" then
                     local duration = tonumber(p2) or 86400
                     local limit = tonumber(p3) or 1
+                    if limit <= 0 then
+                        TextBox.PlaceholderText = "Key expired!"
+                        TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
+                        SetDotRed()
+                        return
+                    end
                     local expireTime = os.time() + duration
                     local remainingLimit = limit - 1
                     if remainingLimit <= 0 then
@@ -2440,5 +2450,5 @@ task.spawn(function()
     ShowAchievement()
 end)
 
-print("[META] META v7.0.75 - Key Limit System Added")
+print("[META] META v7.0.76 - Key Limit + Diagnostics Added")
 print("[META] Press Insert or click icon")
