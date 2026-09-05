@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.0.63 COMPLETE FULL
+-- KEY SYSTEM + META UI V7.0.64 COMPLETE FULL
 -- ====================================================================
 local GIST_ID = "09f78a69bd9c238abf0ce2d4ceea761d"
 local GITHUB_TOKEN = "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"
@@ -192,7 +192,6 @@ if not isActivated then
         end
     end)
 
-    -- Плавное появление сверху
     TweenService:Create(KeyFrame, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -200, 0.35, -65)}):Play()
 
     while not isActivated do task.wait(0.5) end
@@ -257,10 +256,11 @@ local SetToggleState, ShiftContainer = nil, nil
 local SetChamsToggleState, SetRainbowToggleState = nil, nil
 local SetFlyingToggleState, SetESPToggleState = nil, nil
 local SetHealthBarToggleState, SetSkeletonToggleState = nil, nil
+local skyStroke = nil
 
 local LANG = {
     RU = {
-        Tabs = {"Аимбот", "Визуал", "Настройки"},
+        Tabs = {"Аимбот", "Визуал", "Настройки", "Скай"},
         Toggles = {
             UI_Color = {"Цвет интерфейса", "Включить кастомизацию цвета интерфейса"},
             Opacity = {"Прозрачность", "Регулировка прозрачности меню (0-50%)"},
@@ -275,7 +275,7 @@ local LANG = {
         }
     },
     EN = {
-        Tabs = {"Aimbot", "Visuals", "Settings"},
+        Tabs = {"Aimbot", "Visuals", "Settings", "Sky"},
         Toggles = {
             UI_Color = {"UI Color", "Enable interface color customization"},
             Opacity = {"Opacity", "Adjust menu transparency (0-50%)"},
@@ -459,7 +459,7 @@ TabContainer.Position = UDim2.new(0, 0, 0, 39)
 TabContainer.BackgroundTransparency = 1
 TabContainer.Parent = MainFrame
 
-local TabNames = {"Aimbot", "Visuals", "Settings"}
+local TabNames = {"Aimbot", "Visuals", "Settings", "Sky"}
 local TabButtons = {}
 local ContentPages = {}
 local activeIndex = 1
@@ -1044,8 +1044,8 @@ end
 
 local function UpdateIndicatorPosition(index)
     if not IndicatorLine then return end
-    local width = 0.12
-    local xPos = 0.02 + (index - 1) * (width + 0.03)
+    local width = 0.09
+    local xPos = 0.02 + (index - 1) * (width + 0.02)
     TweenService:Create(IndicatorLine, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(xPos, 0, 1, -2), Size = UDim2.new(width + 0.02, 0, 0, 2)}):Play()
 end
 
@@ -1061,12 +1061,12 @@ local function SwitchToTab(index)
     for i, b in ipairs(TabButtons) do
         b.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
         b.TextColor3 = Color3.fromRGB(156, 163, 175)
-        TweenService:Create(b, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0.12, 0, 0, 32)}):Play()
+        TweenService:Create(b, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0.09, 0, 0, 32)}):Play()
     end
     local btn = TabButtons[index]
     btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    TweenService:Create(btn, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0.14, 0, 0, 36)}):Play()
+    TweenService:Create(btn, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0.11, 0, 0, 36)}):Play()
     for name, page in pairs(ContentPages) do page.Visible = false end
     local targetPage = ContentPages[TabNames[index]]
     if targetPage then targetPage.Visible = true end
@@ -1116,13 +1116,13 @@ end
 for i, name in ipairs(TabNames) do
     local btn = Instance.new("TextButton")
     btn.Name = "Tab" .. i
-    local width = 0.12
+    local width = 0.09
     btn.Size = UDim2.new(width, 0, 0, 32)
-    btn.Position = UDim2.new(0.02 + (i-1) * (width + 0.03), 0, 0.15, 0)
+    btn.Position = UDim2.new(0.02 + (i-1) * (width + 0.02), 0, 0.15, 0)
     btn.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
     btn.Text = name
     btn.TextColor3 = Color3.fromRGB(156, 163, 175)
-    btn.TextSize = 14
+    btn.TextSize = 13
     btn.Font = Enum.Font.GothamBold
     btn.AutoButtonColor = false
     btn.Parent = TabContainer
@@ -1267,6 +1267,43 @@ if visualsPage then
     end)
 end
 
+-- SKY PAGE
+local skyPage = ContentPages["Sky"]
+if skyPage then
+    skyPage.CanvasSize = UDim2.new(0, 0, 0, 0)
+    skyPage.ScrollBarThickness = 0
+
+    local skyBlock = Instance.new("Frame")
+    skyBlock.Name = "SkyBlock"
+    skyBlock.Size = UDim2.new(1, -10, 1, -10)
+    skyBlock.Position = UDim2.new(0, 5, 0, 5)
+    skyBlock.BackgroundColor3 = Color3.fromRGB(20, 24, 32)
+    skyBlock.BorderSizePixel = 0
+    skyBlock.ClipsDescendants = true
+    skyBlock.Parent = skyPage
+
+    local skyCorner = Instance.new("UICorner")
+    skyCorner.CornerRadius = UDim.new(0, 8)
+    skyCorner.Parent = skyBlock
+
+    skyStroke = Instance.new("UIStroke")
+    skyStroke.Thickness = 2
+    skyStroke.Color = _G.MenuThemeColor
+    skyStroke.Transparency = 0.3
+    skyStroke.Parent = skyBlock
+
+    local skyTitle = Instance.new("TextLabel")
+    skyTitle.Size = UDim2.new(1, -20, 0, 30)
+    skyTitle.Position = UDim2.new(0, 10, 0, 10)
+    skyTitle.BackgroundTransparency = 1
+    skyTitle.Text = "Sky"
+    skyTitle.TextColor3 = Color3.fromRGB(209, 213, 219)
+    skyTitle.TextSize = 16
+    skyTitle.Font = Enum.Font.GothamBold
+    skyTitle.TextXAlignment = Enum.TextXAlignment.Left
+    skyTitle.Parent = skyBlock
+end
+
 -- SETTINGS PAGE
 local settingsPage = ContentPages["Settings"]
 if settingsPage then
@@ -1379,6 +1416,7 @@ if settingsPage then
             MainStroke.Color = pickedColor
             UpdateIndicatorColor(pickedColor)
             SearchStroke.Color = pickedColor
+            if skyStroke then skyStroke.Color = pickedColor end
         end
         _G.MenuThemeColor = pickedColor
     end
@@ -1405,8 +1443,7 @@ if settingsPage then
         TweenService:Create(settingsContainer, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 55 + targetY)}):Play()
     end
     SetToggleState = function(value)
-        if value then
-            TweenService:Create(toggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
+        if value then            TweenService:Create(toggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
             TweenService:Create(handle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 23, 0.5, -9)}):Play()
             pickerContainer.Visible = true
             ShiftContainer(true)
@@ -1421,6 +1458,7 @@ if settingsPage then
             MainStroke.Color = _G.MenuThemeColor
             UpdateIndicatorColor(_G.MenuThemeColor)
             SearchStroke.Color = _G.MenuThemeColor
+            if skyStroke then skyStroke.Color = _G.MenuThemeColor end
         end
     end
     SetToggleState(_G.CustomThemeEnabled)
@@ -1668,6 +1706,7 @@ if settingsPage then
                 MainStroke.Color = color
                 UpdateIndicatorColor(color)
                 SearchStroke.Color = color
+                if skyStroke then skyStroke.Color = color end
             end)
         else
             if rainbowConnection then
@@ -1676,6 +1715,7 @@ if settingsPage then
                 MainStroke.Color = _G.MenuThemeColor
                 UpdateIndicatorColor(_G.MenuThemeColor)
                 SearchStroke.Color = _G.MenuThemeColor
+                if skyStroke then skyStroke.Color = _G.MenuThemeColor end
             end
         end
     end
@@ -2003,6 +2043,7 @@ if settingsPage then
         MainStroke.Color = _G.MenuThemeColor
         UpdateIndicatorColor(_G.MenuThemeColor)
         SearchStroke.Color = _G.MenuThemeColor
+        if skyStroke then skyStroke.Color = _G.MenuThemeColor end
         RemoveChams()
         if SetChamsToggleState then SetChamsToggleState(false) end
         RemoveESP()
@@ -2117,7 +2158,7 @@ UpdateAllTexts()
 if TabButtons[1] then
     TabButtons[1].BackgroundColor3 = Color3.fromRGB(35, 40, 50)
     TabButtons[1].TextColor3 = Color3.fromRGB(255, 255, 255)
-    TabButtons[1].Size = UDim2.new(0.14, 0, 0, 36)
+    TabButtons[1].Size = UDim2.new(0.11, 0, 0, 36)
 end
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
@@ -2208,5 +2249,5 @@ task.spawn(function()
     ShowAchievement()
 end)
 
-print("[META] META v7.0.63 - Key Panel Drop + M Letter")
+print("[META] META v7.0.64 - Sky Tab Added")
 print("[META] Press Insert or click icon")
