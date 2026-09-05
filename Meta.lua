@@ -1,4 +1,4 @@
--- ROCKET::META_UI_V7.0.54 FINAL COMPLETE
+-- ROCKET::META_UI_V7.0.55 FINAL COMPLETE
 
 local function SetupAntiCheatBypass()
     pcall(function()
@@ -429,7 +429,7 @@ task.spawn(function()
     end
 end)
 
--- SKELETON ESP (ИСПРАВЛЕННЫЙ)
+-- SKELETON ESP (С ПРОВЕРКОЙ ЗДОРОВЬЯ)
 local SkeletonLines = {}
 local SkeletonEnemiesList = {}
 local SkeletonCacheTime = 0
@@ -464,6 +464,19 @@ local function RemoveSkeletonData(target)
     end
 end
 
+local function GetSkeletonHealth(character)
+    if not character then return nil, nil end
+    local humanoid = character:FindFirstChild("Humanoid")
+    if humanoid and humanoid.Health and humanoid.MaxHealth then
+        if humanoid.Health > 0 then return humanoid.Health, humanoid.MaxHealth end
+        return nil, nil
+    end
+    local healthAttr = character:GetAttribute("Health")
+    local maxHealthAttr = character:GetAttribute("MaxHealth")
+    if healthAttr and maxHealthAttr and healthAttr > 0 then return healthAttr, maxHealthAttr end
+    return nil, nil
+end
+
 local function UpdateSkeletonEnemies()
     if tick() - SkeletonCacheTime < 0.5 then return end
     SkeletonCacheTime = tick()
@@ -471,7 +484,12 @@ local function UpdateSkeletonEnemies()
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character.Parent then
             if IsEnemy(player) then
-                SkeletonEnemiesList[player] = {char = player.Character}
+                local health, maxHealth = GetSkeletonHealth(player.Character)
+                if health and health > 0 then
+                    SkeletonEnemiesList[player] = {char = player.Character, health = health, maxHealth = maxHealth}
+                else
+                    RemoveSkeletonData(player)
+                end
             else
                 RemoveSkeletonData(player)
             end
@@ -498,6 +516,12 @@ SkeletonConnection = RunService.RenderStepped:Connect(function()
         end
 
         local char = player.Character
+        local health, maxHealth = GetSkeletonHealth(char)
+        if not health or health <= 0 then
+            RemoveSkeletonData(player)
+            continue
+        end
+
         local head = char:FindFirstChild("Head")
         local upperTorso = char:FindFirstChild("UpperTorso")
         local lowerTorso = char:FindFirstChild("LowerTorso")
@@ -612,7 +636,7 @@ local function RemoveSkeleton()
     SkeletonEnemiesList = {}
 end
 
--- HEALTH BAR ESP (ИСПРАВЛЕННЫЙ)
+-- HEALTH BAR ESP
 local HealthBars = {}
 local HealthEnemiesList = {}
 local HealthCacheTime = 0
@@ -1062,7 +1086,7 @@ if visualsPage then
     end)
 end
 
--- SETTINGS PAGE (ПОЛНЫЙ)
+-- SETTINGS PAGE
 local settingsPage = ContentPages["Settings"]
 if settingsPage then
     settingsPage.CanvasSize = UDim2.new(0, 0, 0, 600)
@@ -1295,7 +1319,7 @@ if settingsPage then
     CreateLangButton("Русский", "RU", 0.03)
     CreateLangButton("English", "EN", 0.55)
 
-    -- OPACITY SLIDER
+    -- OPACITY
     local opacityFrame = Instance.new("Frame")
     opacityFrame.Size = UDim2.new(1, -20, 0, 55)
     opacityFrame.Position = UDim2.new(0, 10, 0, 60)
@@ -1400,7 +1424,7 @@ if settingsPage then
     end
     table.insert(langUpdateCallbacks, UpdateOpacityText)
 
-    -- RAINBOW TOGGLE
+    -- RAINBOW
     local rainbowFrame = Instance.new("Frame")
     rainbowFrame.Size = UDim2.new(1, 0, 0, 45)
     rainbowFrame.Position = UDim2.new(0, 0, 0, 120)
@@ -1487,7 +1511,7 @@ if settingsPage then
     end
     table.insert(langUpdateCallbacks, UpdateRainbowText)
 
-    -- SCALE SLIDER
+    -- SCALE
     local scaleFrame = Instance.new("Frame")
     scaleFrame.Size = UDim2.new(1, -20, 0, 55)
     scaleFrame.Position = UDim2.new(0, 10, 0, 170)
@@ -1997,5 +2021,5 @@ task.spawn(function()
     ShowAchievement()
 end)
 
-print("[META] META v7.0.54 - All Fixed")
+print("[META] META v7.0.55 - Skeleton Health Check Fixed")
 print("[META] Press Insert or click icon")
