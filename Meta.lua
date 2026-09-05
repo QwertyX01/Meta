@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.0.61 COMPLETE FULL
+-- KEY SYSTEM + META UI V7.0.62 COMPLETE FULL
 -- ====================================================================
 local GIST_ID = "09f78a69bd9c238abf0ce2d4ceea761d"
 local GITHUB_TOKEN = "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"
@@ -37,8 +37,6 @@ local function updateGist(filename, oldContent, enteredKey, expireTimestamp)
 end
 
 local isActivated = false
-
--- АВТО-ВХОД С ПРОВЕРКОЙ КЛЮЧА
 local autoLoginSuccess = false
 local cachedDbText = nil
 
@@ -77,68 +75,100 @@ if not isActivated then
     KeyScreenGui.IgnoreGuiInset = true
 
     local KeyFrame = Instance.new("Frame", KeyScreenGui)
-    KeyFrame.Size = UDim2.new(0, 300, 0, 90)
-    KeyFrame.Position = UDim2.new(0.5, -150, 0.4, -45)
-    KeyFrame.BackgroundColor3 = Color3.fromRGB(17, 20, 26)
-    KeyFrame.BackgroundTransparency = 0.15
+    KeyFrame.Size = UDim2.new(0, 360, 0, 110)
+    KeyFrame.Position = UDim2.new(0.5, -180, 0.4, -55)
+    KeyFrame.BackgroundColor3 = Color3.fromRGB(22, 26, 34)
+    KeyFrame.BackgroundTransparency = 0.1
     KeyFrame.BorderSizePixel = 0
     KeyFrame.Active = true
     KeyFrame.Draggable = true
-    Instance.new("UICorner", KeyFrame).CornerRadius = UDim.new(0, 12)
+    Instance.new("UICorner", KeyFrame).CornerRadius = UDim.new(0, 14)
 
     local KeyStroke = Instance.new("UIStroke", KeyFrame)
     KeyStroke.Thickness = 2
     KeyStroke.Color = Color3.fromRGB(59, 130, 246)
-    KeyStroke.Transparency = 0.3
+    KeyStroke.Transparency = 0.25
+
+    local StatusDot = Instance.new("Frame", KeyFrame)
+    StatusDot.Size = UDim2.new(0, 12, 0, 12)
+    StatusDot.Position = UDim2.new(0, 14, 0, 12)
+    StatusDot.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+    StatusDot.BorderSizePixel = 0
+    Instance.new("UICorner", StatusDot).CornerRadius = UDim.new(1, 0)
+
+    local DotGlow = Instance.new("UIStroke", StatusDot)
+    DotGlow.Thickness = 3
+    DotGlow.Color = Color3.fromRGB(255, 60, 60)
+    DotGlow.Transparency = 0.3
+
+    local rgbConnection = nil
+    local function StartRgbGlow()
+        if rgbConnection then rgbConnection:Disconnect() end
+        rgbConnection = RunService.Heartbeat:Connect(function()
+            local hue = (tick() * 0.5) % 1
+            local color = Color3.fromHSV(hue, 1, 1)
+            DotGlow.Color = color
+        end)
+    end
+
+    local function SetDotRed()
+        if rgbConnection then rgbConnection:Disconnect() rgbConnection = nil end
+        StatusDot.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+        DotGlow.Color = Color3.fromRGB(255, 60, 60)
+        DotGlow.Transparency = 0.3
+    end
+
+    local function SetDotGreen()
+        if rgbConnection then rgbConnection:Disconnect() rgbConnection = nil end
+        TweenService:Create(StatusDot, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(50, 255, 100)}):Play()
+        TweenService:Create(DotGlow, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {Color = Color3.fromRGB(50, 255, 100), Transparency = 0.15}):Play()
+    end
+
+    StartRgbGlow()
 
     local KeyTitle = Instance.new("TextLabel", KeyFrame)
-    KeyTitle.Size = UDim2.new(1, -25, 0, 22)
-    KeyTitle.Position = UDim2.new(0, 12, 0, 8)
+    KeyTitle.Size = UDim2.new(1, 0, 0, 28)
+    KeyTitle.Position = UDim2.new(0, 0, 0, 6)
     KeyTitle.Text = "META"
     KeyTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-    KeyTitle.TextSize = 16
+    KeyTitle.TextSize = 20
     KeyTitle.Font = Enum.Font.GothamBold
-    KeyTitle.TextXAlignment = Enum.TextXAlignment.Left
+    KeyTitle.TextXAlignment = Enum.TextXAlignment.Center
     KeyTitle.BackgroundTransparency = 1
 
-    local KeyBeta = Instance.new("TextLabel", KeyFrame)
-    KeyBeta.Size = UDim2.new(0, 40, 0, 15)
-    KeyBeta.Position = UDim2.new(0, 50, 0, 11)
-    KeyBeta.Text = "beta"
-    KeyBeta.TextColor3 = Color3.fromRGB(120, 120, 120)
-    KeyBeta.TextSize = 10
-    KeyBeta.Font = Enum.Font.Gotham
-    KeyBeta.TextXAlignment = Enum.TextXAlignment.Left
-    KeyBeta.BackgroundTransparency = 1
-
     local TextBox = Instance.new("TextBox", KeyFrame)
-    TextBox.Size = UDim2.new(1, -25, 0, 32)
-    TextBox.Position = UDim2.new(0, 12, 0, 45)
-    TextBox.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
-    TextBox.BackgroundTransparency = 0.5
-    TextBox.TextColor3 = Color3.fromRGB(209, 213, 219)
-    TextBox.PlaceholderText = "Введите промокод и нажмите Enter/Готово..."
-    TextBox.PlaceholderColor3 = Color3.fromRGB(113, 113, 122)
+    TextBox.Size = UDim2.new(1, -30, 0, 36)
+    TextBox.Position = UDim2.new(0, 15, 0, 55)
+    TextBox.BackgroundColor3 = Color3.fromRGB(35, 40, 52)
+    TextBox.BackgroundTransparency = 0.3
+    TextBox.TextColor3 = Color3.fromRGB(220, 225, 235)
+    TextBox.PlaceholderText = "Enter key and press Enter..."
+    TextBox.PlaceholderColor3 = Color3.fromRGB(130, 140, 155)
     TextBox.Text = ""
-    TextBox.TextSize = 12
+    TextBox.TextSize = 13
     TextBox.Font = Enum.Font.Gotham
-    Instance.new("UICorner", TextBox).CornerRadius = UDim.new(0, 6)
+    Instance.new("UICorner", TextBox).CornerRadius = UDim.new(0, 8)
     local TextBoxStroke = Instance.new("UIStroke", TextBox)
     TextBoxStroke.Thickness = 1
     TextBoxStroke.Color = Color3.fromRGB(59, 130, 246)
-    TextBoxStroke.Transparency = 0.6
+    TextBoxStroke.Transparency = 0.5
 
     TextBox.FocusLost:Connect(function(enterPressed)
         if not enterPressed then return end
         local text = TextBox.Text
-        if text == "" then TextBox.PlaceholderText = "Поле пустое!" return end
+        if text == "" then TextBox.PlaceholderText = "Field is empty!" return end
         TextBox.Text = ""
-        TextBox.PlaceholderText = "Проверка кода..."
+        TextBox.PlaceholderText = "Checking key..."
         TextBox.PlaceholderColor3 = Color3.fromRGB(255, 255, 255)
         task.wait(0.3)
 
         local dbText, filename = getGistData()
-        if not dbText then TextBox.PlaceholderText = "Ошибка сети!" TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50) return end
+        if not dbText then
+            TextBox.PlaceholderText = "Network error!"
+            TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
+            SetDotRed()
+            return
+        end
 
         for line in string.gmatch(dbText, "[^\r\n]+") do
             local key, p1, p2 = string.match(line, "([^:]+):([^:]+):?([^:]*)")
@@ -151,12 +181,14 @@ if not isActivated then
                 elseif p1 == "used" then
                     local expireTime = tonumber(p2) or 0
                     if os.time() > expireTime then
-                        TextBox.PlaceholderText = "Срок действия кода истек!"
+                        TextBox.PlaceholderText = "Key expired!"
                         TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
+                        SetDotRed()
                         return
                     else
-                        TextBox.PlaceholderText = "Код уже активирован другим!"
+                        TextBox.PlaceholderText = "Key already used!"
                         TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
+                        SetDotRed()
                         return
                     end
                 end
@@ -164,9 +196,10 @@ if not isActivated then
         end
 
         if isActivated then
-            TextBox.PlaceholderText = "Успешно!"
+            TextBox.PlaceholderText = "Success!"
             TextBox.PlaceholderColor3 = Color3.fromRGB(0, 255, 0)
-            TweenService:Create(KeyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Position = UDim2.new(0.5, -150, 0.4, 150)}):Play()
+            SetDotGreen()
+            TweenService:Create(KeyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Position = UDim2.new(0.5, -180, 0.4, 150)}):Play()
             TweenService:Create(KeyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
             for _, child in pairs(KeyFrame:GetDescendants()) do
                 if child:IsA("TextLabel") or child:IsA("TextBox") or child:IsA("UIStroke") then
@@ -176,8 +209,9 @@ if not isActivated then
             task.wait(0.5)
             KeyScreenGui:Destroy()
         else
-            TextBox.PlaceholderText = "Неверный промокод!"
+            TextBox.PlaceholderText = "Invalid key!"
             TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
+            SetDotRed()
         end
     end)
 
@@ -608,7 +642,7 @@ task.spawn(function()
     end
 end)
 
--- SKELETON ESP (С ПРОВЕРКОЙ ЗДОРОВЬЯ)
+-- SKELETON ESP
 local SkeletonLines = {}
 local SkeletonEnemiesList = {}
 local SkeletonCacheTime = 0
@@ -755,44 +789,31 @@ SkeletonConnection = RunService.RenderStepped:Connect(function()
         local rightLowerLeg = char:FindFirstChild("RightLowerLeg")
         local rightFoot = char:FindFirstChild("RightFoot")
 
-        local leftUpperArmPos = leftUpperArm and GetSkeletonPos(leftUpperArm) or nil
-        local leftLowerArmPos = leftLowerArm and GetSkeletonPos(leftLowerArm) or nil
-        local leftHandPos = leftHand and GetSkeletonPos(leftHand) or nil
-        local rightUpperArmPos = rightUpperArm and GetSkeletonPos(rightUpperArm) or nil
-        local rightLowerArmPos = rightLowerArm and GetSkeletonPos(rightLowerArm) or nil
-        local rightHandPos = rightHand and GetSkeletonPos(rightHand) or nil
-        local leftUpperLegPos = leftUpperLeg and GetSkeletonPos(leftUpperLeg) or nil
-        local leftLowerLegPos = leftLowerLeg and GetSkeletonPos(leftLowerLeg) or nil
-        local leftFootPos = leftFoot and GetSkeletonPos(leftFoot) or nil
-        local rightUpperLegPos = rightUpperLeg and GetSkeletonPos(rightUpperLeg) or nil
-        local rightLowerLegPos = rightLowerLeg and GetSkeletonPos(rightLowerLeg) or nil
-        local rightFootPos = rightFoot and GetSkeletonPos(rightFoot) or nil
-
         setLine(headPos, upperTorsoPos, true)
         setLine(upperTorsoPos, lowerTorsoPos, lowerTorsoPos ~= nil)
         setLine(upperTorsoPos, hrpPos, hrpPos ~= nil)
-        setLine(upperTorsoPos, leftUpperArmPos, leftUpperArmPos ~= nil)
-        setLine(leftUpperArmPos, leftLowerArmPos, leftUpperArmPos ~= nil and leftLowerArmPos ~= nil)
-        setLine(leftLowerArmPos, leftHandPos, leftLowerArmPos ~= nil and leftHandPos ~= nil)
-        setLine(upperTorsoPos, rightUpperArmPos, rightUpperArmPos ~= nil)
-        setLine(rightUpperArmPos, rightLowerArmPos, rightUpperArmPos ~= nil and rightLowerArmPos ~= nil)
-        setLine(rightLowerArmPos, rightHandPos, rightLowerArmPos ~= nil and rightHandPos ~= nil)
+        setLine(upperTorsoPos, leftUpperArm and GetSkeletonPos(leftUpperArm), leftUpperArm ~= nil)
+        setLine(leftUpperArm and GetSkeletonPos(leftUpperArm), leftLowerArm and GetSkeletonPos(leftLowerArm), leftUpperArm ~= nil and leftLowerArm ~= nil)
+        setLine(leftLowerArm and GetSkeletonPos(leftLowerArm), leftHand and GetSkeletonPos(leftHand), leftLowerArm ~= nil and leftHand ~= nil)
+        setLine(upperTorsoPos, rightUpperArm and GetSkeletonPos(rightUpperArm), rightUpperArm ~= nil)
+        setLine(rightUpperArm and GetSkeletonPos(rightUpperArm), rightLowerArm and GetSkeletonPos(rightLowerArm), rightUpperArm ~= nil and rightLowerArm ~= nil)
+        setLine(rightLowerArm and GetSkeletonPos(rightLowerArm), rightHand and GetSkeletonPos(rightHand), rightLowerArm ~= nil and rightHand ~= nil)
 
         if lowerTorsoPos then
-            setLine(lowerTorsoPos, leftUpperLegPos, leftUpperLegPos ~= nil)
-            setLine(lowerTorsoPos, rightUpperLegPos, rightUpperLegPos ~= nil)
+            setLine(lowerTorsoPos, leftUpperLeg and GetSkeletonPos(leftUpperLeg), leftUpperLeg ~= nil)
+            setLine(lowerTorsoPos, rightUpperLeg and GetSkeletonPos(rightUpperLeg), rightUpperLeg ~= nil)
         elseif hrpPos then
-            setLine(hrpPos, leftUpperLegPos, leftUpperLegPos ~= nil)
-            setLine(hrpPos, rightUpperLegPos, rightUpperLegPos ~= nil)
+            setLine(hrpPos, leftUpperLeg and GetSkeletonPos(leftUpperLeg), leftUpperLeg ~= nil)
+            setLine(hrpPos, rightUpperLeg and GetSkeletonPos(rightUpperLeg), rightUpperLeg ~= nil)
         else
-            setLine(upperTorsoPos, leftUpperLegPos, leftUpperLegPos ~= nil)
-            setLine(upperTorsoPos, rightUpperLegPos, rightUpperLegPos ~= nil)
+            setLine(upperTorsoPos, leftUpperLeg and GetSkeletonPos(leftUpperLeg), leftUpperLeg ~= nil)
+            setLine(upperTorsoPos, rightUpperLeg and GetSkeletonPos(rightUpperLeg), rightUpperLeg ~= nil)
         end
 
-        setLine(leftUpperLegPos, leftLowerLegPos, leftUpperLegPos ~= nil and leftLowerLegPos ~= nil)
-        setLine(rightUpperLegPos, rightLowerLegPos, rightUpperLegPos ~= nil and rightLowerLegPos ~= nil)
-        setLine(leftLowerLegPos, leftFootPos, leftLowerLegPos ~= nil and leftFootPos ~= nil)
-        setLine(rightLowerLegPos, rightFootPos, rightLowerLegPos ~= nil and rightFootPos ~= nil)
+        setLine(leftUpperLeg and GetSkeletonPos(leftUpperLeg), leftLowerLeg and GetSkeletonPos(leftLowerLeg), leftUpperLeg ~= nil and leftLowerLeg ~= nil)
+        setLine(rightUpperLeg and GetSkeletonPos(rightUpperLeg), rightLowerLeg and GetSkeletonPos(rightLowerLeg), rightUpperLeg ~= nil and rightLowerLeg ~= nil)
+        setLine(leftLowerLeg and GetSkeletonPos(leftLowerLeg), leftFoot and GetSkeletonPos(leftFoot), leftLowerLeg ~= nil and leftFoot ~= nil)
+        setLine(rightLowerLeg and GetSkeletonPos(rightLowerLeg), rightFoot and GetSkeletonPos(rightFoot), rightLowerLeg ~= nil and rightFoot ~= nil)
 
         while idx <= #lines do
             lines[idx].Visible = false
@@ -2200,5 +2221,5 @@ task.spawn(function()
     ShowAchievement()
 end)
 
-print("[META] META v7.0.61 - Key System + Auto Login")
+print("[META] META v7.0.62 - Key System + RGB Dot")
 print("[META] Press Insert or click icon")
