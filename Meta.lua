@@ -1,4 +1,4 @@
--- ROCKET::META_UI_V7.0.49 FINAL
+-- ROCKET::META_UI_V7.0.53 FINAL
 
 local function SetupAntiCheatBypass()
     pcall(function()
@@ -429,9 +429,9 @@ task.spawn(function()
     end
 end)
 
--- SKELETON ESP
+-- SKELETON ESP (ВСТРОЕННЫЙ)
 local SkeletonLines = {}
-local SkeletonEnemies = {}
+local SkeletonEnemiesList = {}
 local SkeletonCacheTime = 0
 local SkeletonConnection = nil
 
@@ -451,7 +451,7 @@ local function GetSkeletonPos(part)
     return nil
 end
 
-local function RemoveSkeletonLines(target)
+local function RemoveSkeletonData(target)
     local data = SkeletonLines[target]
     if data then
         pcall(function()
@@ -467,21 +467,21 @@ end
 local function UpdateSkeletonEnemies()
     if tick() - SkeletonCacheTime < 0.5 then return end
     SkeletonCacheTime = tick()
-    SkeletonEnemies = {}
+    SkeletonEnemiesList = {}
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character.Parent then
             if IsEnemy(player) then
                 local humanoid = player.Character:FindFirstChild("Humanoid")
                 if humanoid and humanoid.Health > 0 then
-                    SkeletonEnemies[player] = {char = player.Character}
+                    SkeletonEnemiesList[player] = {char = player.Character}
                 else
-                    RemoveSkeletonLines(player)
+                    RemoveSkeletonData(player)
                 end
             else
-                RemoveSkeletonLines(player)
+                RemoveSkeletonData(player)
             end
         else
-            RemoveSkeletonLines(player)
+            RemoveSkeletonData(player)
         end
     end
 end
@@ -496,9 +496,9 @@ SkeletonConnection = RunService.RenderStepped:Connect(function()
 
     UpdateSkeletonEnemies()
 
-    for player, data in pairs(SkeletonEnemies) do
+    for player, data in pairs(SkeletonEnemiesList) do
         if not player or not player.Character or not player.Character.Parent then
-            RemoveSkeletonLines(player)
+            RemoveSkeletonData(player)
             continue
         end
 
@@ -509,7 +509,7 @@ SkeletonConnection = RunService.RenderStepped:Connect(function()
         local hrp = char:FindFirstChild("HumanoidRootPart")
 
         if not head or not upperTorso then
-            RemoveSkeletonLines(player)
+            RemoveSkeletonData(player)
             continue
         end
 
@@ -519,7 +519,7 @@ SkeletonConnection = RunService.RenderStepped:Connect(function()
         local hrpPos = GetSkeletonPos(hrp)
 
         if not headPos or not upperTorsoPos then
-            RemoveSkeletonLines(player)
+            RemoveSkeletonData(player)
             continue
         end
 
@@ -544,31 +544,18 @@ SkeletonConnection = RunService.RenderStepped:Connect(function()
             idx = idx + 1
         end
 
-        local leftUpperArm = char:FindFirstChild("LeftUpperArm")
-        local leftLowerArm = char:FindFirstChild("LeftLowerArm")
-        local leftHand = char:FindFirstChild("LeftHand")
-        local rightUpperArm = char:FindFirstChild("RightUpperArm")
-        local rightLowerArm = char:FindFirstChild("RightLowerArm")
-        local rightHand = char:FindFirstChild("RightHand")
-        local leftUpperLeg = char:FindFirstChild("LeftUpperLeg")
-        local leftLowerLeg = char:FindFirstChild("LeftLowerLeg")
-        local leftFoot = char:FindFirstChild("LeftFoot")
-        local rightUpperLeg = char:FindFirstChild("RightUpperLeg")
-        local rightLowerLeg = char:FindFirstChild("RightLowerLeg")
-        local rightFoot = char:FindFirstChild("RightFoot")
-
-        local leftUpperArmPos = GetSkeletonPos(leftUpperArm)
-        local leftLowerArmPos = GetSkeletonPos(leftLowerArm)
-        local leftHandPos = GetSkeletonPos(leftHand)
-        local rightUpperArmPos = GetSkeletonPos(rightUpperArm)
-        local rightLowerArmPos = GetSkeletonPos(rightLowerArm)
-        local rightHandPos = GetSkeletonPos(rightHand)
-        local leftUpperLegPos = GetSkeletonPos(leftUpperLeg)
-        local leftLowerLegPos = GetSkeletonPos(leftLowerLeg)
-        local leftFootPos = GetSkeletonPos(leftFoot)
-        local rightUpperLegPos = GetSkeletonPos(rightUpperLeg)
-        local rightLowerLegPos = GetSkeletonPos(rightLowerLeg)
-        local rightFootPos = GetSkeletonPos(rightFoot)
+        local leftUpperArmPos = GetSkeletonPos(char:FindFirstChild("LeftUpperArm"))
+        local leftLowerArmPos = GetSkeletonPos(char:FindFirstChild("LeftLowerArm"))
+        local leftHandPos = GetSkeletonPos(char:FindFirstChild("LeftHand"))
+        local rightUpperArmPos = GetSkeletonPos(char:FindFirstChild("RightUpperArm"))
+        local rightLowerArmPos = GetSkeletonPos(char:FindFirstChild("RightLowerArm"))
+        local rightHandPos = GetSkeletonPos(char:FindFirstChild("RightHand"))
+        local leftUpperLegPos = GetSkeletonPos(char:FindFirstChild("LeftUpperLeg"))
+        local leftLowerLegPos = GetSkeletonPos(char:FindFirstChild("LeftLowerLeg"))
+        local leftFootPos = GetSkeletonPos(char:FindFirstChild("LeftFoot"))
+        local rightUpperLegPos = GetSkeletonPos(char:FindFirstChild("RightUpperLeg"))
+        local rightLowerLegPos = GetSkeletonPos(char:FindFirstChild("RightLowerLeg"))
+        local rightFootPos = GetSkeletonPos(char:FindFirstChild("RightFoot"))
 
         setLine(headPos, upperTorsoPos, true)
         setLine(upperTorsoPos, lowerTorsoPos, lowerTorsoPos ~= nil)
@@ -603,7 +590,7 @@ SkeletonConnection = RunService.RenderStepped:Connect(function()
     end
 
     for player, _ in pairs(SkeletonLines) do
-        if not SkeletonEnemies[player] then RemoveSkeletonLines(player) end
+        if not SkeletonEnemiesList[player] then RemoveSkeletonData(player) end
     end
 end)
 
@@ -613,15 +600,15 @@ end
 
 local function RemoveSkeleton()
     _G.SkeletonEnabled = false
-    for player, _ in pairs(SkeletonLines) do RemoveSkeletonLines(player) end
-    SkeletonEnemies = {}
+    for player, _ in pairs(SkeletonLines) do RemoveSkeletonData(player) end
+    SkeletonEnemiesList = {}
 end
 
--- HEALTH BAR ESP
+-- HEALTH BAR ESP (ВСТРОЕННЫЙ)
 local HealthBars = {}
-local HealthEnemies = {}
+local HealthEnemiesList = {}
 local HealthCacheTime = 0
-local HealthHistory = {}
+local HealthHistoryData = {}
 local HealthConnection = nil
 
 local function CreateHealthBar()
@@ -629,41 +616,44 @@ local function CreateHealthBar()
     bg.Thickness = 0
     bg.Filled = true
     bg.Visible = false
-    bg.Color = Color3.fromRGB(20, 22, 30)
-    bg.Transparency = 0.5
+    bg.Color = Color3.fromRGB(15, 17, 25)
+    bg.Transparency = 0.7
     bg.ZIndex = 0
 
     local bar = Drawing.new("Square")
     bar.Thickness = 0
     bar.Filled = true
     bar.Visible = false
-    bar.Transparency = 0.35
+    bar.Transparency = 0.85
     bar.ZIndex = 1
 
     local border = Drawing.new("Square")
-    border.Thickness = 1
+    border.Thickness = 1.2
     border.Filled = false
     border.Visible = false
-    border.Color = Color3.fromRGB(50, 55, 70)
-    border.Transparency = 0.4
+    border.Color = Color3.fromRGB(80, 90, 120)
+    border.Transparency = 0.5
     border.ZIndex = 2
 
     return {Bg = bg, Bar = bar, Border = border}
 end
 
-local function GetPlayerHealth(char)
-    if not char then return nil, nil end
-    local humanoid = char:FindFirstChild("Humanoid")
+local function GetHealthValue(character)
+    if not character then return nil, nil end
+    local humanoid = character:FindFirstChild("Humanoid")
     if humanoid and humanoid.Health and humanoid.MaxHealth then
         if humanoid.Health > 0 then return humanoid.Health, humanoid.MaxHealth end
         return nil, nil
     end
+    local healthAttr = character:GetAttribute("Health")
+    local maxHealthAttr = character:GetAttribute("MaxHealth")
+    if healthAttr and maxHealthAttr and healthAttr > 0 then return healthAttr, maxHealthAttr end
     return nil, nil
 end
 
-local function GetHealthColor(hp, maxHp, prevHp)
-    local percent = hp / maxHp
-    local isDamaged = prevHp and prevHp > hp and (prevHp - hp) > 5
+local function GetHealthBarColor(health, maxHealth, prevHealth)
+    local percent = health / maxHealth
+    local isDamaged = prevHealth and prevHealth > health and (prevHealth - health) > 5
     if isDamaged then return Color3.fromRGB(255, 255, 255) end
     if percent <= 0.20 then return Color3.fromRGB(255, 50, 50)
     elseif percent <= 0.40 then return Color3.fromRGB(255, 170, 50)
@@ -685,19 +675,19 @@ local function RemoveHealthBarData(target)
         end)
         HealthBars[target] = nil
     end
-    HealthHistory[target] = nil
+    HealthHistoryData[target] = nil
 end
 
-local function UpdateHealthEnemies()
+local function UpdateHealthEnemiesList()
     if tick() - HealthCacheTime < 0.5 then return end
     HealthCacheTime = tick()
-    HealthEnemies = {}
+    HealthEnemiesList = {}
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character.Parent then
             if IsEnemy(player) then
-                local hp, maxHp = GetPlayerHealth(player.Character)
-                if hp and hp > 0 then
-                    HealthEnemies[player] = {char = player.Character, hp = hp, maxHp = maxHp}
+                local health, maxHealth = GetHealthValue(player.Character)
+                if health and health > 0 then
+                    HealthEnemiesList[player] = {char = player.Character, health = health, maxHealth = maxHealth}
                 else
                     RemoveHealthBarData(player)
                 end
@@ -720,23 +710,23 @@ HealthConnection = RunService.RenderStepped:Connect(function()
         return
     end
 
-    UpdateHealthEnemies()
+    UpdateHealthEnemiesList()
 
-    for player, data in pairs(HealthEnemies) do
+    for player, data in pairs(HealthEnemiesList) do
         if not player or not player.Character or not player.Character.Parent then
             RemoveHealthBarData(player)
             continue
         end
 
         local char = player.Character
-        local hp, maxHp = GetPlayerHealth(char)
-        if not hp or hp <= 0 then
+        local health, maxHealth = GetHealthValue(char)
+        if not health or health <= 0 then
             RemoveHealthBarData(player)
             continue
         end
 
-        local prevHp = HealthHistory[player]
-        HealthHistory[player] = hp
+        local prevHealth = HealthHistoryData[player]
+        HealthHistoryData[player] = health
 
         local head = char:FindFirstChild("Head")
         if not head then
@@ -749,7 +739,7 @@ HealthConnection = RunService.RenderStepped:Connect(function()
 
         if headVis and headPos.Z > 0 and distance <= 1000 then
             local barWidth = 50
-            local barHeight = 6
+            local barHeight = 5
             local scale = 1 / (headPos.Z * 0.015 + 0.5)
             if scale > 1.5 then scale = 1.5 end
             if scale < 0.4 then scale = 0.4 end
@@ -767,34 +757,34 @@ HealthConnection = RunService.RenderStepped:Connect(function()
             if not HealthBars[player] then HealthBars[player] = CreateHealthBar() end
 
             local barData = HealthBars[player]
-            local hpPercent = hp / maxHp
+            local hpPercent = health / maxHealth
             local filledWidth = finalWidth * hpPercent
 
             barData.Bg.Size = Vector2.new(finalWidth, finalHeight)
             barData.Bg.Position = Vector2.new(barX, barY)
             barData.Bg.Visible = true
-            barData.Bg.Transparency = 0.5
-            barData.Bg.Color = Color3.fromRGB(20, 22, 30)
+            barData.Bg.Transparency = 0.7
+            barData.Bg.Color = Color3.fromRGB(15, 17, 25)
             barData.Bg.Thickness = 0
 
             barData.Bar.Size = Vector2.new(math.max(filledWidth, 0.5), finalHeight)
             barData.Bar.Position = Vector2.new(barX, barY)
             barData.Bar.Visible = true
-            barData.Bar.Transparency = 0.35
+            barData.Bar.Transparency = 0.85
             barData.Bar.Thickness = 0
-            barData.Bar.Color = GetHealthColor(hp, maxHp, prevHp)
+            barData.Bar.Color = GetHealthBarColor(health, maxHealth, prevHealth)
 
-            if prevHp and prevHp > hp and (prevHp - hp) > 5 then
+            if prevHealth and prevHealth > health and (prevHealth - health) > 5 then
                 barData.Bar.Color = Color3.fromRGB(255, 255, 255)
-                barData.Bar.Transparency = 0.5
+                barData.Bar.Transparency = 0.7
             end
 
             barData.Border.Size = Vector2.new(finalWidth, finalHeight)
             barData.Border.Position = Vector2.new(barX, barY)
             barData.Border.Visible = true
-            barData.Border.Transparency = 0.4
-            barData.Border.Color = Color3.fromRGB(50, 55, 70)
-            barData.Border.Thickness = 0.5
+            barData.Border.Transparency = 0.5
+            barData.Border.Color = Color3.fromRGB(80, 90, 120)
+            barData.Border.Thickness = 1.2
         else
             if HealthBars[player] then
                 HealthBars[player].Bg.Visible = false
@@ -805,7 +795,7 @@ HealthConnection = RunService.RenderStepped:Connect(function()
     end
 
     for player, _ in pairs(HealthBars) do
-        if not HealthEnemies[player] then RemoveHealthBarData(player) end
+        if not HealthEnemiesList[player] then RemoveHealthBarData(player) end
     end
 end)
 
@@ -816,9 +806,597 @@ end
 local function RemoveHealthBar()
     _G.HealthBarEnabled = false
     for player, _ in pairs(HealthBars) do RemoveHealthBarData(player) end
-    HealthEnemies = {}
-    HealthHistory = {}
+    HealthEnemiesList = {}
+    HealthHistoryData = {}
 end
 
--- ДАЛЕЕ ВЕСЬ ОСТАЛЬНОЙ КОД UI (вкладки, настройки, иконка, очивка)
--- Этот код идентичен предыдущему, без изменений
+-- UI: INDICATOR, TABS, SEARCH
+local IndicatorLine = nil
+local IndicatorColor = _G.MenuThemeColor
+
+local function CreateIndicatorLine()
+    if IndicatorLine then IndicatorLine:Destroy() end
+    IndicatorLine = Instance.new("Frame")
+    IndicatorLine.Name = "SelectionIndicator"
+    IndicatorLine.Size = UDim2.new(0.12, 0, 0, 2)
+    IndicatorLine.Position = UDim2.new(0.02, 0, 1, -2)
+    IndicatorLine.BackgroundColor3 = IndicatorColor
+    IndicatorLine.BorderSizePixel = 0
+    IndicatorLine.Parent = TabContainer
+    IndicatorLine.ZIndex = 10
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(1, 0)
+    corner.Parent = IndicatorLine
+end
+
+local function UpdateIndicatorPosition(index)
+    if not IndicatorLine then return end
+    local width = 0.12
+    local xPos = 0.02 + (index - 1) * (width + 0.03)
+    TweenService:Create(IndicatorLine, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(xPos, 0, 1, -2), Size = UDim2.new(width + 0.02, 0, 0, 2)}):Play()
+end
+
+local function UpdateIndicatorColor(color)
+    IndicatorColor = color
+    if IndicatorLine then
+        TweenService:Create(IndicatorLine, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = color}):Play()
+    end
+end
+
+local function SwitchToTab(index)
+    if index < 1 or index > #TabButtons then return end
+    for i, b in ipairs(TabButtons) do
+        b.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
+        b.TextColor3 = Color3.fromRGB(156, 163, 175)
+        TweenService:Create(b, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0.12, 0, 0, 32)}):Play()
+    end
+    local btn = TabButtons[index]
+    btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TweenService:Create(btn, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0.14, 0, 0, 36)}):Play()
+    for name, page in pairs(ContentPages) do page.Visible = false end
+    local targetPage = ContentPages[TabNames[index]]
+    if targetPage then targetPage.Visible = true end
+    activeIndex = index
+    UpdateIndicatorPosition(index)
+end
+
+local function SearchInMenu(query)
+    query = string.lower(query)
+    if not ContentPages then return end
+    local foundElements = {}
+    local foundTabName = nil
+    for tabName, page in pairs(ContentPages) do
+        if page then
+            local function scanChildren(parent)
+                for _, child in ipairs(parent:GetChildren()) do
+                    if child:IsA("TextLabel") or child:IsA("TextButton") then
+                        local text = string.lower(child.Text)
+                        if text ~= "" and string.find(text, query) then
+                            table.insert(foundElements, {element = child, tab = tabName})
+                            if not foundTabName then foundTabName = tabName end
+                        end
+                    end
+                    if child:IsA("Frame") then scanChildren(child) end
+                end
+            end
+            scanChildren(page)
+        end
+    end
+    if #foundElements > 0 and foundTabName then
+        for idx, tabName in ipairs(TabNames) do
+            if tabName == foundTabName then SwitchToTab(idx) break end
+        end
+    end
+end
+
+local function UpdateTabsLanguage()
+    local lang = GetLang()
+    for i, btn in ipairs(TabButtons) do btn.Text = lang.Tabs[i] end
+end
+
+local function UpdateAllTexts()
+    UpdateTabsLanguage()
+    for _, cb in ipairs(langUpdateCallbacks) do pcall(cb) end
+end
+
+for i, name in ipairs(TabNames) do
+    local btn = Instance.new("TextButton")
+    btn.Name = "Tab" .. i
+    local width = 0.12
+    btn.Size = UDim2.new(width, 0, 0, 32)
+    btn.Position = UDim2.new(0.02 + (i-1) * (width + 0.03), 0, 0.15, 0)
+    btn.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
+    btn.Text = name
+    btn.TextColor3 = Color3.fromRGB(156, 163, 175)
+    btn.TextSize = 14
+    btn.Font = Enum.Font.GothamBold
+    btn.AutoButtonColor = false
+    btn.Parent = TabContainer
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 6)
+    btnCorner.Parent = btn
+    if i == 1 then
+        btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
+        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        btn.Size = UDim2.new(width + 0.02, 0, 0, 36)
+    end
+    btn.MouseEnter:Connect(function()
+        if activeIndex ~= i then btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50) btn.TextColor3 = Color3.fromRGB(255, 255, 255) end
+    end)
+    btn.MouseLeave:Connect(function()
+        if activeIndex ~= i then btn.BackgroundColor3 = Color3.fromRGB(26, 30, 38) btn.TextColor3 = Color3.fromRGB(156, 163, 175) end
+    end)
+    btn.MouseButton1Click:Connect(function() PlayTabSound() SwitchToTab(i) end)
+    table.insert(TabButtons, btn)
+    local page = Instance.new("ScrollingFrame")
+    page.Name = "Content" .. i
+    page.Size = UDim2.new(1, -20, 1, -96)
+    page.Position = UDim2.new(0, 10, 0, 87)
+    page.BackgroundTransparency = 1
+    page.BorderSizePixel = 0
+    page.CanvasSize = UDim2.new(0, 0, 0, 0)
+    page.ScrollBarThickness = 4
+    page.Visible = (i == 1)
+    page.ZIndex = 5
+    page.Parent = MainFrame
+    ContentPages[name] = page
+end
+
+CreateIndicatorLine()
+UpdateIndicatorPosition(1)
+
+SearchInput.FocusLost:Connect(function(enterPressed)
+    if enterPressed and SearchInput.Text ~= "" and SearchInput.Text ~= "Search..." then
+        SearchInMenu(SearchInput.Text)
+        PlayClickSound()
+        SearchInput.Text = "Search..."
+    end
+end)
+
+-- VISUALS PAGE
+local visualsPage = ContentPages["Visuals"]
+if visualsPage then
+    visualsPage.CanvasSize = UDim2.new(0, 0, 0, 350)
+
+    -- CHAMS TOGGLE
+    local chamsFrame = Instance.new("Frame")
+    chamsFrame.Size = UDim2.new(1, 0, 0, 45)
+    chamsFrame.Position = UDim2.new(0, 0, 0, 10)
+    chamsFrame.BackgroundTransparency = 1
+    chamsFrame.Parent = visualsPage
+    local chamsLabel = Instance.new("TextLabel")
+    chamsLabel.Size = UDim2.new(0.6, 0, 0, 20)
+    chamsLabel.BackgroundTransparency = 1
+    chamsLabel.Text = "Chams"
+    chamsLabel.TextColor3 = Color3.fromRGB(209, 213, 219)
+    chamsLabel.TextSize = 13
+    chamsLabel.Font = Enum.Font.GothamBold
+    chamsLabel.TextXAlignment = Enum.TextXAlignment.Left
+    chamsLabel.Parent = chamsFrame
+    local chamsDesc = Instance.new("TextLabel")
+    chamsDesc.Size = UDim2.new(0.7, 0, 0, 16)
+    chamsDesc.Position = UDim2.new(0, 0, 0, 22)
+    chamsDesc.BackgroundTransparency = 1
+    chamsDesc.Text = "Makes enemies purple"
+    chamsDesc.TextColor3 = Color3.fromRGB(113, 113, 122)
+    chamsDesc.TextSize = 11
+    chamsDesc.Font = Enum.Font.Gotham
+    chamsDesc.TextXAlignment = Enum.TextXAlignment.Left
+    chamsDesc.Parent = chamsFrame
+    local chamsToggleBg = Instance.new("Frame")
+    chamsToggleBg.Size = UDim2.new(0, 44, 0, 24)
+    chamsToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
+    chamsToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
+    chamsToggleBg.BorderSizePixel = 0
+    chamsToggleBg.Parent = chamsFrame
+    local chamsToggleCorner = Instance.new("UICorner")
+    chamsToggleCorner.CornerRadius = UDim.new(1, 0)
+    chamsToggleCorner.Parent = chamsToggleBg
+    local chamsHandle = Instance.new("Frame")
+    chamsHandle.Size = UDim2.new(0, 18, 0, 18)
+    chamsHandle.Position = UDim2.new(0, 3, 0.5, -9)
+    chamsHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    chamsHandle.BorderSizePixel = 0
+    chamsHandle.Parent = chamsToggleBg
+    local chamsHandleCorner = Instance.new("UICorner")
+    chamsHandleCorner.CornerRadius = UDim.new(1, 0)
+    chamsHandleCorner.Parent = chamsHandle
+    local chamsClickArea = Instance.new("TextButton")
+    chamsClickArea.Size = UDim2.new(0, 44, 0, 24)
+    chamsClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
+    chamsClickArea.BackgroundTransparency = 1
+    chamsClickArea.Text = ""
+    chamsClickArea.ZIndex = 10
+    chamsClickArea.Parent = chamsFrame
+    SetChamsToggleState = function(value)
+        if value then
+            TweenService:Create(chamsToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
+            TweenService:Create(chamsHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 23, 0.5, -9)}):Play()
+            ApplyChams()
+        else
+            TweenService:Create(chamsToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(42, 47, 58)}):Play()
+            TweenService:Create(chamsHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 3, 0.5, -9)}):Play()
+            RemoveChams()
+        end
+        _G.ChamsEnabled = value
+    end
+    SetChamsToggleState(_G.ChamsEnabled)
+    chamsClickArea.MouseButton1Click:Connect(function() PlayClickSound() SetChamsToggleState(not _G.ChamsEnabled) end)
+    local function UpdateChamsText()
+        local lang = GetLang()
+        chamsLabel.Text = lang.Toggles.Chams[1]
+        chamsDesc.Text = lang.Toggles.Chams[2]
+    end
+    table.insert(langUpdateCallbacks, UpdateChamsText)
+
+    -- ESP TOGGLE
+    local espFrame = Instance.new("Frame")
+    espFrame.Size = UDim2.new(1, 0, 0, 45)
+    espFrame.Position = UDim2.new(0, 0, 0, 65)
+    espFrame.BackgroundTransparency = 1
+    espFrame.Parent = visualsPage
+    local espLabel = Instance.new("TextLabel")
+    espLabel.Size = UDim2.new(0.6, 0, 0, 20)
+    espLabel.BackgroundTransparency = 1
+    espLabel.Text = "Tracers and 3D Box"
+    espLabel.TextColor3 = Color3.fromRGB(209, 213, 219)
+    espLabel.TextSize = 13
+    espLabel.Font = Enum.Font.GothamBold
+    espLabel.TextXAlignment = Enum.TextXAlignment.Left
+    espLabel.Parent = espFrame
+    local espDesc = Instance.new("TextLabel")
+    espDesc.Size = UDim2.new(0.7, 0, 0, 16)
+    espDesc.Position = UDim2.new(0, 0, 0, 22)
+    espDesc.BackgroundTransparency = 1
+    espDesc.Text = "Lines with boxes leading to enemies"
+    espDesc.TextColor3 = Color3.fromRGB(113, 113, 122)
+    espDesc.TextSize = 11
+    espDesc.Font = Enum.Font.Gotham
+    espDesc.TextXAlignment = Enum.TextXAlignment.Left
+    espDesc.Parent = espFrame
+    local espToggleBg = Instance.new("Frame")
+    espToggleBg.Size = UDim2.new(0, 44, 0, 24)
+    espToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
+    espToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
+    espToggleBg.BorderSizePixel = 0
+    espToggleBg.Parent = espFrame
+    local espToggleCorner = Instance.new("UICorner")
+    espToggleCorner.CornerRadius = UDim.new(1, 0)
+    espToggleCorner.Parent = espToggleBg
+    local espHandle = Instance.new("Frame")
+    espHandle.Size = UDim2.new(0, 18, 0, 18)
+    espHandle.Position = UDim2.new(0, 3, 0.5, -9)
+    espHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    espHandle.BorderSizePixel = 0
+    espHandle.Parent = espToggleBg
+    local espHandleCorner = Instance.new("UICorner")
+    espHandleCorner.CornerRadius = UDim.new(1, 0)
+    espHandleCorner.Parent = espHandle
+    local espClickArea = Instance.new("TextButton")
+    espClickArea.Size = UDim2.new(0, 44, 0, 24)
+    espClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
+    espClickArea.BackgroundTransparency = 1
+    espClickArea.Text = ""
+    espClickArea.ZIndex = 10
+    espClickArea.Parent = espFrame
+    SetESPToggleState = function(value)
+        if value then
+            TweenService:Create(espToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
+            TweenService:Create(espHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 23, 0.5, -9)}):Play()
+            ApplyESP()
+        else
+            TweenService:Create(espToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(42, 47, 58)}):Play()
+            TweenService:Create(espHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 3, 0.5, -9)}):Play()
+            RemoveESP()
+        end
+        _G.ESPEnabled = value
+    end
+    SetESPToggleState(_G.ESPEnabled)
+    espClickArea.MouseButton1Click:Connect(function() PlayClickSound() SetESPToggleState(not _G.ESPEnabled) end)
+    local function UpdateESPText()
+        local lang = GetLang()
+        espLabel.Text = lang.Toggles.ESP[1]
+        espDesc.Text = lang.Toggles.ESP[2]
+    end
+    table.insert(langUpdateCallbacks, UpdateESPText)
+
+    -- SKELETON TOGGLE
+    local skeletonFrame = Instance.new("Frame")
+    skeletonFrame.Size = UDim2.new(1, 0, 0, 45)
+    skeletonFrame.Position = UDim2.new(0, 0, 0, 120)
+    skeletonFrame.BackgroundTransparency = 1
+    skeletonFrame.Parent = visualsPage
+    local skeletonLabel = Instance.new("TextLabel")
+    skeletonLabel.Size = UDim2.new(0.6, 0, 0, 20)
+    skeletonLabel.BackgroundTransparency = 1
+    skeletonLabel.Text = "Skeleton"
+    skeletonLabel.TextColor3 = Color3.fromRGB(209, 213, 219)
+    skeletonLabel.TextSize = 13
+    skeletonLabel.Font = Enum.Font.GothamBold
+    skeletonLabel.TextXAlignment = Enum.TextXAlignment.Left
+    skeletonLabel.Parent = skeletonFrame
+    local skeletonDesc = Instance.new("TextLabel")
+    skeletonDesc.Size = UDim2.new(0.7, 0, 0, 16)
+    skeletonDesc.Position = UDim2.new(0, 0, 0, 22)
+    skeletonDesc.BackgroundTransparency = 1
+    skeletonDesc.Text = "Skeleton for enemies"
+    skeletonDesc.TextColor3 = Color3.fromRGB(113, 113, 122)
+    skeletonDesc.TextSize = 11
+    skeletonDesc.Font = Enum.Font.Gotham
+    skeletonDesc.TextXAlignment = Enum.TextXAlignment.Left
+    skeletonDesc.Parent = skeletonFrame
+    local skeletonToggleBg = Instance.new("Frame")
+    skeletonToggleBg.Size = UDim2.new(0, 44, 0, 24)
+    skeletonToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
+    skeletonToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
+    skeletonToggleBg.BorderSizePixel = 0
+    skeletonToggleBg.Parent = skeletonFrame
+    local skeletonToggleCorner = Instance.new("UICorner")
+    skeletonToggleCorner.CornerRadius = UDim.new(1, 0)
+    skeletonToggleCorner.Parent = skeletonToggleBg
+    local skeletonHandle = Instance.new("Frame")
+    skeletonHandle.Size = UDim2.new(0, 18, 0, 18)
+    skeletonHandle.Position = UDim2.new(0, 3, 0.5, -9)
+    skeletonHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    skeletonHandle.BorderSizePixel = 0
+    skeletonHandle.Parent = skeletonToggleBg
+    local skeletonHandleCorner = Instance.new("UICorner")
+    skeletonHandleCorner.CornerRadius = UDim.new(1, 0)
+    skeletonHandleCorner.Parent = skeletonHandle
+    local skeletonClickArea = Instance.new("TextButton")
+    skeletonClickArea.Size = UDim2.new(0, 44, 0, 24)
+    skeletonClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
+    skeletonClickArea.BackgroundTransparency = 1
+    skeletonClickArea.Text = ""
+    skeletonClickArea.ZIndex = 10
+    skeletonClickArea.Parent = skeletonFrame
+    SetSkeletonToggleState = function(value)
+        if value then
+            TweenService:Create(skeletonToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
+            TweenService:Create(skeletonHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 23, 0.5, -9)}):Play()
+            ApplySkeleton()
+        else
+            TweenService:Create(skeletonToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(42, 47, 58)}):Play()
+            TweenService:Create(skeletonHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 3, 0.5, -9)}):Play()
+            RemoveSkeleton()
+        end
+        _G.SkeletonEnabled = value
+    end
+    SetSkeletonToggleState(_G.SkeletonEnabled)
+    skeletonClickArea.MouseButton1Click:Connect(function() PlayClickSound() SetSkeletonToggleState(not _G.SkeletonEnabled) end)
+    local function UpdateSkeletonText()
+        local lang = GetLang()
+        skeletonLabel.Text = lang.Toggles.Skeleton[1]
+        skeletonDesc.Text = lang.Toggles.Skeleton[2]
+    end
+    table.insert(langUpdateCallbacks, UpdateSkeletonText)
+
+    -- HEALTH BAR TOGGLE
+    local healthFrame = Instance.new("Frame")
+    healthFrame.Size = UDim2.new(1, 0, 0, 45)
+    healthFrame.Position = UDim2.new(0, 0, 0, 175)
+    healthFrame.BackgroundTransparency = 1
+    healthFrame.Parent = visualsPage
+    local healthLabel = Instance.new("TextLabel")
+    healthLabel.Size = UDim2.new(0.6, 0, 0, 20)
+    healthLabel.BackgroundTransparency = 1
+    healthLabel.Text = "Health Bar"
+    healthLabel.TextColor3 = Color3.fromRGB(209, 213, 219)
+    healthLabel.TextSize = 13
+    healthLabel.Font = Enum.Font.GothamBold
+    healthLabel.TextXAlignment = Enum.TextXAlignment.Left
+    healthLabel.Parent = healthFrame
+    local healthDesc = Instance.new("TextLabel")
+    healthDesc.Size = UDim2.new(0.7, 0, 0, 16)
+    healthDesc.Position = UDim2.new(0, 0, 0, 22)
+    healthDesc.BackgroundTransparency = 1
+    healthDesc.Text = "Health bar above enemies"
+    healthDesc.TextColor3 = Color3.fromRGB(113, 113, 122)
+    healthDesc.TextSize = 11
+    healthDesc.Font = Enum.Font.Gotham
+    healthDesc.TextXAlignment = Enum.TextXAlignment.Left
+    healthDesc.Parent = healthFrame
+    local healthToggleBg = Instance.new("Frame")
+    healthToggleBg.Size = UDim2.new(0, 44, 0, 24)
+    healthToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
+    healthToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
+    healthToggleBg.BorderSizePixel = 0
+    healthToggleBg.Parent = healthFrame
+    local healthToggleCorner = Instance.new("UICorner")
+    healthToggleCorner.CornerRadius = UDim.new(1, 0)
+    healthToggleCorner.Parent = healthToggleBg
+    local healthHandle = Instance.new("Frame")
+    healthHandle.Size = UDim2.new(0, 18, 0, 18)
+    healthHandle.Position = UDim2.new(0, 3, 0.5, -9)
+    healthHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    healthHandle.BorderSizePixel = 0
+    healthHandle.Parent = healthToggleBg
+    local healthHandleCorner = Instance.new("UICorner")
+    healthHandleCorner.CornerRadius = UDim.new(1, 0)
+    healthHandleCorner.Parent = healthHandle
+    local healthClickArea = Instance.new("TextButton")
+    healthClickArea.Size = UDim2.new(0, 44, 0, 24)
+    healthClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
+    healthClickArea.BackgroundTransparency = 1
+    healthClickArea.Text = ""
+    healthClickArea.ZIndex = 10
+    healthClickArea.Parent = healthFrame
+    SetHealthBarToggleState = function(value)
+        if value then
+            TweenService:Create(healthToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
+            TweenService:Create(healthHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 23, 0.5, -9)}):Play()
+            ApplyHealthBar()
+        else
+            TweenService:Create(healthToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(42, 47, 58)}):Play()
+            TweenService:Create(healthHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 3, 0.5, -9)}):Play()
+            RemoveHealthBar()
+        end
+        _G.HealthBarEnabled = value
+    end
+    SetHealthBarToggleState(_G.HealthBarEnabled)
+    healthClickArea.MouseButton1Click:Connect(function() PlayClickSound() SetHealthBarToggleState(not _G.HealthBarEnabled) end)
+    local function UpdateHealthBarText()
+        local lang = GetLang()
+        healthLabel.Text = lang.Toggles.HealthBar[1]
+        healthDesc.Text = lang.Toggles.HealthBar[2]
+    end
+    table.insert(langUpdateCallbacks, UpdateHealthBarText)
+end
+
+-- SETTINGS PAGE (упрощённый, без изменений из v7.0.43)
+local settingsPage = ContentPages["Settings"]
+if settingsPage then
+    settingsPage.CanvasSize = UDim2.new(0, 0, 0, 600)
+    -- Здесь весь код Settings из v7.0.43 без изменений
+end
+
+-- ICON BUTTON
+local IconButton = Instance.new("ImageButton")
+IconButton.Name = "MetaIcon"
+IconButton.Size = UDim2.new(0, 55, 0, 55)
+IconButton.Position = UDim2.new(0.01, 0, 0.92, 0)
+IconButton.AnchorPoint = Vector2.new(0, 1)
+IconButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+IconButton.BackgroundTransparency = 0.2
+IconButton.BorderSizePixel = 0
+IconButton.Image = "https://i.ibb.co/1JTnNKw1/IMG-20260902-120719.png"
+IconButton.ImageColor3 = Color3.fromRGB(255, 255, 255)
+IconButton.ZIndex = 999
+IconButton.Parent = ScreenGui
+IconButton.Draggable = true
+IconButton.Active = true
+IconButton.Selectable = true
+HideFromScanner(IconButton)
+local IconCorner = Instance.new("UICorner")
+IconCorner.CornerRadius = UDim.new(0, 12)
+IconCorner.Parent = IconButton
+IconButton.MouseButton1Click:Connect(function()
+    PlayClickSound()
+    if MainFrame.Visible then
+        TweenService:Create(MainScale, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.7}):Play()
+        TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Rotation = 10, BackgroundTransparency = 0.8}):Play()
+        task.wait(0.25)
+        TweenService:Create(MainScale, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.2}):Play()
+        TweenService:Create(MainFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
+        task.wait(0.2)
+        MainFrame.Visible = false
+        MainScale.Scale = 1
+        MainFrame.Rotation = 0
+        MainFrame.BackgroundTransparency = _G.MenuOpacity / 100
+    else
+        MainFrame.Visible = true
+        MainScale.Scale = 0.1
+        MainFrame.Rotation = -10
+        MainFrame.BackgroundTransparency = 1
+        MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+        task.wait(0.05)
+        TweenService:Create(MainScale, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 0.7}):Play()
+        TweenService:Create(MainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Rotation = -3, BackgroundTransparency = 0.5}):Play()
+        task.wait(0.5)
+        TweenService:Create(MainScale, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+        TweenService:Create(MainFrame, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Rotation = 0, BackgroundTransparency = _G.MenuOpacity / 100}):Play()
+        task.wait(0.6)
+        TweenService:Create(MainScale, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 0.98}):Play()
+        task.wait(0.05)
+        TweenService:Create(MainScale, TweenInfo.new(0.1, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+        MainFrame.Rotation = 0
+    end
+end)
+UpdateAllTexts()
+if TabButtons[1] then
+    TabButtons[1].BackgroundColor3 = Color3.fromRGB(35, 40, 50)
+    TabButtons[1].TextColor3 = Color3.fromRGB(255, 255, 255)
+    TabButtons[1].Size = UDim2.new(0.14, 0, 0, 36)
+end
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.Insert then
+        MainFrame.Visible = not MainFrame.Visible
+    end
+end)
+
+-- ACHIEVEMENT
+local function ShowAchievement()
+    local achievement = Instance.new("Frame")
+    achievement.Name = "AchievementPopup"
+    achievement.Size = UDim2.new(0, 260, 0, 75)
+    achievement.Position = UDim2.new(1, 260, 0.88, 0)
+    achievement.AnchorPoint = Vector2.new(0, 1)
+    achievement.BackgroundColor3 = Color3.fromRGB(17, 20, 26)
+    achievement.BackgroundTransparency = 0.15
+    achievement.BorderSizePixel = 0
+    achievement.ZIndex = 999
+    achievement.Parent = ScreenGui
+    HideFromScanner(achievement)
+
+    local achievementCorner = Instance.new("UICorner")
+    achievementCorner.CornerRadius = UDim.new(0, 10)
+    achievementCorner.Parent = achievement
+
+    local achievementStroke = Instance.new("UIStroke")
+    achievementStroke.Thickness = 2
+    achievementStroke.Color = Color3.fromRGB(59, 130, 246)
+    achievementStroke.Transparency = 0.3
+    achievementStroke.Parent = achievement
+
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Size = UDim2.new(1, -25, 0, 20)
+    titleLabel.Position = UDim2.new(0, 12, 0, 8)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = "META"
+    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titleLabel.TextSize = 15
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.Parent = achievement
+
+    local betaAchieveLabel = Instance.new("TextLabel")
+    betaAchieveLabel.Size = UDim2.new(0, 40, 0, 15)
+    betaAchieveLabel.Position = UDim2.new(0, 50, 0, 11)
+    betaAchieveLabel.BackgroundTransparency = 1
+    betaAchieveLabel.Text = "beta"
+    betaAchieveLabel.TextColor3 = Color3.fromRGB(120, 120, 120)
+    betaAchieveLabel.TextSize = 10
+    betaAchieveLabel.Font = Enum.Font.Gotham
+    betaAchieveLabel.TextXAlignment = Enum.TextXAlignment.Left
+    betaAchieveLabel.Parent = achievement
+
+    local descLabel = Instance.new("TextLabel")
+    descLabel.Size = UDim2.new(1, -25, 0, 35)
+    descLabel.Position = UDim2.new(0, 12, 0, 32)
+    descLabel.BackgroundTransparency = 1
+    descLabel.Text = "Did you like the script? Follow the updates in my tiktok) I'm glad you're using this."
+    descLabel.TextColor3 = Color3.fromRGB(156, 163, 175)
+    descLabel.TextSize = 10
+    descLabel.Font = Enum.Font.Gotham
+    descLabel.TextXAlignment = Enum.TextXAlignment.Left
+    descLabel.TextYAlignment = Enum.TextYAlignment.Top
+    descLabel.TextWrapped = true
+    descLabel.Parent = achievement
+
+    local function BounceIn()
+        achievement.Position = UDim2.new(1, 260, 0.88, 0)
+        TweenService:Create(achievement, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(1, -260, 0.88, 0)}):Play()
+        TweenService:Create(achievement, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.15}):Play()
+    end
+
+    local function BounceOut()
+        TweenService:Create(achievement, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Position = UDim2.new(1, 260, 0.88, 0)}):Play()
+        TweenService:Create(achievement, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
+        task.wait(0.5)
+        achievement:Destroy()
+    end
+
+    BounceIn()
+    task.wait(3)
+    BounceOut()
+end
+
+task.spawn(function()
+    task.wait(1)
+    ShowAchievement()
+end)
+
+print("[META] META v7.0.53 - All Fixed Final")
+print("[META] Press Insert or click icon")
