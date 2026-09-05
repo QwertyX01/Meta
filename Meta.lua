@@ -2,7 +2,7 @@
 -- KEY SYSTEM + META UI V7.0.76 COMPLETE FULL (LIMIT + DIAGNOSTICS)
 -- ====================================================================
 local GIST_ID = "09f78a69bd9c238abf0ce2d4ceea761d"
-local GITHUB_TOKEN = "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"
+local GITHUB_TOKEN = "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"
 local KEY_FILE_NAME = "meta_bloxstrike_auth.txt"
 
 local HttpService = game:GetService("HttpService")
