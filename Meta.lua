@@ -1127,7 +1127,87 @@ if visualsPage then
         espDesc.Text = lang.Toggles.ESP[2]
     end
     table.insert(langUpdateCallbacks, UpdateESPText)
+-- ACHIEVEMENT OVERLAY
+local function ShowAchievement()
+    local achievement = Instance.new("Frame")
+    achievement.Name = "AchievementPopup"
+    achievement.Size = UDim2.new(0, 300, 0, 80)
+    achievement.Position = UDim2.new(1, 320, 0.85, 0)
+    achievement.AnchorPoint = Vector2.new(0, 1)
+    achievement.BackgroundColor3 = Color3.fromRGB(17, 20, 26)
+    achievement.BackgroundTransparency = 0.15
+    achievement.BorderSizePixel = 0
+    achievement.ZIndex = 999
+    achievement.Parent = ScreenGui
+    HideFromScanner(achievement)
 
+    local achievementCorner = Instance.new("UICorner")
+    achievementCorner.CornerRadius = UDim.new(0, 12)
+    achievementCorner.Parent = achievement
+
+    local achievementStroke = Instance.new("UIStroke")
+    achievementStroke.Thickness = 2
+    achievementStroke.Color = Color3.fromRGB(59, 130, 246)
+    achievementStroke.Transparency = 0.3
+    achievementStroke.Parent = achievement
+
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Size = UDim2.new(1, -30, 0, 25)
+    titleLabel.Position = UDim2.new(0, 15, 0, 10)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = "META"
+    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titleLabel.TextSize = 18
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.Parent = achievement
+
+    local betaAchieveLabel = Instance.new("TextLabel")
+    betaAchieveLabel.Size = UDim2.new(0, 50, 0, 20)
+    betaAchieveLabel.Position = UDim2.new(0, 60, 0, 15)
+    betaAchieveLabel.BackgroundTransparency = 1
+    betaAchieveLabel.Text = "beta"
+    betaAchieveLabel.TextColor3 = Color3.fromRGB(120, 120, 120)
+    betaAchieveLabel.TextSize = 11
+    betaAchieveLabel.Font = Enum.Font.Gotham
+    betaAchieveLabel.TextXAlignment = Enum.TextXAlignment.Left
+    betaAchieveLabel.Parent = achievement
+
+    local descLabel = Instance.new("TextLabel")
+    descLabel.Size = UDim2.new(1, -30, 0, 35)
+    descLabel.Position = UDim2.new(0, 15, 0, 40)
+    descLabel.BackgroundTransparency = 1
+    descLabel.Text = "Did you like the script? Follow the updates in my tiktok) I'm glad you're using this."
+    descLabel.TextColor3 = Color3.fromRGB(156, 163, 175)
+    descLabel.TextSize = 11
+    descLabel.Font = Enum.Font.Gotham
+    descLabel.TextXAlignment = Enum.TextXAlignment.Left
+    descLabel.TextYAlignment = Enum.TextYAlignment.Top
+    descLabel.TextWrapped = true
+    descLabel.Parent = achievement
+
+    local function BounceIn()
+        achievement.Position = UDim2.new(1, 320, 0.85, 0)
+        TweenService:Create(achievement, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(1, -20, 0.85, 0)}):Play()
+        TweenService:Create(achievement, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.15}):Play()
+    end
+
+    local function BounceOut()
+        TweenService:Create(achievement, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Position = UDim2.new(1, 320, 0.85, 0)}):Play()
+        TweenService:Create(achievement, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
+        task.wait(0.4)
+        achievement:Destroy()
+    end
+
+    BounceIn()
+    task.wait(5)
+    BounceOut()
+end
+
+task.spawn(function()
+    task.wait(300)
+    ShowAchievement()
+end)
     -- SKELETON
     local skeletonFrame = Instance.new("Frame")
     skeletonFrame.Size = UDim2.new(1, 0, 0, 45)
