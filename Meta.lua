@@ -1,4 +1,4 @@
--- ROCKET::META_UI_V7.0.43
+-- ROCKET::META_UI_V7.0.45
 
 local function SetupAntiCheatBypass()
     pcall(function()
@@ -429,192 +429,204 @@ task.spawn(function()
     end
 end)
 
--- SKELETON ESP (ПОЛНЫЙ РОСТ)
-local SkeletonConnections = {}
-local SkeletonEvents = {}
-local function SetupSkeleton()
-    local function createLine()
-        local line = Drawing.new("Line")
-        line.Thickness = 2
-        line.Visible = false
-        line.Color = Color3.fromRGB(255, 255, 255)
-        line.Transparency = 1
-        return line
-    end
+-- SKELETON ESP (ВСТРОЕННЫЙ)
+local skeletons = {}
+local skeletonCache = {}
+local skeletonCacheTime = 0
+local skeletonConnection = nil
+local skeletonPlayerAdded = nil
+local skeletonPlayerRemoving = nil
 
-    local function getPos(part)
-        if not part or not part:IsA("BasePart") then return nil end
-        local pos, onScreen = Camera:WorldToViewportPoint(part.Position)
-        if pos.Z > 0 then return Vector2.new(pos.X, pos.Y) end
-        return nil
-    end
+getgenv().SkeletonColor = Color3.fromRGB(255, 255, 255)
+getgenv().SkeletonThickness = 2
 
-    local function removeSkeleton(target)
-        if not target then return end
-        local data = SkeletonConnections[target]
-        if data then
-            if data.Lines then
-                pcall(function()
-                    for _, line in pairs(data.Lines) do
-                        line.Visible = false
-                        line:Remove()
-                    end
-                end)
-            end
-            if data.Connection then
-                pcall(function() data.Connection:Disconnect() end)
-            end
-            SkeletonConnections[target] = nil
-        end
-    end
-
-    local function CreateSkeleton(target)
-        local lines = {}
-        for i = 1, 15 do lines[i] = createLine() end
-        local conn = RunService.RenderStepped:Connect(function()
-            if not _G.SkeletonEnabled then
-                for _, l in pairs(lines) do l.Visible = false end
-                return
-            end
-            local char = target.Character
-            if not char or not char.Parent or not IsEnemy(target) then
-                for _, l in pairs(lines) do l.Visible = false end
-                return
-            end
-
-            local head = char:FindFirstChild("Head")
-            local upperTorso = char:FindFirstChild("UpperTorso")
-            local lowerTorso = char:FindFirstChild("LowerTorso")
-            local hrp = char:FindFirstChild("HumanoidRootPart")
-
-            local leftUpperArm = char:FindFirstChild("LeftUpperArm")
-            local leftLowerArm = char:FindFirstChild("LeftLowerArm")
-            local leftHand = char:FindFirstChild("LeftHand")
-
-            local rightUpperArm = char:FindFirstChild("RightUpperArm")
-            local rightLowerArm = char:FindFirstChild("RightLowerArm")
-            local rightHand = char:FindFirstChild("RightHand")
-
-            local leftUpperLeg = char:FindFirstChild("LeftUpperLeg")
-            local leftLowerLeg = char:FindFirstChild("LeftLowerLeg")
-            local leftFoot = char:FindFirstChild("LeftFoot")
-
-            local rightUpperLeg = char:FindFirstChild("RightUpperLeg")
-            local rightLowerLeg = char:FindFirstChild("RightLowerLeg")
-            local rightFoot = char:FindFirstChild("RightFoot")
-
-            if not head or not upperTorso then
-                for _, l in pairs(lines) do l.Visible = false end
-                return
-            end
-
-            local headPos = getPos(head)
-            local upperTorsoPos = getPos(upperTorso)
-            local lowerTorsoPos = getPos(lowerTorso)
-            local hrpPos = getPos(hrp)
-
-            local leftUpperArmPos = getPos(leftUpperArm)
-            local leftLowerArmPos = getPos(leftLowerArm)
-            local leftHandPos = getPos(leftHand)
-
-            local rightUpperArmPos = getPos(rightUpperArm)
-            local rightLowerArmPos = getPos(rightLowerArm)
-            local rightHandPos = getPos(rightHand)
-
-            local leftUpperLegPos = getPos(leftUpperLeg)
-            local leftLowerLegPos = getPos(leftLowerLeg)
-            local leftFootPos = getPos(leftFoot)
-
-            local rightUpperLegPos = getPos(rightUpperLeg)
-            local rightLowerLegPos = getPos(rightLowerLeg)
-            local rightFootPos = getPos(rightFoot)
-
-            if not headPos or not upperTorsoPos then
-                for _, l in pairs(lines) do l.Visible = false end
-                return
-            end
-
-            local idx = 1
-            local function setLine(from, to, show)
-                if from and to and show then
-                    lines[idx].From = from
-                    lines[idx].To = to
-                    lines[idx].Visible = true
-                    lines[idx].Thickness = 2
-                    lines[idx].Color = Color3.fromRGB(255, 255, 255)
-                else
-                    lines[idx].Visible = false
-                end
-                idx = idx + 1
-            end
-
-            setLine(headPos, upperTorsoPos, true)
-            setLine(upperTorsoPos, lowerTorsoPos, lowerTorsoPos ~= nil)
-            setLine(upperTorsoPos, hrpPos, hrpPos ~= nil)
-
-            setLine(upperTorsoPos, leftUpperArmPos, leftUpperArmPos ~= nil)
-            setLine(leftUpperArmPos, leftLowerArmPos, leftUpperArmPos ~= nil and leftLowerArmPos ~= nil)
-            setLine(leftLowerArmPos, leftHandPos, leftLowerArmPos ~= nil and leftHandPos ~= nil)
-
-            setLine(upperTorsoPos, rightUpperArmPos, rightUpperArmPos ~= nil)
-            setLine(rightUpperArmPos, rightLowerArmPos, rightUpperArmPos ~= nil and rightLowerArmPos ~= nil)
-            setLine(rightLowerArmPos, rightHandPos, rightLowerArmPos ~= nil and rightHandPos ~= nil)
-
-            if lowerTorsoPos then
-                setLine(lowerTorsoPos, leftUpperLegPos, leftUpperLegPos ~= nil)
-                setLine(lowerTorsoPos, rightUpperLegPos, rightUpperLegPos ~= nil)
-            elseif hrpPos then
-                setLine(hrpPos, leftUpperLegPos, leftUpperLegPos ~= nil)
-                setLine(hrpPos, rightUpperLegPos, rightUpperLegPos ~= nil)
-            else
-                setLine(upperTorsoPos, leftUpperLegPos, leftUpperLegPos ~= nil)
-                setLine(upperTorsoPos, rightUpperLegPos, rightUpperLegPos ~= nil)
-            end
-
-            setLine(leftUpperLegPos, leftLowerLegPos, leftUpperLegPos ~= nil and leftLowerLegPos ~= nil)
-            setLine(rightUpperLegPos, rightLowerLegPos, rightUpperLegPos ~= nil and rightLowerLegPos ~= nil)
-            setLine(leftLowerLegPos, leftFootPos, leftLowerLegPos ~= nil and leftFootPos ~= nil)
-            setLine(rightLowerLegPos, rightFootPos, rightLowerLegPos ~= nil and rightFootPos ~= nil)
-
-            while idx <= #lines do
-                lines[idx].Visible = false
-                idx = idx + 1
-            end
-        end)
-        SkeletonConnections[target] = {Lines = lines, Connection = conn}
-    end
-
-    local function ApplySkeleton()
-        if _G.UnloadSkeleton then _G.UnloadSkeleton() end
-        _G.SkeletonEnabled = true
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer then CreateSkeleton(p) end
-        end
-        SkeletonEvents.PlayerAdded = Players.PlayerAdded:Connect(function(p)
-            task.wait(1)
-            if p ~= LocalPlayer and _G.SkeletonEnabled then CreateSkeleton(p) end
-        end)
-        SkeletonEvents.PlayerRemoving = Players.PlayerRemoving:Connect(function(p)
-            removeSkeleton(p)
-        end)
-        _G.UnloadSkeleton = function()
-            _G.SkeletonEnabled = false
-            if SkeletonEvents.PlayerAdded then SkeletonEvents.PlayerAdded:Disconnect() SkeletonEvents.PlayerAdded = nil end
-            if SkeletonEvents.PlayerRemoving then SkeletonEvents.PlayerRemoving:Disconnect() SkeletonEvents.PlayerRemoving = nil end
-            for p, _ in pairs(SkeletonConnections) do
-                removeSkeleton(p)
-            end
-            SkeletonConnections = {}
-        end
-    end
-
-    local function RemoveSkeleton()
-        if _G.UnloadSkeleton then _G.UnloadSkeleton() end
-    end
-
-    return ApplySkeleton, RemoveSkeleton
+local function createSkeletonLine()
+    local line = Drawing.new("Line")
+    line.Thickness = getgenv().SkeletonThickness or 2
+    line.Visible = false
+    line.Color = getgenv().SkeletonColor or Color3.fromRGB(255, 255, 255)
+    line.Transparency = 1
+    return line
 end
-local ApplySkeleton, RemoveSkeleton = SetupSkeleton()
+
+local function getSkeletonPos(part)
+    if not part or not part:IsA("BasePart") then return nil end
+    local pos, onScreen = Camera:WorldToViewportPoint(part.Position)
+    if pos.Z > 0 then return Vector2.new(pos.X, pos.Y) end
+    return nil
+end
+
+local function removeSkeleton(target)
+    local data = skeletons[target]
+    if data then
+        pcall(function()
+            for _, line in pairs(data) do
+                line.Visible = false
+                line:Remove()
+            end
+        end)
+        skeletons[target] = nil
+    end
+end
+
+local function updateSkeletonCache()
+    if tick() - skeletonCacheTime < 0.5 then return end
+    skeletonCacheTime = tick()
+    skeletonCache = {}
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character.Parent then
+            if IsEnemy(player) then
+                local humanoid = player.Character:FindFirstChild("Humanoid")
+                if humanoid and humanoid.Health > 0 then
+                    skeletonCache[player] = {char = player.Character}
+                else
+                    removeSkeleton(player)
+                end
+            else
+                removeSkeleton(player)
+            end
+        else
+            removeSkeleton(player)
+        end
+    end
+end
+
+skeletonConnection = RunService.RenderStepped:Connect(function()
+    if not _G.SkeletonEnabled then
+        for _, data in pairs(skeletons) do
+            for _, line in pairs(data) do line.Visible = false end
+        end
+        return
+    end
+
+    updateSkeletonCache()
+
+    for player, data in pairs(skeletonCache) do
+        if not player or not player.Character or not player.Character.Parent then
+            removeSkeleton(player)
+            continue
+        end
+
+        local char = player.Character
+        local head = char:FindFirstChild("Head")
+        local upperTorso = char:FindFirstChild("UpperTorso")
+        local lowerTorso = char:FindFirstChild("LowerTorso")
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+
+        if not head or not upperTorso then
+            removeSkeleton(player)
+            continue
+        end
+
+        local headPos = getSkeletonPos(head)
+        local upperTorsoPos = getSkeletonPos(upperTorso)
+        local lowerTorsoPos = getSkeletonPos(lowerTorso)
+        local hrpPos = getSkeletonPos(hrp)
+
+        if not headPos or not upperTorsoPos then
+            removeSkeleton(player)
+            continue
+        end
+
+        if not skeletons[player] then
+            skeletons[player] = {}
+            for i = 1, 15 do
+                table.insert(skeletons[player], createSkeletonLine())
+            end
+        end
+
+        local lines = skeletons[player]
+        local color = getgenv().SkeletonColor or Color3.fromRGB(255, 255, 255)
+        local thickness = getgenv().SkeletonThickness or 2
+        local idx = 1
+
+        local function setLine(from, to, show)
+            if from and to and show then
+                lines[idx].From = from
+                lines[idx].To = to
+                lines[idx].Visible = true
+                lines[idx].Thickness = thickness
+                lines[idx].Color = color
+            else
+                lines[idx].Visible = false
+            end
+            idx = idx + 1
+        end
+
+        local leftUpperArm = char:FindFirstChild("LeftUpperArm")
+        local leftLowerArm = char:FindFirstChild("LeftLowerArm")
+        local leftHand = char:FindFirstChild("LeftHand")
+        local rightUpperArm = char:FindFirstChild("RightUpperArm")
+        local rightLowerArm = char:FindFirstChild("RightLowerArm")
+        local rightHand = char:FindFirstChild("RightHand")
+        local leftUpperLeg = char:FindFirstChild("LeftUpperLeg")
+        local leftLowerLeg = char:FindFirstChild("LeftLowerLeg")
+        local leftFoot = char:FindFirstChild("LeftFoot")
+        local rightUpperLeg = char:FindFirstChild("RightUpperLeg")
+        local rightLowerLeg = char:FindFirstChild("RightLowerLeg")
+        local rightFoot = char:FindFirstChild("RightFoot")
+
+        local leftUpperArmPos = getSkeletonPos(leftUpperArm)
+        local leftLowerArmPos = getSkeletonPos(leftLowerArm)
+        local leftHandPos = getSkeletonPos(leftHand)
+        local rightUpperArmPos = getSkeletonPos(rightUpperArm)
+        local rightLowerArmPos = getSkeletonPos(rightLowerArm)
+        local rightHandPos = getSkeletonPos(rightHand)
+        local leftUpperLegPos = getSkeletonPos(leftUpperLeg)
+        local leftLowerLegPos = getSkeletonPos(leftLowerLeg)
+        local leftFootPos = getSkeletonPos(leftFoot)
+        local rightUpperLegPos = getSkeletonPos(rightUpperLeg)
+        local rightLowerLegPos = getSkeletonPos(rightLowerLeg)
+        local rightFootPos = getSkeletonPos(rightFoot)
+
+        setLine(headPos, upperTorsoPos, true)
+        setLine(upperTorsoPos, lowerTorsoPos, lowerTorsoPos ~= nil)
+        setLine(upperTorsoPos, hrpPos, hrpPos ~= nil)
+        setLine(upperTorsoPos, leftUpperArmPos, leftUpperArmPos ~= nil)
+        setLine(leftUpperArmPos, leftLowerArmPos, leftUpperArmPos ~= nil and leftLowerArmPos ~= nil)
+        setLine(leftLowerArmPos, leftHandPos, leftLowerArmPos ~= nil and leftHandPos ~= nil)
+        setLine(upperTorsoPos, rightUpperArmPos, rightUpperArmPos ~= nil)
+        setLine(rightUpperArmPos, rightLowerArmPos, rightUpperArmPos ~= nil and rightLowerArmPos ~= nil)
+        setLine(rightLowerArmPos, rightHandPos, rightLowerArmPos ~= nil and rightHandPos ~= nil)
+
+        if lowerTorsoPos then
+            setLine(lowerTorsoPos, leftUpperLegPos, leftUpperLegPos ~= nil)
+            setLine(lowerTorsoPos, rightUpperLegPos, rightUpperLegPos ~= nil)
+        elseif hrpPos then
+            setLine(hrpPos, leftUpperLegPos, leftUpperLegPos ~= nil)
+            setLine(hrpPos, rightUpperLegPos, rightUpperLegPos ~= nil)
+        else
+            setLine(upperTorsoPos, leftUpperLegPos, leftUpperLegPos ~= nil)
+            setLine(upperTorsoPos, rightUpperLegPos, rightUpperLegPos ~= nil)
+        end
+
+        setLine(leftUpperLegPos, leftLowerLegPos, leftUpperLegPos ~= nil and leftLowerLegPos ~= nil)
+        setLine(rightUpperLegPos, rightLowerLegPos, rightUpperLegPos ~= nil and rightLowerLegPos ~= nil)
+        setLine(leftLowerLegPos, leftFootPos, leftLowerLegPos ~= nil and leftFootPos ~= nil)
+        setLine(rightLowerLegPos, rightFootPos, rightLowerLegPos ~= nil and rightFootPos ~= nil)
+
+        while idx <= #lines do
+            lines[idx].Visible = false
+            idx = idx + 1
+        end
+    end
+
+    for player, _ in pairs(skeletons) do
+        if not skeletonCache[player] then
+            removeSkeleton(player)
+        end
+    end
+end)
+
+local function ApplySkeleton()
+    _G.SkeletonEnabled = true
+end
+
+local function RemoveSkeleton()
+    _G.SkeletonEnabled = false
+    for player, _ in pairs(skeletons) do removeSkeleton(player) end
+    skeletonCache = {}
+end
 
 -- HEALTH BAR ESP (НАД ГОЛОВОЙ, БЕЗ РАЗДЕЛИТЕЛЕЙ, ПРОЗРАЧНЫЙ)
 local healthBars = {}
@@ -826,10 +838,6 @@ local function SetupHealthBar()
         for player, _ in pairs(healthBars) do removeHealthBar(player) end
         enemiesCache = {}
         healthHistory = {}
-    end
-    _G.UnloadHealthBar = function()
-        if healthConnection then healthConnection:Disconnect() end
-        RemoveHealthBar()
     end
     return ApplyHealthBar, RemoveHealthBar
 end
@@ -1127,87 +1135,7 @@ if visualsPage then
         espDesc.Text = lang.Toggles.ESP[2]
     end
     table.insert(langUpdateCallbacks, UpdateESPText)
--- ACHIEVEMENT OVERLAY
-local function ShowAchievement()
-    local achievement = Instance.new("Frame")
-    achievement.Name = "AchievementPopup"
-    achievement.Size = UDim2.new(0, 300, 0, 80)
-    achievement.Position = UDim2.new(1, 320, 0.85, 0)
-    achievement.AnchorPoint = Vector2.new(0, 1)
-    achievement.BackgroundColor3 = Color3.fromRGB(17, 20, 26)
-    achievement.BackgroundTransparency = 0.15
-    achievement.BorderSizePixel = 0
-    achievement.ZIndex = 999
-    achievement.Parent = ScreenGui
-    HideFromScanner(achievement)
 
-    local achievementCorner = Instance.new("UICorner")
-    achievementCorner.CornerRadius = UDim.new(0, 12)
-    achievementCorner.Parent = achievement
-
-    local achievementStroke = Instance.new("UIStroke")
-    achievementStroke.Thickness = 2
-    achievementStroke.Color = Color3.fromRGB(59, 130, 246)
-    achievementStroke.Transparency = 0.3
-    achievementStroke.Parent = achievement
-
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(1, -30, 0, 25)
-    titleLabel.Position = UDim2.new(0, 15, 0, 10)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.Text = "META"
-    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    titleLabel.TextSize = 18
-    titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    titleLabel.Parent = achievement
-
-    local betaAchieveLabel = Instance.new("TextLabel")
-    betaAchieveLabel.Size = UDim2.new(0, 50, 0, 20)
-    betaAchieveLabel.Position = UDim2.new(0, 60, 0, 15)
-    betaAchieveLabel.BackgroundTransparency = 1
-    betaAchieveLabel.Text = "beta"
-    betaAchieveLabel.TextColor3 = Color3.fromRGB(120, 120, 120)
-    betaAchieveLabel.TextSize = 11
-    betaAchieveLabel.Font = Enum.Font.Gotham
-    betaAchieveLabel.TextXAlignment = Enum.TextXAlignment.Left
-    betaAchieveLabel.Parent = achievement
-
-    local descLabel = Instance.new("TextLabel")
-    descLabel.Size = UDim2.new(1, -30, 0, 35)
-    descLabel.Position = UDim2.new(0, 15, 0, 40)
-    descLabel.BackgroundTransparency = 1
-    descLabel.Text = "Did you like the script? Follow the updates in my tiktok) I'm glad you're using this."
-    descLabel.TextColor3 = Color3.fromRGB(156, 163, 175)
-    descLabel.TextSize = 11
-    descLabel.Font = Enum.Font.Gotham
-    descLabel.TextXAlignment = Enum.TextXAlignment.Left
-    descLabel.TextYAlignment = Enum.TextYAlignment.Top
-    descLabel.TextWrapped = true
-    descLabel.Parent = achievement
-
-    local function BounceIn()
-        achievement.Position = UDim2.new(1, 320, 0.85, 0)
-        TweenService:Create(achievement, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(1, -20, 0.85, 0)}):Play()
-        TweenService:Create(achievement, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.15}):Play()
-    end
-
-    local function BounceOut()
-        TweenService:Create(achievement, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Position = UDim2.new(1, 320, 0.85, 0)}):Play()
-        TweenService:Create(achievement, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
-        task.wait(0.4)
-        achievement:Destroy()
-    end
-
-    BounceIn()
-    task.wait(5)
-    BounceOut()
-end
-
-task.spawn(function()
-    task.wait(300)
-    ShowAchievement()
-end)
     -- SKELETON
     local skeletonFrame = Instance.new("Frame")
     skeletonFrame.Size = UDim2.new(1, 0, 0, 45)
@@ -2187,5 +2115,88 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         MainFrame.Visible = not MainFrame.Visible
     end
 end)
-print("[META] META v7.0.43 - Skeleton FIXED")
+
+-- ACHIEVEMENT OVERLAY (1 SECOND DELAY, 3 SECOND SHOW)
+local function ShowAchievement()
+    local achievement = Instance.new("Frame")
+    achievement.Name = "AchievementPopup"
+    achievement.Size = UDim2.new(0, 300, 0, 80)
+    achievement.Position = UDim2.new(1, 320, 0.85, 0)
+    achievement.AnchorPoint = Vector2.new(0, 1)
+    achievement.BackgroundColor3 = Color3.fromRGB(17, 20, 26)
+    achievement.BackgroundTransparency = 0.15
+    achievement.BorderSizePixel = 0
+    achievement.ZIndex = 999
+    achievement.Parent = ScreenGui
+    HideFromScanner(achievement)
+
+    local achievementCorner = Instance.new("UICorner")
+    achievementCorner.CornerRadius = UDim.new(0, 12)
+    achievementCorner.Parent = achievement
+
+    local achievementStroke = Instance.new("UIStroke")
+    achievementStroke.Thickness = 2
+    achievementStroke.Color = Color3.fromRGB(59, 130, 246)
+    achievementStroke.Transparency = 0.3
+    achievementStroke.Parent = achievement
+
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Size = UDim2.new(1, -30, 0, 25)
+    titleLabel.Position = UDim2.new(0, 15, 0, 10)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = "META"
+    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titleLabel.TextSize = 18
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.Parent = achievement
+
+    local betaAchieveLabel = Instance.new("TextLabel")
+    betaAchieveLabel.Size = UDim2.new(0, 50, 0, 20)
+    betaAchieveLabel.Position = UDim2.new(0, 60, 0, 15)
+    betaAchieveLabel.BackgroundTransparency = 1
+    betaAchieveLabel.Text = "beta"
+    betaAchieveLabel.TextColor3 = Color3.fromRGB(120, 120, 120)
+    betaAchieveLabel.TextSize = 11
+    betaAchieveLabel.Font = Enum.Font.Gotham
+    betaAchieveLabel.TextXAlignment = Enum.TextXAlignment.Left
+    betaAchieveLabel.Parent = achievement
+
+    local descLabel = Instance.new("TextLabel")
+    descLabel.Size = UDim2.new(1, -30, 0, 35)
+    descLabel.Position = UDim2.new(0, 15, 0, 40)
+    descLabel.BackgroundTransparency = 1
+    descLabel.Text = "Did you like the script? Follow the updates in my tiktok) I'm glad you're using this."
+    descLabel.TextColor3 = Color3.fromRGB(156, 163, 175)
+    descLabel.TextSize = 11
+    descLabel.Font = Enum.Font.Gotham
+    descLabel.TextXAlignment = Enum.TextXAlignment.Left
+    descLabel.TextYAlignment = Enum.TextYAlignment.Top
+    descLabel.TextWrapped = true
+    descLabel.Parent = achievement
+
+    local function BounceIn()
+        achievement.Position = UDim2.new(1, 320, 0.85, 0)
+        TweenService:Create(achievement, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(1, -20, 0.85, 0)}):Play()
+        TweenService:Create(achievement, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.15}):Play()
+    end
+
+    local function BounceOut()
+        TweenService:Create(achievement, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Position = UDim2.new(1, 320, 0.85, 0)}):Play()
+        TweenService:Create(achievement, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
+        task.wait(0.4)
+        achievement:Destroy()
+    end
+
+    BounceIn()
+    task.wait(3)
+    BounceOut()
+end
+
+task.spawn(function()
+    task.wait(1)
+    ShowAchievement()
+end)
+
+print("[META] META v7.0.45 - Skeleton Inline + Achievement")
 print("[META] Press Insert or click icon")
