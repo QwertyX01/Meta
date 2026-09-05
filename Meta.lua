@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.0.64 COMPLETE FULL
+-- KEY SYSTEM + META UI V7.0.65 COMPLETE FULL
 -- ====================================================================
 local GIST_ID = "09f78a69bd9c238abf0ce2d4ceea761d"
 local GITHUB_TOKEN = "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"
@@ -75,63 +75,85 @@ if not isActivated then
     KeyScreenGui.IgnoreGuiInset = true
 
     local KeyFrame = Instance.new("Frame", KeyScreenGui)
-    KeyFrame.Size = UDim2.new(0, 400, 0, 130)
-    KeyFrame.Position = UDim2.new(0.5, -200, 0, -150)
+    KeyFrame.Size = UDim2.new(0, 450, 0, 150)
+    KeyFrame.Position = UDim2.new(0.5, -225, 0, -180)
     KeyFrame.BackgroundColor3 = Color3.fromRGB(22, 26, 34)
-    KeyFrame.BackgroundTransparency = 0.08
+    KeyFrame.BackgroundTransparency = 0.06
     KeyFrame.BorderSizePixel = 0
     KeyFrame.Active = true
     KeyFrame.Draggable = true
-    Instance.new("UICorner", KeyFrame).CornerRadius = UDim.new(0, 16)
+    Instance.new("UICorner", KeyFrame).CornerRadius = UDim.new(0, 18)
 
     local KeyStroke = Instance.new("UIStroke", KeyFrame)
     KeyStroke.Thickness = 1.5
     KeyStroke.Color = Color3.fromRGB(45, 52, 65)
-    KeyStroke.Transparency = 0.4
+    KeyStroke.Transparency = 0.35
 
+    -- ТОЧКА С BLOOM EFFECT
     local StatusDot = Instance.new("Frame", KeyFrame)
-    StatusDot.Size = UDim2.new(0, 14, 0, 14)
-    StatusDot.Position = UDim2.new(0, 16, 0, 14)
+    StatusDot.Size = UDim2.new(0, 16, 0, 16)
+    StatusDot.Position = UDim2.new(0, 18, 0, 16)
     StatusDot.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
     StatusDot.BorderSizePixel = 0
     Instance.new("UICorner", StatusDot).CornerRadius = UDim.new(1, 0)
 
-    local DotGlow = Instance.new("UIStroke", StatusDot)
-    DotGlow.Thickness = 4
-    DotGlow.Color = Color3.fromRGB(255, 80, 80)
-    DotGlow.Transparency = 0.55
+    -- Bloom слой 1 (большой, очень прозрачный)
+    local BloomOuter = Instance.new("Frame", StatusDot)
+    BloomOuter.Size = UDim2.new(2.5, 0, 2.5, 0)
+    BloomOuter.Position = UDim2.new(-0.75, 0, -0.75, 0)
+    BloomOuter.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+    BloomOuter.BackgroundTransparency = 0.75
+    BloomOuter.BorderSizePixel = 0
+    BloomOuter.ZIndex = -1
+    Instance.new("UICorner", BloomOuter).CornerRadius = UDim.new(1, 0)
+
+    -- Bloom слой 2 (средний, менее прозрачный)
+    local BloomInner = Instance.new("Frame", StatusDot)
+    BloomInner.Size = UDim2.new(1.8, 0, 1.8, 0)
+    BloomInner.Position = UDim2.new(-0.4, 0, -0.4, 0)
+    BloomInner.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+    BloomInner.BackgroundTransparency = 0.55
+    BloomInner.BorderSizePixel = 0
+    BloomInner.ZIndex = -1
+    Instance.new("UICorner", BloomInner).CornerRadius = UDim.new(1, 0)
 
     local function SetDotRed()
         StatusDot.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
-        DotGlow.Color = Color3.fromRGB(255, 80, 80)
-        DotGlow.Transparency = 0.55
+        BloomOuter.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+        BloomOuter.BackgroundTransparency = 0.75
+        BloomInner.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+        BloomInner.BackgroundTransparency = 0.55
     end
 
     local function SetDotGreen()
-        TweenService:Create(StatusDot, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(80, 255, 130)}):Play()
-        TweenService:Create(DotGlow, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {Color = Color3.fromRGB(80, 255, 130), Transparency = 0.35}):Play()
+        TweenService:Create(StatusDot, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(50, 255, 100)}):Play()
+        TweenService:Create(BloomOuter, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(50, 255, 100), BackgroundTransparency = 0.6}):Play()
+        TweenService:Create(BloomInner, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(50, 255, 100), BackgroundTransparency = 0.4}):Play()
     end
 
+    SetDotRed()
+
+    -- ЗАГОЛОВОК
     local KeyTitle = Instance.new("TextLabel", KeyFrame)
-    KeyTitle.Size = UDim2.new(1, 0, 0, 30)
-    KeyTitle.Position = UDim2.new(0, 0, 0, 8)
+    KeyTitle.Size = UDim2.new(1, 0, 0, 32)
+    KeyTitle.Position = UDim2.new(0, 0, 0, 10)
     KeyTitle.Text = "META"
     KeyTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-    KeyTitle.TextSize = 22
+    KeyTitle.TextSize = 26
     KeyTitle.Font = Enum.Font.GothamBold
     KeyTitle.TextXAlignment = Enum.TextXAlignment.Center
     KeyTitle.BackgroundTransparency = 1
 
     local TextBox = Instance.new("TextBox", KeyFrame)
-    TextBox.Size = UDim2.new(1, -40, 0, 40)
-    TextBox.Position = UDim2.new(0, 20, 0, 65)
+    TextBox.Size = UDim2.new(1, -40, 0, 44)
+    TextBox.Position = UDim2.new(0, 20, 0, 75)
     TextBox.BackgroundColor3 = Color3.fromRGB(35, 40, 52)
     TextBox.BackgroundTransparency = 0.25
     TextBox.TextColor3 = Color3.fromRGB(225, 230, 240)
     TextBox.PlaceholderText = "Enter key and press Enter..."
     TextBox.PlaceholderColor3 = Color3.fromRGB(140, 150, 165)
     TextBox.Text = ""
-    TextBox.TextSize = 14
+    TextBox.TextSize = 15
     TextBox.Font = Enum.Font.Gotham
     Instance.new("UICorner", TextBox).CornerRadius = UDim.new(0, 10)
 
@@ -181,8 +203,13 @@ if not isActivated then
             TextBox.PlaceholderText = "Success!"
             TextBox.PlaceholderColor3 = Color3.fromRGB(0, 255, 0)
             SetDotGreen()
-            TweenService:Create(KeyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Position = UDim2.new(0.5, -200, 0, -150)}):Play()
+            TweenService:Create(KeyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Position = UDim2.new(0.5, -225, 0, -180)}):Play()
             TweenService:Create(KeyFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
+            for _, child in pairs(KeyFrame:GetDescendants()) do
+                if child:IsA("TextLabel") or child:IsA("TextBox") or child:IsA("Frame") or child:IsA("UIStroke") then
+                    TweenService:Create(child, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {TextTransparency = 1, BackgroundTransparency = 1}):Play()
+                end
+            end
             task.wait(0.5)
             KeyScreenGui:Destroy()
         else
@@ -192,7 +219,7 @@ if not isActivated then
         end
     end)
 
-    TweenService:Create(KeyFrame, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -200, 0.35, -65)}):Play()
+    TweenService:Create(KeyFrame, TweenInfo.new(0.7, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -225, 0.35, -75)}):Play()
 
     while not isActivated do task.wait(0.5) end
     KeyScreenGui:Destroy()
@@ -677,8 +704,7 @@ local function UpdateSkeletonEnemies()
     SkeletonEnemiesList = {}
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character.Parent then
-            if IsEnemy(player) then
-                local health, maxHealth = GetSkeletonHealth(player.Character)
+            if IsEnemy(player) then                local health, maxHealth = GetSkeletonHealth(player.Character)
                 if health and health > 0 then
                     SkeletonEnemiesList[player] = {char = player.Character, health = health, maxHealth = maxHealth}
                 else
@@ -1267,7 +1293,7 @@ if visualsPage then
     end)
 end
 
--- SKY PAGE
+-- SKY PAGE (с кнопками-режимами)
 local skyPage = ContentPages["Sky"]
 if skyPage then
     skyPage.CanvasSize = UDim2.new(0, 0, 0, 0)
@@ -1278,6 +1304,7 @@ if skyPage then
     skyBlock.Size = UDim2.new(1, -10, 1, -10)
     skyBlock.Position = UDim2.new(0, 5, 0, 5)
     skyBlock.BackgroundColor3 = Color3.fromRGB(20, 24, 32)
+    skyBlock.BackgroundTransparency = 0.15
     skyBlock.BorderSizePixel = 0
     skyBlock.ClipsDescendants = true
     skyBlock.Parent = skyPage
@@ -1292,16 +1319,82 @@ if skyPage then
     skyStroke.Transparency = 0.3
     skyStroke.Parent = skyBlock
 
-    local skyTitle = Instance.new("TextLabel")
-    skyTitle.Size = UDim2.new(1, -20, 0, 30)
-    skyTitle.Position = UDim2.new(0, 10, 0, 10)
-    skyTitle.BackgroundTransparency = 1
-    skyTitle.Text = "Sky"
-    skyTitle.TextColor3 = Color3.fromRGB(209, 213, 219)
-    skyTitle.TextSize = 16
-    skyTitle.Font = Enum.Font.GothamBold
-    skyTitle.TextXAlignment = Enum.TextXAlignment.Left
-    skyTitle.Parent = skyBlock
+    local modeButtons = {}
+
+    local function CreateModeButton(text, yPos)
+        local btnFrame = Instance.new("Frame")
+        btnFrame.Size = UDim2.new(0.85, 0, 0, 36)
+        btnFrame.Position = UDim2.new(0.075, 0, 0, yPos)
+        btnFrame.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
+        btnFrame.BackgroundTransparency = 0.4
+        btnFrame.BorderSizePixel = 0
+        btnFrame.Parent = skyBlock
+
+        local btnCorner = Instance.new("UICorner")
+        btnCorner.CornerRadius = UDim.new(0, 6)
+        btnCorner.Parent = btnFrame
+
+        local uiScale = Instance.new("UIScale")
+        uiScale.Scale = 1
+        uiScale.Parent = btnFrame
+
+        local txt = Instance.new("TextLabel")
+        txt.Size = UDim2.new(1, 0, 1, 0)
+        txt.BackgroundTransparency = 1
+        txt.Text = text
+        txt.TextColor3 = Color3.fromRGB(156, 163, 175)
+        txt.TextSize = 12
+        txt.Font = Enum.Font.GothamBold
+        txt.TextXAlignment = Enum.TextXAlignment.Center
+        txt.TextYAlignment = Enum.TextYAlignment.Center
+        txt.Parent = btnFrame
+
+        local clickBtn = Instance.new("TextButton")
+        clickBtn.Size = UDim2.new(1, 0, 1, 0)
+        clickBtn.BackgroundTransparency = 1
+        clickBtn.Text = ""
+        clickBtn.ZIndex = 10
+        clickBtn.Parent = btnFrame
+
+        local function SetActive(active)
+            if active then
+                TweenService:Create(uiScale, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1.05}):Play()
+                TweenService:Create(btnFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = 0.05}):Play()
+                TweenService:Create(txt, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {TextColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+            else
+                TweenService:Create(uiScale, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Scale = 1}):Play()
+                TweenService:Create(btnFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(26, 30, 38), BackgroundTransparency = 0.4}):Play()
+                TweenService:Create(txt, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {TextColor3 = Color3.fromRGB(156, 163, 175)}):Play()
+            end
+        end
+
+        clickBtn.MouseButton1Click:Connect(function()
+            PlayClickSound()
+            for _, otherBtn in pairs(modeButtons) do
+                if otherBtn ~= btnFrame then
+                    otherBtn:SetAttribute("Active", false)
+                    TweenService:Create(otherBtn.UIScale, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Scale = 1}):Play()
+                    TweenService:Create(otherBtn, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(26, 30, 38), BackgroundTransparency = 0.4}):Play()
+                    TweenService:Create(otherBtn.TextLabel, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {TextColor3 = Color3.fromRGB(156, 163, 175)}):Play()
+                end
+            end
+            if btnFrame:GetAttribute("Active") then
+                btnFrame:SetAttribute("Active", false)
+                SetActive(false)
+            else
+                btnFrame:SetAttribute("Active", true)
+                SetActive(true)
+            end
+        end)
+
+        btnFrame:SetAttribute("Active", false)
+        table.insert(modeButtons, btnFrame)
+        return btnFrame
+    end
+
+    CreateModeButton("Night Sky (Mode)", 15)
+    CreateModeButton("Evening Sky (Mode)", 60)
+    CreateModeButton("Purple Sky (My Love Mode)", 105)
 end
 
 -- SETTINGS PAGE
@@ -1315,6 +1408,7 @@ if settingsPage then
     settingsContainer.ClipsDescendants = true
     settingsContainer.Parent = settingsPage
 
+    -- UI COLOR
     local toggleFrame = Instance.new("Frame")
     toggleFrame.Size = UDim2.new(1, 0, 0, 45)
     toggleFrame.Position = UDim2.new(0, 0, 0, 10)
@@ -1443,7 +1537,8 @@ if settingsPage then
         TweenService:Create(settingsContainer, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 55 + targetY)}):Play()
     end
     SetToggleState = function(value)
-        if value then            TweenService:Create(toggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
+        if value then
+            TweenService:Create(toggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
             TweenService:Create(handle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 23, 0.5, -9)}):Play()
             pickerContainer.Visible = true
             ShiftContainer(true)
@@ -1536,6 +1631,7 @@ if settingsPage then
     CreateLangButton("Русский", "RU", 0.03)
     CreateLangButton("English", "EN", 0.55)
 
+    -- OPACITY
     local opacityFrame = Instance.new("Frame")
     opacityFrame.Size = UDim2.new(1, -20, 0, 55)
     opacityFrame.Position = UDim2.new(0, 10, 0, 60)
@@ -1640,6 +1736,7 @@ if settingsPage then
     end
     table.insert(langUpdateCallbacks, UpdateOpacityText)
 
+    -- RAINBOW
     local rainbowFrame = Instance.new("Frame")
     rainbowFrame.Size = UDim2.new(1, 0, 0, 45)
     rainbowFrame.Position = UDim2.new(0, 0, 0, 120)
@@ -1728,6 +1825,7 @@ if settingsPage then
     end
     table.insert(langUpdateCallbacks, UpdateRainbowText)
 
+    -- SCALE
     local scaleFrame = Instance.new("Frame")
     scaleFrame.Size = UDim2.new(1, -20, 0, 55)
     scaleFrame.Position = UDim2.new(0, 10, 0, 170)
@@ -1832,6 +1930,7 @@ if settingsPage then
     end
     table.insert(langUpdateCallbacks, UpdateScaleText)
 
+    -- FLYING DOTS
     local flyingFrame = Instance.new("Frame")
     flyingFrame.Name = "Effects"
     flyingFrame.Size = UDim2.new(1, 0, 1, 0)
@@ -1938,8 +2037,7 @@ if settingsPage then
     flyingDesc.TextColor3 = Color3.fromRGB(113, 113, 122)
     flyingDesc.TextSize = 11
     flyingDesc.Font = Enum.Font.Gotham
-    flyingDesc.TextXAlignment = Enum.TextXAlignment.Left
-    flyingDesc.Parent = flyingToggleFrame
+    flyingDesc.TextXAlignment = Enum.TextXAlignment.Left    flyingDesc.Parent = flyingToggleFrame
     local flyingToggleBg = Instance.new("Frame")
     flyingToggleBg.Size = UDim2.new(0, 44, 0, 24)
     flyingToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
@@ -1984,6 +2082,7 @@ if settingsPage then
     end
     table.insert(langUpdateCallbacks, UpdateFlyingText)
 
+    -- RESET
     local resetFrame = Instance.new("Frame")
     resetFrame.Size = UDim2.new(1, 0, 0, 45)
     resetFrame.Position = UDim2.new(0, 0, 0, 280)
@@ -2249,5 +2348,5 @@ task.spawn(function()
     ShowAchievement()
 end)
 
-print("[META] META v7.0.64 - Sky Tab Added")
+print("[META] META v7.0.65 - Sky Modes + Bloom Key")
 print("[META] Press Insert or click icon")
