@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.0.80 SKY MODES + RESET
+-- KEY SYSTEM + META UI V7.0.81 SOUND TAB + SKY MODES
 -- ====================================================================
 local GIST_ID = "0952fe76bcc259fcbda99e552956e5e6"
 local TOKEN_PART1 = "ghp_kMjn"
@@ -432,10 +432,11 @@ local SetChamsToggleState, SetRainbowToggleState = nil, nil
 local SetFlyingToggleState, SetESPToggleState = nil, nil
 local SetHealthBarToggleState, SetSkeletonToggleState = nil, nil
 local skyStroke = nil
+local soundStroke = nil
 
 local LANG = {
     RU = {
-        Tabs = {"Аимбот", "Визуал", "Настройки", "Скай"},
+        Tabs = {"Аимбот", "Визуал", "Настройки", "Скай", "Звук"},
         Toggles = {
             UI_Color = {"Цвет интерфейса", "Включить кастомизацию цвета интерфейса"},
             Opacity = {"Прозрачность", "Регулировка прозрачности меню (0-50%)"},
@@ -450,7 +451,7 @@ local LANG = {
         }
     },
     EN = {
-        Tabs = {"Aimbot", "Visuals", "Settings", "Sky"},
+        Tabs = {"Aimbot", "Visuals", "Settings", "Sky", "Sound"},
         Toggles = {
             UI_Color = {"UI Color", "Enable interface color customization"},
             Opacity = {"Opacity", "Adjust menu transparency (0-50%)"},
@@ -634,7 +635,7 @@ TabContainer.Position = UDim2.new(0, 0, 0, 39)
 TabContainer.BackgroundTransparency = 1
 TabContainer.Parent = MainFrame
 
-local TabNames = {"Aimbot", "Visuals", "Settings", "Sky"}
+local TabNames = {"Aimbot", "Visuals", "Settings", "Sky", "Sound"}
 local TabButtons = {}
 local ContentPages = {}
 local activeIndex = 1
@@ -1219,9 +1220,9 @@ end
 
 local function UpdateIndicatorPosition(index)
     if not IndicatorLine then return end
-    local width = 0.09
-    local xPos = 0.02 + (index - 1) * (width + 0.02)
-    TweenService:Create(IndicatorLine, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(xPos, 0, 1, -2), Size = UDim2.new(width + 0.02, 0, 0, 2)}):Play()
+    local width = 0.07
+    local xPos = 0.02 + (index - 1) * (width + 0.015)
+    TweenService:Create(IndicatorLine, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(xPos, 0, 1, -2), Size = UDim2.new(width + 0.015, 0, 0, 2)}):Play()
 end
 
 local function UpdateIndicatorColor(color)
@@ -1236,12 +1237,12 @@ local function SwitchToTab(index)
     for i, b in ipairs(TabButtons) do
         b.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
         b.TextColor3 = Color3.fromRGB(156, 163, 175)
-        TweenService:Create(b, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0.09, 0, 0, 32)}):Play()
+        TweenService:Create(b, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0.07, 0, 0, 32)}):Play()
     end
     local btn = TabButtons[index]
     btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    TweenService:Create(btn, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0.11, 0, 0, 36)}):Play()
+    TweenService:Create(btn, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0.085, 0, 0, 36)}):Play()
     for name, page in pairs(ContentPages) do page.Visible = false end
     local targetPage = ContentPages[TabNames[index]]
     if targetPage then targetPage.Visible = true end
@@ -1291,9 +1292,9 @@ end
 for i, name in ipairs(TabNames) do
     local btn = Instance.new("TextButton")
     btn.Name = "Tab" .. i
-    local width = 0.09
+    local width = 0.07
     btn.Size = UDim2.new(width, 0, 0, 32)
-    btn.Position = UDim2.new(0.02 + (i-1) * (width + 0.02), 0, 0.15, 0)
+    btn.Position = UDim2.new(0.02 + (i-1) * (width + 0.015), 0, 0.15, 0)
     btn.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
     btn.Text = name
     btn.TextColor3 = Color3.fromRGB(156, 163, 175)
@@ -1307,7 +1308,7 @@ for i, name in ipairs(TabNames) do
     if i == 1 then
         btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
         btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        btn.Size = UDim2.new(width + 0.02, 0, 0, 36)
+        btn.Size = UDim2.new(width + 0.015, 0, 0, 36)
     end
     btn.MouseEnter:Connect(function()
         if activeIndex ~= i then btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50) btn.TextColor3 = Color3.fromRGB(255, 255, 255) end
@@ -1737,6 +1738,55 @@ if skyPage then
     end)
 end
 
+-- SOUND PAGE
+local soundPage = ContentPages["Sound"]
+if soundPage then
+    soundPage.CanvasSize = UDim2.new(0, 0, 0, 0)
+    soundPage.ScrollBarThickness = 0
+
+    local soundBlock = Instance.new("Frame")
+    soundBlock.Name = "SoundBlock"
+    soundBlock.Size = UDim2.new(1, -10, 1, -10)
+    soundBlock.Position = UDim2.new(0, 5, 0, 5)
+    soundBlock.BackgroundColor3 = Color3.fromRGB(20, 24, 32)
+    soundBlock.BackgroundTransparency = 0.15
+    soundBlock.BorderSizePixel = 0
+    soundBlock.ClipsDescendants = true
+    soundBlock.Parent = soundPage
+
+    local soundCorner = Instance.new("UICorner")
+    soundCorner.CornerRadius = UDim.new(0, 8)
+    soundCorner.Parent = soundBlock
+
+    soundStroke = Instance.new("UIStroke")
+    soundStroke.Thickness = 2
+    soundStroke.Color = _G.MenuThemeColor
+    soundStroke.Transparency = 0.3
+    soundStroke.Parent = soundBlock
+
+    local ResetSoundButton = Instance.new("TextButton")
+    ResetSoundButton.Size = UDim2.new(0, 60, 0, 22)
+    ResetSoundButton.Position = UDim2.new(1, -65, 1, -27)
+    ResetSoundButton.BackgroundColor3 = Color3.fromRGB(60, 65, 75)
+    ResetSoundButton.BackgroundTransparency = 0.75
+    ResetSoundButton.BorderSizePixel = 0
+    ResetSoundButton.Text = "Reset"
+    ResetSoundButton.TextColor3 = Color3.fromRGB(200, 205, 215)
+    ResetSoundButton.TextSize = 11
+    ResetSoundButton.Font = Enum.Font.Gotham
+    ResetSoundButton.ZIndex = 20
+    ResetSoundButton.Parent = soundBlock
+
+    local ResetCorner = Instance.new("UICorner")
+    ResetCorner.CornerRadius = UDim.new(0, 4)
+    ResetCorner.Parent = ResetSoundButton
+
+    ResetSoundButton.MouseButton1Click:Connect(function()
+        PlayClickSound()
+        print("[SOUND] Reset")
+    end)
+end
+
 -- SETTINGS PAGE
 local settingsPage = ContentPages["Settings"]
 if settingsPage then
@@ -1850,6 +1900,7 @@ if settingsPage then
             UpdateIndicatorColor(pickedColor)
             SearchStroke.Color = pickedColor
             if skyStroke then skyStroke.Color = pickedColor end
+            if soundStroke then soundStroke.Color = pickedColor end
         end
         _G.MenuThemeColor = pickedColor
     end
@@ -1893,6 +1944,7 @@ if settingsPage then
             UpdateIndicatorColor(_G.MenuThemeColor)
             SearchStroke.Color = _G.MenuThemeColor
             if skyStroke then skyStroke.Color = _G.MenuThemeColor end
+            if soundStroke then soundStroke.Color = _G.MenuThemeColor end
         end
     end
     SetToggleState(_G.CustomThemeEnabled)
@@ -2141,6 +2193,7 @@ if settingsPage then
                 UpdateIndicatorColor(color)
                 SearchStroke.Color = color
                 if skyStroke then skyStroke.Color = color end
+                if soundStroke then soundStroke.Color = color end
             end)
         else
             if rainbowConnection then
@@ -2150,6 +2203,7 @@ if settingsPage then
                 UpdateIndicatorColor(_G.MenuThemeColor)
                 SearchStroke.Color = _G.MenuThemeColor
                 if skyStroke then skyStroke.Color = _G.MenuThemeColor end
+                if soundStroke then soundStroke.Color = _G.MenuThemeColor end
             end
         end
     end
@@ -2478,6 +2532,7 @@ if settingsPage then
         UpdateIndicatorColor(_G.MenuThemeColor)
         SearchStroke.Color = _G.MenuThemeColor
         if skyStroke then skyStroke.Color = _G.MenuThemeColor end
+        if soundStroke then soundStroke.Color = _G.MenuThemeColor end
         RemoveChams()
         if SetChamsToggleState then SetChamsToggleState(false) end
         RemoveESP()
@@ -2592,7 +2647,7 @@ UpdateAllTexts()
 if TabButtons[1] then
     TabButtons[1].BackgroundColor3 = Color3.fromRGB(35, 40, 50)
     TabButtons[1].TextColor3 = Color3.fromRGB(255, 255, 255)
-    TabButtons[1].Size = UDim2.new(0.11, 0, 0, 36)
+    TabButtons[1].Size = UDim2.new(0.085, 0, 0, 36)
 end
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
@@ -2683,5 +2738,5 @@ task.spawn(function()
     ShowAchievement()
 end)
 
-print("[META] META v7.0.80 - Sky Modes + Reset")
+print("[META] META v7.0.81 - Sound Tab Added")
 print("[META] Press Insert or click icon")
