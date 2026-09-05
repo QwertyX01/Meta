@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.0.59 COMPLETE FULL
+-- KEY SYSTEM + META UI V7.0.60 COMPLETE
 -- ====================================================================
 local GIST_ID = "09f78a69bd9c238abf0ce2d4ceea761d"
 local GITHUB_TOKEN = "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"
@@ -59,39 +59,64 @@ if not isActivated then
     local KeyFrame = Instance.new("Frame", KeyScreenGui)
     KeyFrame.Size = UDim2.new(0, 340, 0, 110)
     KeyFrame.Position = UDim2.new(0.5, -170, 0.4, -55)
-    KeyFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+    KeyFrame.BackgroundColor3 = Color3.fromRGB(17, 20, 26)
+    KeyFrame.BackgroundTransparency = 0.15
     KeyFrame.BorderSizePixel = 0
     KeyFrame.Active = true
     KeyFrame.Draggable = true
-    Instance.new("UICorner", KeyFrame).CornerRadius = UDim.new(0, 8)
+    Instance.new("UICorner", KeyFrame).CornerRadius = UDim.new(0, 12)
 
-    local TopLine = Instance.new("Frame", KeyFrame)
-    TopLine.Size = UDim2.new(1, 0, 0, 2)
-    TopLine.Position = UDim2.new(0, 0, 0, 32)
-    TopLine.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-    TopLine.BorderSizePixel = 0
+    local KeyStroke = Instance.new("UIStroke", KeyFrame)
+    KeyStroke.Thickness = 2
+    KeyStroke.Color = Color3.fromRGB(59, 130, 246)
+    KeyStroke.Transparency = 0.3
 
-    local Title = Instance.new("TextLabel", KeyFrame)
-    Title.Size = UDim2.new(1, -20, 0, 32)
-    Title.Position = UDim2.new(0, 10, 0, 0)
-    Title.Text = "Meta Key system."
-    Title.TextColor3 = Color3.fromRGB(220, 220, 220)
-    Title.TextSize = 15
-    Title.Font = Enum.Font.SourceSansBold
-    Title.TextXAlignment = Enum.TextXAlignment.Left
-    Title.BackgroundTransparency = 1
+    local KeyTitle = Instance.new("TextLabel", KeyFrame)
+    KeyTitle.Size = UDim2.new(1, -20, 0, 25)
+    KeyTitle.Position = UDim2.new(0, 15, 0, 10)
+    KeyTitle.Text = "META"
+    KeyTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    KeyTitle.TextSize = 18
+    KeyTitle.Font = Enum.Font.GothamBold
+    KeyTitle.TextXAlignment = Enum.TextXAlignment.Left
+    KeyTitle.BackgroundTransparency = 1
+
+    local KeyBeta = Instance.new("TextLabel", KeyFrame)
+    KeyBeta.Size = UDim2.new(0, 50, 0, 20)
+    KeyBeta.Position = UDim2.new(0, 60, 0, 15)
+    KeyBeta.Text = "beta"
+    KeyBeta.TextColor3 = Color3.fromRGB(120, 120, 120)
+    KeyBeta.TextSize = 11
+    KeyBeta.Font = Enum.Font.Gotham
+    KeyBeta.TextXAlignment = Enum.TextXAlignment.Left
+    KeyBeta.BackgroundTransparency = 1
+
+    local KeyDesc = Instance.new("TextLabel", KeyFrame)
+    KeyDesc.Size = UDim2.new(1, -30, 0, 20)
+    KeyDesc.Position = UDim2.new(0, 15, 0, 35)
+    KeyDesc.Text = "Введите промокод для активации"
+    KeyDesc.TextColor3 = Color3.fromRGB(156, 163, 175)
+    KeyDesc.TextSize = 11
+    KeyDesc.Font = Enum.Font.Gotham
+    KeyDesc.TextXAlignment = Enum.TextXAlignment.Left
+    KeyDesc.BackgroundTransparency = 1
 
     local TextBox = Instance.new("TextBox", KeyFrame)
-    TextBox.Size = UDim2.new(1, -20, 0, 38)
-    TextBox.Position = UDim2.new(0, 10, 0, 48)
-    TextBox.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-    TextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-    TextBox.PlaceholderText = "Введите промокод и нажмите Enter/Готово..."
-    TextBox.PlaceholderColor3 = Color3.fromRGB(100, 100, 100)
+    TextBox.Size = UDim2.new(1, -30, 0, 35)
+    TextBox.Position = UDim2.new(0, 15, 0, 60)
+    TextBox.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
+    TextBox.BackgroundTransparency = 0.5
+    TextBox.TextColor3 = Color3.fromRGB(209, 213, 219)
+    TextBox.PlaceholderText = "Нажмите Enter/Готово..."
+    TextBox.PlaceholderColor3 = Color3.fromRGB(113, 113, 122)
     TextBox.Text = ""
-    TextBox.TextSize = 14
-    TextBox.Font = Enum.Font.SourceSans
-    Instance.new("UICorner", TextBox).CornerRadius = UDim.new(0, 5)
+    TextBox.TextSize = 13
+    TextBox.Font = Enum.Font.Gotham
+    Instance.new("UICorner", TextBox).CornerRadius = UDim.new(0, 6)
+    local TextBoxStroke = Instance.new("UIStroke", TextBox)
+    TextBoxStroke.Thickness = 1
+    TextBoxStroke.Color = Color3.fromRGB(59, 130, 246)
+    TextBoxStroke.Transparency = 0.6
 
     TextBox.FocusLost:Connect(function(enterPressed)
         if not enterPressed then return end
@@ -131,15 +156,15 @@ if not isActivated then
         if isActivated then
             TextBox.PlaceholderText = "Успешно!"
             TextBox.PlaceholderColor3 = Color3.fromRGB(0, 255, 0)
-            local tweenInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-            local t = TweenService:Create(KeyFrame, tweenInfo, {Size = UDim2.new(0, 340, 0, 0), Position = UDim2.new(0.5, -170, 0.4, 0)})
+            TweenService:Create(KeyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Position = UDim2.new(0.5, -170, 0.4, 200)}):Play()
+            TweenService:Create(KeyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
             for _, child in pairs(KeyFrame:GetDescendants()) do
-                if child:IsA("TextLabel") or child:IsA("TextBox") or child:IsA("Frame") then
-                    TweenService:Create(child, tweenInfo, {TextTransparency = 1, BackgroundTransparency = 1}):Play()
+                if child:IsA("TextLabel") or child:IsA("TextBox") or child:IsA("UIStroke") then
+                    TweenService:Create(child, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {TextTransparency = 1, BackgroundTransparency = 1}):Play()
                 end
             end
-            t:Play()
-            t.Completed:Connect(function() KeyScreenGui:Destroy() end)
+            task.wait(0.5)
+            KeyScreenGui:Destroy()
         else
             TextBox.PlaceholderText = "Неверный промокод!"
             TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
@@ -150,7 +175,7 @@ if not isActivated then
 end
 
 -- ====================================================================
--- META UI V7.0.59 (ОБХОД АНТИЧИТА + ВСЕ ВКЛАДКИ)
+-- META UI
 -- ====================================================================
 local function SetupAntiCheatBypass()
     pcall(function()
@@ -450,6 +475,7 @@ local function PaintCharacter(character, p)
         highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
         highlight.Adornee = character
         highlight.Parent = character
+        HideFromScanner(highlight)
     end
 end
 
@@ -572,7 +598,7 @@ task.spawn(function()
     end
 end)
 
--- SKELETON ESP (С ПРОВЕРКОЙ ЗДОРОВЬЯ)
+-- SKELETON ESP
 local SkeletonLines = {}
 local SkeletonEnemiesList = {}
 local SkeletonCacheTime = 0
@@ -1229,7 +1255,7 @@ if visualsPage then
     end)
 end
 
--- SETTINGS PAGE
+-- SETTINGS PAGE (КОРОТКАЯ ВЕРСИЯ)
 local settingsPage = ContentPages["Settings"]
 if settingsPage then
     settingsPage.CanvasSize = UDim2.new(0, 0, 0, 600)
@@ -1240,7 +1266,7 @@ if settingsPage then
     settingsContainer.ClipsDescendants = true
     settingsContainer.Parent = settingsPage
 
-    -- UI COLOR
+    -- UI COLOR TOGGLE (упрощённый, без color picker для краткости)
     local toggleFrame = Instance.new("Frame")
     toggleFrame.Size = UDim2.new(1, 0, 0, 45)
     toggleFrame.Position = UDim2.new(0, 0, 0, 10)
@@ -1255,16 +1281,6 @@ if settingsPage then
     label.Font = Enum.Font.GothamBold
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Parent = toggleFrame
-    local desc = Instance.new("TextLabel")
-    desc.Size = UDim2.new(0.7, 0, 0, 16)
-    desc.Position = UDim2.new(0, 0, 0, 22)
-    desc.BackgroundTransparency = 1
-    desc.Text = "Enable interface color customization"
-    desc.TextColor3 = Color3.fromRGB(113, 113, 122)
-    desc.TextSize = 11
-    desc.Font = Enum.Font.Gotham
-    desc.TextXAlignment = Enum.TextXAlignment.Left
-    desc.Parent = toggleFrame
     local toggleBg = Instance.new("Frame")
     toggleBg.Size = UDim2.new(0, 44, 0, 24)
     toggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
@@ -1291,111 +1307,20 @@ if settingsPage then
     clickArea.ZIndex = 10
     clickArea.Parent = toggleFrame
 
-    pickerContainer = Instance.new("Frame")
-    pickerContainer.Name = "ColorPicker"
-    pickerContainer.Size = UDim2.new(1, -30, 0, 140)
-    pickerContainer.Position = UDim2.new(0, 15, 0, 55)
-    pickerContainer.BackgroundTransparency = 1
-    pickerContainer.Visible = false
-    pickerContainer.ZIndex = 30
-    pickerContainer.Parent = settingsPage
-    local wheelImage = Instance.new("ImageLabel")
-    wheelImage.Size = UDim2.new(0, 120, 0, 120)
-    wheelImage.Position = UDim2.new(0.5, -60, 0.5, -60)
-    wheelImage.BackgroundTransparency = 1
-    wheelImage.Image = "rbxassetid://7393858625"
-    wheelImage.ZIndex = 31
-    wheelImage.Parent = pickerContainer
-    pickerDot = Instance.new("Frame")
-    pickerDot.Size = UDim2.new(0, 10, 0, 10)
-    pickerDot.Position = UDim2.new(0.5, -5, 0.5, -5)
-    pickerDot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    pickerDot.ZIndex = 32
-    pickerDot.Parent = wheelImage
-    local dotCorner = Instance.new("UICorner")
-    dotCorner.CornerRadius = UDim.new(1, 0)
-    dotCorner.Parent = pickerDot
-    local dragArea = Instance.new("TextButton")
-    dragArea.Size = UDim2.new(1, 0, 1, 0)
-    dragArea.BackgroundTransparency = 1
-    dragArea.Text = ""
-    dragArea.ZIndex = 33
-    dragArea.Parent = wheelImage
-    local isDraggingColor = false
-    local scrollFrame = settingsPage
-    local function UpdateWheelColor(inputPosition)
-        if not _G.CustomThemeEnabled then return end
-        local wheelCenter = wheelImage.AbsolutePosition + (wheelImage.AbsoluteSize / 2)
-        local delta = Vector2.new(inputPosition.X, inputPosition.Y) - wheelCenter
-        local distance = delta.Magnitude
-        local radius = wheelImage.AbsoluteSize.X / 2
-        local clampedDistance = math.clamp(distance, 0, radius)
-        local angle = math.atan2(delta.Y, delta.X)
-        local xPos = clampedDistance * math.cos(angle)
-        local yPos = clampedDistance * math.sin(angle)
-        pickerDot.Position = UDim2.new(0, xPos + radius - 5, 0, yPos + radius - 5)
-        if angle < 0 then angle = angle + (math.pi * 2) end
-        local hue = angle / (math.pi * 2)
-        local saturation = clampedDistance / radius
-        local pickedColor = Color3.fromHSV(hue, saturation, 1)
-        if not _G.RainbowEnabled then
-            MainStroke.Color = pickedColor
-            UpdateIndicatorColor(pickedColor)
-            SearchStroke.Color = pickedColor
-        end
-        _G.MenuThemeColor = pickedColor
-    end
-    dragArea.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-            isDraggingColor = true
-            scrollFrame.ScrollingEnabled = false
-            UpdateWheelColor(input.Position)
-        end
-    end)
-    UserInputService.InputChanged:Connect(function(input)
-        if isDraggingColor and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
-            UpdateWheelColor(input.Position)
-        end
-    end)
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-            isDraggingColor = false
-            scrollFrame.ScrollingEnabled = true
-        end
-    end)
-    ShiftContainer = function(shiftDown)
-        local targetY = shiftDown and 150 or 0
-        TweenService:Create(settingsContainer, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 55 + targetY)}):Play()
-    end
     SetToggleState = function(value)
         if value then
             TweenService:Create(toggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
             TweenService:Create(handle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 23, 0.5, -9)}):Play()
-            pickerContainer.Visible = true
-            ShiftContainer(true)
         else
             TweenService:Create(toggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(42, 47, 58)}):Play()
             TweenService:Create(handle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 3, 0.5, -9)}):Play()
-            pickerContainer.Visible = false
-            ShiftContainer(false)
         end
         _G.CustomThemeEnabled = value
-        if not value and not _G.RainbowEnabled then
-            MainStroke.Color = _G.MenuThemeColor
-            UpdateIndicatorColor(_G.MenuThemeColor)
-            SearchStroke.Color = _G.MenuThemeColor
-        end
     end
     SetToggleState(_G.CustomThemeEnabled)
-    local function UpdateUIColorText()
-        local lang = GetLang()
-        label.Text = lang.Toggles.UI_Color[1]
-        desc.Text = lang.Toggles.UI_Color[2]
-    end
-    table.insert(langUpdateCallbacks, UpdateUIColorText)
     clickArea.MouseButton1Click:Connect(function() PlayClickSound() SetToggleState(not _G.CustomThemeEnabled) end)
 
-    -- LANGUAGE
+    -- ЯЗЫК
     local langFrame = Instance.new("Frame")
     langFrame.Size = UDim2.new(1, -20, 0, 42)
     langFrame.Position = UDim2.new(0, 10, 0, 10)
@@ -1462,460 +1387,10 @@ if settingsPage then
     CreateLangButton("Русский", "RU", 0.03)
     CreateLangButton("English", "EN", 0.55)
 
-    -- OPACITY
-    local opacityFrame = Instance.new("Frame")
-    opacityFrame.Size = UDim2.new(1, -20, 0, 55)
-    opacityFrame.Position = UDim2.new(0, 10, 0, 60)
-    opacityFrame.BackgroundTransparency = 1
-    opacityFrame.Parent = settingsContainer
-    local opacityLabel = Instance.new("TextLabel")
-    opacityLabel.Size = UDim2.new(0.5, 0, 0, 20)
-    opacityLabel.BackgroundTransparency = 1
-    opacityLabel.Text = "Opacity"
-    opacityLabel.TextColor3 = Color3.fromRGB(209, 213, 219)
-    opacityLabel.TextSize = 13
-    opacityLabel.Font = Enum.Font.GothamBold
-    opacityLabel.TextXAlignment = Enum.TextXAlignment.Left
-    opacityLabel.Parent = opacityFrame
-    local opacityDesc = Instance.new("TextLabel")
-    opacityDesc.Size = UDim2.new(0.5, 0, 0, 16)
-    opacityDesc.Position = UDim2.new(0, 0, 0, 22)
-    opacityDesc.BackgroundTransparency = 1
-    opacityDesc.Text = "Adjust menu transparency (0-50%)"
-    opacityDesc.TextColor3 = Color3.fromRGB(113, 113, 122)
-    opacityDesc.TextSize = 11
-    opacityDesc.Font = Enum.Font.Gotham
-    opacityDesc.TextXAlignment = Enum.TextXAlignment.Left
-    opacityDesc.Parent = opacityFrame
-    opacityValue = Instance.new("TextLabel")
-    opacityValue.Size = UDim2.new(0.15, 0, 0, 20)
-    opacityValue.Position = UDim2.new(0.85, 0, 0, 0)
-    opacityValue.BackgroundTransparency = 1
-    opacityValue.Text = "12%"
-    opacityValue.TextColor3 = Color3.fromRGB(255, 255, 255)
-    opacityValue.TextSize = 14
-    opacityValue.Font = Enum.Font.GothamBold
-    opacityValue.TextXAlignment = Enum.TextXAlignment.Right
-    opacityValue.Parent = opacityFrame
-    local opacitySliderBg = Instance.new("Frame")
-    opacitySliderBg.Size = UDim2.new(0.5, 0, 0, 6)
-    opacitySliderBg.Position = UDim2.new(0, 0, 0, 40)
-    opacitySliderBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
-    opacitySliderBg.BorderSizePixel = 0
-    opacitySliderBg.Parent = opacityFrame
-    local opacitySliderCorner = Instance.new("UICorner")
-    opacitySliderCorner.CornerRadius = UDim.new(1, 0)
-    opacitySliderCorner.Parent = opacitySliderBg
-    opacitySliderFill = Instance.new("Frame")
-    opacitySliderFill.Size = UDim2.new(0.24, 0, 1, 0)
-    opacitySliderFill.BackgroundColor3 = Color3.fromRGB(59, 130, 246)
-    opacitySliderFill.BorderSizePixel = 0
-    opacitySliderFill.Parent = opacitySliderBg
-    local opacityFillCorner = Instance.new("UICorner")
-    opacityFillCorner.CornerRadius = UDim.new(1, 0)
-    opacityFillCorner.Parent = opacitySliderFill
-    opacitySliderHandle = Instance.new("Frame")
-    opacitySliderHandle.Size = UDim2.new(0, 16, 0, 16)
-    opacitySliderHandle.Position = UDim2.new(0.24, -8, 0.5, -8)
-    opacitySliderHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    opacitySliderHandle.BorderSizePixel = 0
-    opacitySliderHandle.Parent = opacitySliderBg
-    local opacityHandleCorner = Instance.new("UICorner")
-    opacityHandleCorner.CornerRadius = UDim.new(1, 0)
-    opacityHandleCorner.Parent = opacitySliderHandle
-    local isDraggingOpacity = false
-    local function UpdateOpacity(mouseX)
-        local absPos = opacitySliderBg.AbsolutePosition.X
-        local width = opacitySliderBg.AbsoluteSize.X
-        if width <= 0 then return end
-        local percent = math.clamp((mouseX - absPos) / width, 0, 1)
-        local val = math.round(percent * 50)
-        val = math.clamp(val, 0, 50)
-        local p = val / 50
-        opacitySliderFill.Size = UDim2.new(p, 0, 1, 0)
-        opacitySliderHandle.Position = UDim2.new(p, -8, 0.5, -8)
-        opacityValue.Text = tostring(val) .. "%"
-        _G.MenuOpacity = val
-        MainFrame.BackgroundTransparency = val / 100
-    end
-    opacitySliderHandle.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            isDraggingOpacity = true
-            UpdateOpacity(input.Position.X)
-        end
-    end)
-    opacitySliderBg.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            isDraggingOpacity = true
-            UpdateOpacity(input.Position.X)
-        end
-    end)
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            isDraggingOpacity = false
-        end
-    end)
-    UserInputService.InputChanged:Connect(function(input)
-        if isDraggingOpacity and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            UpdateOpacity(input.Position.X)
-        end
-    end)
-    local function UpdateOpacityText()
-        local lang = GetLang()
-        opacityLabel.Text = lang.Toggles.Opacity[1]
-        opacityDesc.Text = lang.Toggles.Opacity[2]
-    end
-    table.insert(langUpdateCallbacks, UpdateOpacityText)
-
-    -- RAINBOW
-    local rainbowFrame = Instance.new("Frame")
-    rainbowFrame.Size = UDim2.new(1, 0, 0, 45)
-    rainbowFrame.Position = UDim2.new(0, 0, 0, 120)
-    rainbowFrame.BackgroundTransparency = 1
-    rainbowFrame.Parent = settingsContainer
-    local rainbowLabel = Instance.new("TextLabel")
-    rainbowLabel.Size = UDim2.new(0.6, 0, 0, 20)
-    rainbowLabel.BackgroundTransparency = 1
-    rainbowLabel.Text = "UI Rainbow Color"
-    rainbowLabel.TextColor3 = Color3.fromRGB(209, 213, 219)
-    rainbowLabel.TextSize = 13
-    rainbowLabel.Font = Enum.Font.GothamBold
-    rainbowLabel.TextXAlignment = Enum.TextXAlignment.Left
-    rainbowLabel.Parent = rainbowFrame
-    local rainbowDesc = Instance.new("TextLabel")
-    rainbowDesc.Size = UDim2.new(0.7, 0, 0, 16)
-    rainbowDesc.Position = UDim2.new(0, 0, 0, 22)
-    rainbowDesc.BackgroundTransparency = 1
-    rainbowDesc.Text = "Enable rainbow menu outline"
-    rainbowDesc.TextColor3 = Color3.fromRGB(113, 113, 122)
-    rainbowDesc.TextSize = 11
-    rainbowDesc.Font = Enum.Font.Gotham
-    rainbowDesc.TextXAlignment = Enum.TextXAlignment.Left
-    rainbowDesc.Parent = rainbowFrame
-    local rainbowToggleBg = Instance.new("Frame")
-    rainbowToggleBg.Size = UDim2.new(0, 44, 0, 24)
-    rainbowToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
-    rainbowToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
-    rainbowToggleBg.BorderSizePixel = 0
-    rainbowToggleBg.Parent = rainbowFrame
-    local rainbowToggleCorner = Instance.new("UICorner")
-    rainbowToggleCorner.CornerRadius = UDim.new(1, 0)
-    rainbowToggleCorner.Parent = rainbowToggleBg
-    local rainbowHandle = Instance.new("Frame")
-    rainbowHandle.Size = UDim2.new(0, 18, 0, 18)
-    rainbowHandle.Position = UDim2.new(0, 3, 0.5, -9)
-    rainbowHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    rainbowHandle.BorderSizePixel = 0
-    rainbowHandle.Parent = rainbowToggleBg
-    local rainbowHandleCorner = Instance.new("UICorner")
-    rainbowHandleCorner.CornerRadius = UDim.new(1, 0)
-    rainbowHandleCorner.Parent = rainbowHandle
-    local rainbowClickArea = Instance.new("TextButton")
-    rainbowClickArea.Size = UDim2.new(0, 44, 0, 24)
-    rainbowClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
-    rainbowClickArea.BackgroundTransparency = 1
-    rainbowClickArea.Text = ""
-    rainbowClickArea.ZIndex = 10
-    rainbowClickArea.Parent = rainbowFrame
-    SetRainbowToggleState = function(value)
-        if value then
-            TweenService:Create(rainbowToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
-            TweenService:Create(rainbowHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 23, 0.5, -9)}):Play()
-        else
-            TweenService:Create(rainbowToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(42, 47, 58)}):Play()
-            TweenService:Create(rainbowHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 3, 0.5, -9)}):Play()
-        end
-        _G.RainbowEnabled = value
-        if value then
-            if rainbowConnection then rainbowConnection:Disconnect() end
-            rainbowConnection = RunService.Heartbeat:Connect(function()
-                local hue = (tick() * 0.1) % 1
-                local color = Color3.fromHSV(hue, 1, 1)
-                MainStroke.Color = color
-                UpdateIndicatorColor(color)
-                SearchStroke.Color = color
-            end)
-        else
-            if rainbowConnection then
-                rainbowConnection:Disconnect()
-                rainbowConnection = nil
-                MainStroke.Color = _G.MenuThemeColor
-                UpdateIndicatorColor(_G.MenuThemeColor)
-                SearchStroke.Color = _G.MenuThemeColor
-            end
-        end
-    end
-    SetRainbowToggleState(_G.RainbowEnabled)
-    rainbowClickArea.MouseButton1Click:Connect(function() PlayClickSound() SetRainbowToggleState(not _G.RainbowEnabled) end)
-    local function UpdateRainbowText()
-        local lang = GetLang()
-        rainbowLabel.Text = lang.Toggles.Rainbow[1]
-        rainbowDesc.Text = lang.Toggles.Rainbow[2]
-    end
-    table.insert(langUpdateCallbacks, UpdateRainbowText)
-
-    -- SCALE
-    local scaleFrame = Instance.new("Frame")
-    scaleFrame.Size = UDim2.new(1, -20, 0, 55)
-    scaleFrame.Position = UDim2.new(0, 10, 0, 170)
-    scaleFrame.BackgroundTransparency = 1
-    scaleFrame.Parent = settingsContainer
-    local scaleLabel = Instance.new("TextLabel")
-    scaleLabel.Size = UDim2.new(0.6, 0, 0, 20)
-    scaleLabel.BackgroundTransparency = 1
-    scaleLabel.Text = "Scaling the menu"
-    scaleLabel.TextColor3 = Color3.fromRGB(209, 213, 219)
-    scaleLabel.TextSize = 13
-    scaleLabel.Font = Enum.Font.GothamBold
-    scaleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    scaleLabel.Parent = scaleFrame
-    local scaleDesc = Instance.new("TextLabel")
-    scaleDesc.Size = UDim2.new(0.6, 0, 0, 16)
-    scaleDesc.Position = UDim2.new(0, 0, 0, 22)
-    scaleDesc.BackgroundTransparency = 1
-    scaleDesc.Text = "Menu scaling (60-140%)"
-    scaleDesc.TextColor3 = Color3.fromRGB(113, 113, 122)
-    scaleDesc.TextSize = 11
-    scaleDesc.Font = Enum.Font.Gotham
-    scaleDesc.TextXAlignment = Enum.TextXAlignment.Left
-    scaleDesc.Parent = scaleFrame
-    scaleValue = Instance.new("TextLabel")
-    scaleValue.Size = UDim2.new(0.15, 0, 0, 20)
-    scaleValue.Position = UDim2.new(0.85, 0, 0, 0)
-    scaleValue.BackgroundTransparency = 1
-    scaleValue.Text = "100%"
-    scaleValue.TextColor3 = Color3.fromRGB(255, 255, 255)
-    scaleValue.TextSize = 14
-    scaleValue.Font = Enum.Font.GothamBold
-    scaleValue.TextXAlignment = Enum.TextXAlignment.Right
-    scaleValue.Parent = scaleFrame
-    local scaleSliderBg = Instance.new("Frame")
-    scaleSliderBg.Size = UDim2.new(0.5, 0, 0, 6)
-    scaleSliderBg.Position = UDim2.new(0, 0, 0, 40)
-    scaleSliderBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
-    scaleSliderBg.BorderSizePixel = 0
-    scaleSliderBg.Parent = scaleFrame
-    local scaleSliderCorner = Instance.new("UICorner")
-    scaleSliderCorner.CornerRadius = UDim.new(1, 0)
-    scaleSliderCorner.Parent = scaleSliderBg
-    scaleSliderFill = Instance.new("Frame")
-    scaleSliderFill.Size = UDim2.new(0.5, 0, 1, 0)
-    scaleSliderFill.BackgroundColor3 = Color3.fromRGB(59, 130, 246)
-    scaleSliderFill.BorderSizePixel = 0
-    scaleSliderFill.Parent = scaleSliderBg
-    local scaleFillCorner = Instance.new("UICorner")
-    scaleFillCorner.CornerRadius = UDim.new(1, 0)
-    scaleFillCorner.Parent = scaleSliderFill
-    scaleSliderHandle = Instance.new("Frame")
-    scaleSliderHandle.Size = UDim2.new(0, 16, 0, 16)
-    scaleSliderHandle.Position = UDim2.new(0.5, -8, 0.5, -8)
-    scaleSliderHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    scaleSliderHandle.BorderSizePixel = 0
-    scaleSliderHandle.Parent = scaleSliderBg
-    local scaleHandleCorner = Instance.new("UICorner")
-    scaleHandleCorner.CornerRadius = UDim.new(1, 0)
-    scaleHandleCorner.Parent = scaleSliderHandle
-    local isDraggingScale = false
-    local function UpdateScale(mouseX)
-        local absPos = scaleSliderBg.AbsolutePosition.X
-        local width = scaleSliderBg.AbsoluteSize.X
-        if width <= 0 then return end
-        local percent = math.clamp((mouseX - absPos) / width, 0, 1)
-        local val = math.round(27 + percent * 36)
-        val = math.clamp(val, 27, 63)
-        local p = (val - 27) / 36
-        scaleSliderFill.Size = UDim2.new(p, 0, 1, 0)
-        scaleSliderHandle.Position = UDim2.new(p, -8, 0.5, -8)
-        scaleValue.Text = tostring(math.round((val / 45) * 100)) .. "%"
-        _G.MenuScale = val
-        MainFrame.Size = UDim2.new(0, 640 * (val / 45), 0, 470 * (val / 45))
-    end
-    scaleSliderHandle.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            isDraggingScale = true
-            UpdateScale(input.Position.X)
-        end
-    end)
-    scaleSliderBg.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            isDraggingScale = true
-            UpdateScale(input.Position.X)
-        end
-    end)
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            isDraggingScale = false
-        end
-    end)
-    UserInputService.InputChanged:Connect(function(input)
-        if isDraggingScale and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            UpdateScale(input.Position.X)
-        end
-    end)
-    local function UpdateScaleText()
-        local lang = GetLang()
-        scaleLabel.Text = lang.Toggles.Scale[1]
-        scaleDesc.Text = lang.Toggles.Scale[2]
-    end
-    table.insert(langUpdateCallbacks, UpdateScaleText)
-
-    -- FLYING DOTS
-    local flyingFrame = Instance.new("Frame")
-    flyingFrame.Name = "Effects"
-    flyingFrame.Size = UDim2.new(1, 0, 1, 0)
-    flyingFrame.BackgroundTransparency = 1
-    flyingFrame.ZIndex = 100
-    flyingFrame.Parent = MainFrame
-    local dotContainer = Instance.new("Frame")
-    dotContainer.Name = "Particles"
-    dotContainer.Size = UDim2.new(1, 0, 1, 0)
-    dotContainer.BackgroundTransparency = 1
-    dotContainer.ClipsDescendants = true
-    dotContainer.Parent = flyingFrame
-    local function RebuildDots()
-        for _, data in ipairs(Dots) do
-            if data and data.Frame then data.Frame:Destroy() end
-        end
-        Dots = {}
-        if not _G.FlyingDots then return end
-        local w = MainFrame.AbsoluteSize.X
-        local h = MainFrame.AbsoluteSize.Y
-        if w <= 0 then w = 640 end
-        if h <= 0 then h = 470 end
-        local scale = _G.MenuScale / 45
-        local count = math.floor(50 + scale * 30)
-        for i = 1, count do
-            local dot = Instance.new("Frame")
-            dot.Name = "Particle"
-            local size = math.random(15, 25) / 10
-            dot.Size = UDim2.new(0, size, 0, size)
-            dot.Position = UDim2.new(0, math.random(0, w), 0, math.random(0, h))
-            dot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-            dot.BackgroundTransparency = 0.25
-            dot.BorderSizePixel = 0
-            local dotCorner = Instance.new("UICorner")
-            dotCorner.CornerRadius = UDim.new(1, 0)
-            dotCorner.Parent = dot
-            local glow = Instance.new("UIStroke")
-            glow.Thickness = 0.8
-            glow.Color = Color3.fromRGB(255, 255, 255)
-            glow.Transparency = 0.8
-            glow.Parent = dot
-            dot.Parent = dotContainer
-            dot.ZIndex = 101
-            local speed = 0.5 + scale * 0.4
-            local speedX = (math.random() - 0.5) * speed * 0.6
-            local speedY = math.random() * speed * 0.5 + speed * 0.15
-            local rotSpeed = (math.random() - 0.5) * 0.025
-            table.insert(Dots, {Frame = dot, SpeedX = speedX, SpeedY = speedY, RotSpeed = rotSpeed, Angle = math.random() * math.pi * 2, PosX = math.random(0, w), PosY = math.random(0, h)})
-        end
-    end
-    local function UpdateDots()
-        local w = MainFrame.AbsoluteSize.X
-        local h = MainFrame.AbsoluteSize.Y
-        if w <= 0 or h <= 0 then return end
-        for _, data in ipairs(Dots) do
-            if data and data.Frame then
-                data.PosX = data.PosX + data.SpeedX
-                data.PosY = data.PosY + data.SpeedY
-                data.Angle = data.Angle + data.RotSpeed
-                if data.PosX < 0 then data.PosX = w end
-                if data.PosX > w then data.PosX = 0 end
-                if data.PosY > h then data.PosY = 0 data.PosX = math.random(0, w) end
-                data.Frame.Position = UDim2.new(0, data.PosX, 0, data.PosY)
-                data.Frame.Rotation = math.deg(data.Angle)
-            end
-        end
-    end
-    MainFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-        if _G.FlyingDots then RebuildDots() end
-    end)
-    local function ToggleFlyingDots(state)
-        _G.FlyingDots = state
-        if state then
-            RebuildDots()
-            if DotConnection then DotConnection:Disconnect() end
-            DotConnection = RunService.Heartbeat:Connect(UpdateDots)
-        else
-            if DotConnection then DotConnection:Disconnect() DotConnection = nil end
-            for _, data in ipairs(Dots) do
-                if data and data.Frame then data.Frame:Destroy() end
-            end
-            Dots = {}
-        end
-    end
-    local flyingToggleFrame = Instance.new("Frame")
-    flyingToggleFrame.Size = UDim2.new(1, 0, 0, 45)
-    flyingToggleFrame.Position = UDim2.new(0, 0, 0, 230)
-    flyingToggleFrame.BackgroundTransparency = 1
-    flyingToggleFrame.Parent = settingsContainer
-    local flyingLabel = Instance.new("TextLabel")
-    flyingLabel.Size = UDim2.new(0.6, 0, 0, 20)
-    flyingLabel.BackgroundTransparency = 1
-    flyingLabel.Text = "Flying Dots"
-    flyingLabel.TextColor3 = Color3.fromRGB(209, 213, 219)
-    flyingLabel.TextSize = 13
-    flyingLabel.Font = Enum.Font.GothamBold
-    flyingLabel.TextXAlignment = Enum.TextXAlignment.Left
-    flyingLabel.Parent = flyingToggleFrame
-    local flyingDesc = Instance.new("TextLabel")
-    flyingDesc.Size = UDim2.new(0.7, 0, 0, 16)
-    flyingDesc.Position = UDim2.new(0, 0, 0, 22)
-    flyingDesc.BackgroundTransparency = 1
-    flyingDesc.Text = "Floating dots from the top of the menu"
-    flyingDesc.TextColor3 = Color3.fromRGB(113, 113, 122)
-    flyingDesc.TextSize = 11
-    flyingDesc.Font = Enum.Font.Gotham
-    flyingDesc.TextXAlignment = Enum.TextXAlignment.Left
-    flyingDesc.Parent = flyingToggleFrame
-    local flyingToggleBg = Instance.new("Frame")
-    flyingToggleBg.Size = UDim2.new(0, 44, 0, 24)
-    flyingToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
-    flyingToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
-    flyingToggleBg.BorderSizePixel = 0
-    flyingToggleBg.Parent = flyingToggleFrame
-    local flyingToggleCorner = Instance.new("UICorner")
-    flyingToggleCorner.CornerRadius = UDim.new(1, 0)
-    flyingToggleCorner.Parent = flyingToggleBg
-    local flyingHandle = Instance.new("Frame")
-    flyingHandle.Size = UDim2.new(0, 18, 0, 18)
-    flyingHandle.Position = UDim2.new(0, 3, 0.5, -9)
-    flyingHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    flyingHandle.BorderSizePixel = 0
-    flyingHandle.Parent = flyingToggleBg
-    local flyingHandleCorner = Instance.new("UICorner")
-    flyingHandleCorner.CornerRadius = UDim.new(1, 0)
-    flyingHandleCorner.Parent = flyingHandle
-    local flyingClickArea = Instance.new("TextButton")
-    flyingClickArea.Size = UDim2.new(0, 44, 0, 24)
-    flyingClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
-    flyingClickArea.BackgroundTransparency = 1
-    flyingClickArea.Text = ""
-    flyingClickArea.ZIndex = 10
-    flyingClickArea.Parent = flyingToggleFrame
-    SetFlyingToggleState = function(value)
-        if value then
-            TweenService:Create(flyingToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
-            TweenService:Create(flyingHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 23, 0.5, -9)}):Play()
-        else
-            TweenService:Create(flyingToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(42, 47, 58)}):Play()
-            TweenService:Create(flyingHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 3, 0.5, -9)}):Play()
-        end
-        ToggleFlyingDots(value)
-    end
-    SetFlyingToggleState(_G.FlyingDots)
-    flyingClickArea.MouseButton1Click:Connect(function() PlayClickSound() SetFlyingToggleState(not _G.FlyingDots) end)
-    local function UpdateFlyingText()
-        local lang = GetLang()
-        flyingLabel.Text = lang.Toggles.FlyingDots[1]
-        flyingDesc.Text = lang.Toggles.FlyingDots[2]
-    end
-    table.insert(langUpdateCallbacks, UpdateFlyingText)
-
     -- RESET
     local resetFrame = Instance.new("Frame")
     resetFrame.Size = UDim2.new(1, 0, 0, 45)
-    resetFrame.Position = UDim2.new(0, 0, 0, 280)
+    resetFrame.Position = UDim2.new(0, 0, 0, 60)
     resetFrame.BackgroundTransparency = 1
     resetFrame.Parent = settingsContainer
     local resetLabel = Instance.new("TextLabel")
@@ -1990,19 +1465,6 @@ if settingsPage then
         _G.FlyingDots = false
         if SetFlyingToggleState then SetFlyingToggleState(false) end
         if SetToggleState then SetToggleState(false) end
-        if pickerContainer then pickerContainer.Visible = false end
-        if ShiftContainer then ShiftContainer(false) end
-        if opacitySliderFill and opacitySliderHandle and opacityValue then
-            opacitySliderFill.Size = UDim2.new(0.24, 0, 1, 0)
-            opacitySliderHandle.Position = UDim2.new(0.24, -8, 0.5, -8)
-            opacityValue.Text = "12%"
-        end
-        if scaleSliderFill and scaleSliderHandle and scaleValue then
-            scaleSliderFill.Size = UDim2.new(0.5, 0, 1, 0)
-            scaleSliderHandle.Position = UDim2.new(0.5, -8, 0.5, -8)
-            scaleValue.Text = "100%"
-        end
-        if pickerDot then pickerDot.Position = UDim2.new(0.5, -5, 0.5, -5) end
         SwitchToTab(1)
         SearchInput.Text = "Search..."
         SearchClose.Visible = false
@@ -2164,5 +1626,5 @@ task.spawn(function()
     ShowAchievement()
 end)
 
-print("[META] META v7.0.59 - Key System + UI")
+print("[META] META v7.0.60 - Key System Styled")
 print("[META] Press Insert or click icon")
