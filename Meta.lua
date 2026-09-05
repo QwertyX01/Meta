@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.0.78 PREMIUM GLASS + TIKTOK LINK
+-- KEY SYSTEM + META UI V7.0.79 LAUNCH COUNTER
 -- ====================================================================
 local GIST_ID = "0952fe76bcc259fcbda99e552956e5e6"
 local TOKEN_PART1 = "ghp_kMjn"
@@ -29,6 +29,40 @@ local function getGistData()
         for filename, fileInfo in pairs(data.files) do return fileInfo.content, filename end
     end
     return nil
+end
+
+local function getLaunchCount(dbText)
+    if not dbText then return 0 end
+    for line in string.gmatch(dbText, "[^\r\n]+") do
+        local key, value = string.match(line, "([^:]+):([^:]+)")
+        if key == "launches" then
+            return tonumber(value) or 0
+        end
+    end
+    return 0
+end
+
+local function updateLaunchCount(filename, oldContent, newCount)
+    local updatedContent = oldContent
+    local found = false
+    local lines = {}
+    for line in string.gmatch(oldContent, "[^\r\n]+") do
+        local key = string.match(line, "([^:]+):")
+        if key == "launches" then
+            table.insert(lines, "launches:" .. tostring(newCount))
+            found = true
+        else
+            table.insert(lines, line)
+        end
+    end
+    if not found then table.insert(lines, "launches:" .. tostring(newCount)) end
+    updatedContent = table.concat(lines, "\n")
+    http({
+        Url = "https://api.github.com/gists/" .. GIST_ID,
+        Method = "PATCH",
+        Headers = {["Authorization"] = "token " .. GITHUB_TOKEN, ["Content-Type"] = "application/json"},
+        Body = HttpService:JSONEncode({files = {[filename] = {content = updatedContent}}})
+    })
 end
 
 local function updateGist(filename, oldContent, enteredKey, expireTimestamp, userId, remainingLimit)
@@ -374,6 +408,18 @@ if not isActivated then
     KeyScreenGui:Destroy()
 end
 
+-- INCREMENT LAUNCH COUNT
+local function IncrementLaunchCount()
+    local dbText, filename = getGistData()
+    if dbText then
+        local currentCount = getLaunchCount(dbText)
+        local newCount = currentCount + 1
+        updateLaunchCount(filename, dbText, newCount)
+        _G.LaunchCount = newCount
+    end
+end
+IncrementLaunchCount()
+
 -- ====================================================================
 -- META UI
 -- ====================================================================
@@ -554,6 +600,18 @@ BetaLabel.Font = Enum.Font.Gotham
 BetaLabel.TextXAlignment = Enum.TextXAlignment.Left
 BetaLabel.TextYAlignment = Enum.TextYAlignment.Center
 BetaLabel.Parent = Header
+
+local LaunchCountLabel = Instance.new("TextLabel")
+LaunchCountLabel.Size = UDim2.new(0, 100, 1, 0)
+LaunchCountLabel.Position = UDim2.new(0, 110, 0, 0)
+LaunchCountLabel.BackgroundTransparency = 1
+LaunchCountLabel.Text = tostring(_G.LaunchCount or 0)
+LaunchCountLabel.TextColor3 = Color3.fromRGB(120, 120, 120)
+LaunchCountLabel.TextSize = 11
+LaunchCountLabel.Font = Enum.Font.Gotham
+LaunchCountLabel.TextXAlignment = Enum.TextXAlignment.Left
+LaunchCountLabel.TextYAlignment = Enum.TextYAlignment.Center
+LaunchCountLabel.Parent = Header
 
 local GameNameLabel = Instance.new("TextLabel")
 GameNameLabel.Size = UDim2.new(0.35, 0, 1, 0)
@@ -2493,5 +2551,5 @@ task.spawn(function()
     ShowAchievement()
 end)
 
-print("[META] META v7.0.78 - Premium Glass + TikTok Link")
+print("[META] META v7.0.79 - Launch Counter Added")
 print("[META] Press Insert or click icon")
