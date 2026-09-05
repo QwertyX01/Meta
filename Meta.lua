@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.0.60 COMPLETE
+-- KEY SYSTEM + META UI V7.0.61 COMPLETE FULL
 -- ====================================================================
 local GIST_ID = "09f78a69bd9c238abf0ce2d4ceea761d"
 local GITHUB_TOKEN = "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"
@@ -14,44 +14,7 @@ local UserInputService = game:GetService("UserInputService")
 local SoundService = game:GetService("SoundService")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
--- 1. АВТО-ВХОД С ПРОВЕРКОЙ КЛЮЧА И АВТО-СБРОСОМ
-local autoLoginSuccess = false
-local cachedDbText = nil
 
-if readfile then
-	local fileExists, content = pcall(function() return readfile(KEY_FILE_NAME) end)
-	if fileExists and content ~= "" then
-		local success, clientData = pcall(function() return HttpService:JSONDecode(content) end)
-		if success and clientData.key and clientData.expires then
-			-- Загружаем базу с Гитхаба для проверки
-			cachedDbText = getGistData()
-			if cachedDbText then
-				local isKeyStillValid = false
-				for line in string.gmatch(cachedDbText, "[^\r\n]+") do
-					local key = string.match(line, "([^:]+):")
-					-- Если сохраненный ключ ДО СИХ ПОР есть в твоем Gist
-					if key == clientData.key then
-						isKeyStillValid = true
-						break
-					end
-				end
-				
-				-- Пускаем без пароля только если время не вышло И ключ не удален из Gist
-				if isKeyStillValid and os.time() < clientData.expires then
-					autoLoginSuccess = true
-					goto run_main_script
-				end
-			end
-		end
-	end
-end
-
--- Если авто-вход НЕ сработал (ключ удалили из Gist), принудительно сбрасываем файл,
--- чтобы он не мешал, и включаем Key-панель
-if not autoLoginSuccess then
-	if writefile then writefile(KEY_FILE_NAME, "") end -- Очищаем старую сессию
-	-- Код ниже сам создаст и покажет Key-панель игроку
-end
 local http = (syn and syn.request) or (http and http.request) or http_request
 if not http then return print("Дельта не поддерживает http_request!") end
 
@@ -75,16 +38,36 @@ end
 
 local isActivated = false
 
+-- АВТО-ВХОД С ПРОВЕРКОЙ КЛЮЧА
+local autoLoginSuccess = false
+local cachedDbText = nil
+
 if readfile then
     local fileExists, content = pcall(function() return readfile(KEY_FILE_NAME) end)
     if fileExists and content ~= "" then
         local success, clientData = pcall(function() return HttpService:JSONDecode(content) end)
         if success and clientData.key and clientData.expires then
-            if os.time() < clientData.expires then
-                isActivated = true
+            cachedDbText = getGistData()
+            if cachedDbText then
+                local isKeyStillValid = false
+                for line in string.gmatch(cachedDbText, "[^\r\n]+") do
+                    local key = string.match(line, "([^:]+):")
+                    if key == clientData.key then
+                        isKeyStillValid = true
+                        break
+                    end
+                end
+                if isKeyStillValid and os.time() < clientData.expires then
+                    autoLoginSuccess = true
+                    isActivated = true
+                end
             end
         end
     end
+end
+
+if not autoLoginSuccess then
+    if writefile then writefile(KEY_FILE_NAME, "") end
 end
 
 if not isActivated then
@@ -2217,5 +2200,5 @@ task.spawn(function()
     ShowAchievement()
 end)
 
-print("[META] META v7.0.60 - Key System Styled")
+print("[META] META v7.0.61 - Key System + Auto Login")
 print("[META] Press Insert or click icon")
