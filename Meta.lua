@@ -1,4 +1,4 @@
--- ROCKET::META_UI_V7.0.41
+-- ROCKET::META_UI_V7.0.42
 
 local function SetupAntiCheatBypass()
     pcall(function()
@@ -430,9 +430,6 @@ task.spawn(function()
 end)
 
 -- SKELETON ESP (ПОЛНЫЙ РОСТ)
--- ЗАМЕНИТЕ ВЕСЬ БЛОК SKELETON НА ЭТОТ:
-
--- SKELETON ESP (ПОЛНЫЙ РОСТ)
 local SkeletonConnections = {}
 local function SetupSkeleton()
     local function createLine()
@@ -612,6 +609,7 @@ local function SetupSkeleton()
     return ApplySkeleton, RemoveSkeleton
 end
 local ApplySkeleton, RemoveSkeleton = SetupSkeleton()
+
 -- HEALTH BAR ESP (НАД ГОЛОВОЙ, БЕЗ РАЗДЕЛИТЕЛЕЙ, ПРОЗРАЧНЫЙ)
 local healthBars = {}
 local enemiesCache = {}
@@ -2103,5 +2101,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         MainFrame.Visible = not MainFrame.Visible
     end
 end)
-print("[META] META v7.0.41 - Skeleton + Health Bar")
+print("[META] META v7.0.42 - Skeleton + Health Bar FIXED")
 print("[META] Press Insert or click icon")
