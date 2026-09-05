@@ -1,4 +1,4 @@
--- ROCKET::META_UI_V7.0.47
+-- ROCKET::META_UI_V7.0.48
 
 local function SetupAntiCheatBypass()
     pcall(function()
@@ -429,58 +429,25 @@ task.spawn(function()
     end
 end)
 
--- SKELETON ESP (LOADSTRING ИСПРАВЛЕННЫЙ)
-local SkeletonLoaded = false
-local function ApplySkeleton()
-    _G.SkeletonEnabled = true
-    getgenv().SkeletonEnabled = true
-    if not SkeletonLoaded then
-        SkeletonLoaded = true
-        local skeletonScript = [[
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local Camera = workspace.CurrentCamera
-local LocalPlayer = Players.LocalPlayer
-
+-- SKELETON ESP (ВСТРОЕННЫЙ, РАБОТАЕТ С ТУМБЛЕРОМ)
 local skeletons = {}
-local enemiesCache = {}
-local cacheTime = 0
+local skeletonEnemiesCache = {}
+local skeletonCacheTime = 0
+local skeletonConnection = nil
 
-local function IsEnemy(player)
-    if not player or player == LocalPlayer then return false end
-    if player.Team and LocalPlayer.Team then
-        if player.Team ~= LocalPlayer.Team then return true end
-        if player.Team.Name ~= LocalPlayer.Team.Name then return true end
-    end
-    if player.TeamColor and LocalPlayer.TeamColor then
-        if player.TeamColor ~= LocalPlayer.TeamColor then return true end
-    end
-    local mySide = LocalPlayer:GetAttribute("Team") or LocalPlayer:GetAttribute("Side") or ""
-    local enemySide = player:GetAttribute("Team") or player:GetAttribute("Side") or ""
-    if mySide ~= "" and enemySide ~= "" then return mySide ~= enemySide end
-    return false
-end
+getgenv().SkeletonColor = Color3.fromRGB(255, 255, 255)
+getgenv().SkeletonThickness = 2
 
-local function getPlayerHealth(character)
-    if not character then return nil, nil end
-    local humanoid = character:FindFirstChild("Humanoid")
-    if humanoid and humanoid.Health and humanoid.MaxHealth then
-        if humanoid.Health > 0 then return humanoid.Health, humanoid.MaxHealth end
-        return nil, nil
-    end
-    return nil, nil
-end
-
-local function createLine()
+local function createSkeletonLine()
     local line = Drawing.new("Line")
-    line.Thickness = 2
+    line.Thickness = getgenv().SkeletonThickness or 2
     line.Visible = false
-    line.Color = Color3.fromRGB(255, 255, 255)
+    line.Color = getgenv().SkeletonColor or Color3.fromRGB(255, 255, 255)
     line.Transparency = 1
     return line
 end
 
-local function getPos(part)
+local function getSkeletonPos(part)
     if not part or not part:IsA("BasePart") then return nil end
     local pos = Camera:WorldToViewportPoint(part.Position)
     if pos.Z > 0 then return Vector2.new(pos.X, pos.Y) end
@@ -500,16 +467,16 @@ local function removeSkeleton(target)
     end
 end
 
-local function updateEnemiesCache()
-    if tick() - cacheTime < 0.5 then return end
-    cacheTime = tick()
-    enemiesCache = {}
+local function updateSkeletonEnemiesCache()
+    if tick() - skeletonCacheTime < 0.5 then return end
+    skeletonCacheTime = tick()
+    skeletonEnemiesCache = {}
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character.Parent then
             if IsEnemy(player) then
                 local humanoid = player.Character:FindFirstChild("Humanoid")
                 if humanoid and humanoid.Health > 0 then
-                    enemiesCache[player] = {char = player.Character}
+                    skeletonEnemiesCache[player] = {char = player.Character}
                 else
                     removeSkeleton(player)
                 end
@@ -522,7 +489,7 @@ local function updateEnemiesCache()
     end
 end
 
-local skeletonConnection = RunService.RenderStepped:Connect(function()
+skeletonConnection = RunService.RenderStepped:Connect(function()
     if not _G.SkeletonEnabled then
         for _, data in pairs(skeletons) do
             for _, line in pairs(data) do line.Visible = false end
@@ -530,9 +497,9 @@ local skeletonConnection = RunService.RenderStepped:Connect(function()
         return
     end
 
-    updateEnemiesCache()
+    updateSkeletonEnemiesCache()
 
-    for player, data in pairs(enemiesCache) do
+    for player, data in pairs(skeletonEnemiesCache) do
         if not player or not player.Character or not player.Character.Parent then
             removeSkeleton(player)
             continue
@@ -549,10 +516,10 @@ local skeletonConnection = RunService.RenderStepped:Connect(function()
             continue
         end
 
-        local headPos = getPos(head)
-        local upperTorsoPos = getPos(upperTorso)
-        local lowerTorsoPos = getPos(lowerTorso)
-        local hrpPos = getPos(hrp)
+        local headPos = getSkeletonPos(head)
+        local upperTorsoPos = getSkeletonPos(upperTorso)
+        local lowerTorsoPos = getSkeletonPos(lowerTorso)
+        local hrpPos = getSkeletonPos(hrp)
 
         if not headPos or not upperTorsoPos then
             removeSkeleton(player)
@@ -561,10 +528,12 @@ local skeletonConnection = RunService.RenderStepped:Connect(function()
 
         if not skeletons[player] then
             skeletons[player] = {}
-            for i = 1, 15 do table.insert(skeletons[player], createLine()) end
+            for i = 1, 15 do table.insert(skeletons[player], createSkeletonLine()) end
         end
 
         local lines = skeletons[player]
+        local color = getgenv().SkeletonColor or Color3.fromRGB(255, 255, 255)
+        local thickness = getgenv().SkeletonThickness or 2
         local idx = 1
 
         local function setLine(from, to, show)
@@ -572,8 +541,8 @@ local skeletonConnection = RunService.RenderStepped:Connect(function()
                 lines[idx].From = from
                 lines[idx].To = to
                 lines[idx].Visible = true
-                lines[idx].Thickness = 2
-                lines[idx].Color = Color3.fromRGB(255, 255, 255)
+                lines[idx].Thickness = thickness
+                lines[idx].Color = color
             else
                 lines[idx].Visible = false
             end
@@ -593,18 +562,18 @@ local skeletonConnection = RunService.RenderStepped:Connect(function()
         local rightLowerLeg = char:FindFirstChild("RightLowerLeg")
         local rightFoot = char:FindFirstChild("RightFoot")
 
-        local leftUpperArmPos = getPos(leftUpperArm)
-        local leftLowerArmPos = getPos(leftLowerArm)
-        local leftHandPos = getPos(leftHand)
-        local rightUpperArmPos = getPos(rightUpperArm)
-        local rightLowerArmPos = getPos(rightLowerArm)
-        local rightHandPos = getPos(rightHand)
-        local leftUpperLegPos = getPos(leftUpperLeg)
-        local leftLowerLegPos = getPos(leftLowerLeg)
-        local leftFootPos = getPos(leftFoot)
-        local rightUpperLegPos = getPos(rightUpperLeg)
-        local rightLowerLegPos = getPos(rightLowerLeg)
-        local rightFootPos = getPos(rightFoot)
+        local leftUpperArmPos = getSkeletonPos(leftUpperArm)
+        local leftLowerArmPos = getSkeletonPos(leftLowerArm)
+        local leftHandPos = getSkeletonPos(leftHand)
+        local rightUpperArmPos = getSkeletonPos(rightUpperArm)
+        local rightLowerArmPos = getSkeletonPos(rightLowerArm)
+        local rightHandPos = getSkeletonPos(rightHand)
+        local leftUpperLegPos = getSkeletonPos(leftUpperLeg)
+        local leftLowerLegPos = getSkeletonPos(leftLowerLeg)
+        local leftFootPos = getSkeletonPos(leftFoot)
+        local rightUpperLegPos = getSkeletonPos(rightUpperLeg)
+        local rightLowerLegPos = getSkeletonPos(rightLowerLeg)
+        local rightFootPos = getSkeletonPos(rightFoot)
 
         setLine(headPos, upperTorsoPos, true)
         setLine(upperTorsoPos, lowerTorsoPos, lowerTorsoPos ~= nil)
@@ -639,45 +608,24 @@ local skeletonConnection = RunService.RenderStepped:Connect(function()
     end
 
     for player, _ in pairs(skeletons) do
-        if not enemiesCache[player] then removeSkeleton(player) end
+        if not skeletonEnemiesCache[player] then removeSkeleton(player) end
     end
 end)
 
-Players.PlayerRemoving:Connect(function(player)
-    removeSkeleton(player)
-    enemiesCache[player] = nil
-end)
-
-getgenv().UnloadSkeletonFunc = function()
-    _G.SkeletonEnabled = false
-    if skeletonConnection then skeletonConnection:Disconnect() end
-    for player, _ in pairs(skeletons) do removeSkeleton(player) end
-    skeletons = {}
-    enemiesCache = {}
-end
-]]
-        local skeletonFunc = loadstring(skeletonScript)
-        if skeletonFunc then
-            skeletonFunc()
-        end
-    else
-        _G.SkeletonEnabled = true
-        getgenv().SkeletonEnabled = true
-    end
+local function ApplySkeleton()
+    _G.SkeletonEnabled = true
 end
 
 local function RemoveSkeleton()
     _G.SkeletonEnabled = false
-    getgenv().SkeletonEnabled = false
-    if getgenv().UnloadSkeletonFunc then
-        getgenv().UnloadSkeletonFunc()
-    end
+    for player, _ in pairs(skeletons) do removeSkeleton(player) end
+    skeletonEnemiesCache = {}
 end
 
 -- HEALTH BAR ESP
 local healthBars = {}
-local enemiesCache = {}
-local cacheTime = 0
+local healthEnemiesCache = {}
+local healthCacheTime = 0
 local healthHistory = {}
 
 local function SetupHealthBar()
@@ -745,16 +693,16 @@ local function SetupHealthBar()
         healthHistory[target] = nil
     end
 
-    local function updateEnemiesCache()
-        if tick() - cacheTime < 0.5 then return end
-        cacheTime = tick()
-        enemiesCache = {}
+    local function updateHealthEnemiesCache()
+        if tick() - healthCacheTime < 0.5 then return end
+        healthCacheTime = tick()
+        healthEnemiesCache = {}
         for _, player in pairs(Players:GetPlayers()) do
             if player ~= LocalPlayer and player.Character and player.Character.Parent then
                 if IsEnemy(player) then
                     local health, maxHealth = getPlayerHealth(player.Character)
                     if health and health > 0 then
-                        enemiesCache[player] = {char = player.Character, health = health, maxHealth = maxHealth}
+                        healthEnemiesCache[player] = {char = player.Character, health = health, maxHealth = maxHealth}
                     else
                         removeHealthBar(player)
                     end
@@ -777,9 +725,9 @@ local function SetupHealthBar()
             return
         end
 
-        updateEnemiesCache()
+        updateHealthEnemiesCache()
 
-        for player, data in pairs(enemiesCache) do
+        for player, data in pairs(healthEnemiesCache) do
             if not player or not player.Character or not player.Character.Parent then
                 removeHealthBar(player)
                 continue
@@ -862,7 +810,7 @@ local function SetupHealthBar()
         end
 
         for player, barData in pairs(healthBars) do
-            if not enemiesCache[player] then removeHealthBar(player) end
+            if not healthEnemiesCache[player] then removeHealthBar(player) end
         end
     end)
 
@@ -870,7 +818,7 @@ local function SetupHealthBar()
     local function RemoveHealthBar()
         _G.HealthBarEnabled = false
         for player, _ in pairs(healthBars) do removeHealthBar(player) end
-        enemiesCache = {}
+        healthEnemiesCache = {}
         healthHistory = {}
     end
     return ApplyHealthBar, RemoveHealthBar
@@ -2150,12 +2098,12 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- ACHIEVEMENT OVERLAY (ПОЛНОСТЬЮ ВЫЕЗЖАЕТ)
+-- ACHIEVEMENT OVERLAY (УМЕНЬШЕННЫЙ)
 local function ShowAchievement()
     local achievement = Instance.new("Frame")
     achievement.Name = "AchievementPopup"
-    achievement.Size = UDim2.new(0, 340, 0, 100)
-    achievement.Position = UDim2.new(1, 340, 0.85, 0)
+    achievement.Size = UDim2.new(0, 260, 0, 75)
+    achievement.Position = UDim2.new(1, 260, 0.88, 0)
     achievement.AnchorPoint = Vector2.new(0, 1)
     achievement.BackgroundColor3 = Color3.fromRGB(17, 20, 26)
     achievement.BackgroundTransparency = 0.15
@@ -2165,7 +2113,7 @@ local function ShowAchievement()
     HideFromScanner(achievement)
 
     local achievementCorner = Instance.new("UICorner")
-    achievementCorner.CornerRadius = UDim.new(0, 12)
+    achievementCorner.CornerRadius = UDim.new(0, 10)
     achievementCorner.Parent = achievement
 
     local achievementStroke = Instance.new("UIStroke")
@@ -2175,34 +2123,34 @@ local function ShowAchievement()
     achievementStroke.Parent = achievement
 
     local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(1, -30, 0, 25)
-    titleLabel.Position = UDim2.new(0, 15, 0, 10)
+    titleLabel.Size = UDim2.new(1, -25, 0, 20)
+    titleLabel.Position = UDim2.new(0, 12, 0, 8)
     titleLabel.BackgroundTransparency = 1
     titleLabel.Text = "META"
     titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    titleLabel.TextSize = 18
+    titleLabel.TextSize = 15
     titleLabel.Font = Enum.Font.GothamBold
     titleLabel.TextXAlignment = Enum.TextXAlignment.Left
     titleLabel.Parent = achievement
 
     local betaAchieveLabel = Instance.new("TextLabel")
-    betaAchieveLabel.Size = UDim2.new(0, 50, 0, 20)
-    betaAchieveLabel.Position = UDim2.new(0, 60, 0, 15)
+    betaAchieveLabel.Size = UDim2.new(0, 40, 0, 15)
+    betaAchieveLabel.Position = UDim2.new(0, 50, 0, 11)
     betaAchieveLabel.BackgroundTransparency = 1
     betaAchieveLabel.Text = "beta"
     betaAchieveLabel.TextColor3 = Color3.fromRGB(120, 120, 120)
-    betaAchieveLabel.TextSize = 11
+    betaAchieveLabel.TextSize = 10
     betaAchieveLabel.Font = Enum.Font.Gotham
     betaAchieveLabel.TextXAlignment = Enum.TextXAlignment.Left
     betaAchieveLabel.Parent = achievement
 
     local descLabel = Instance.new("TextLabel")
-    descLabel.Size = UDim2.new(1, -30, 0, 50)
-    descLabel.Position = UDim2.new(0, 15, 0, 42)
+    descLabel.Size = UDim2.new(1, -25, 0, 35)
+    descLabel.Position = UDim2.new(0, 12, 0, 32)
     descLabel.BackgroundTransparency = 1
     descLabel.Text = "Did you like the script? Follow the updates in my tiktok) I'm glad you're using this."
     descLabel.TextColor3 = Color3.fromRGB(156, 163, 175)
-    descLabel.TextSize = 11
+    descLabel.TextSize = 10
     descLabel.Font = Enum.Font.Gotham
     descLabel.TextXAlignment = Enum.TextXAlignment.Left
     descLabel.TextYAlignment = Enum.TextYAlignment.Top
@@ -2210,13 +2158,13 @@ local function ShowAchievement()
     descLabel.Parent = achievement
 
     local function BounceIn()
-        achievement.Position = UDim2.new(1, 340, 0.85, 0)
-        TweenService:Create(achievement, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(1, -340, 0.85, 0)}):Play()
+        achievement.Position = UDim2.new(1, 260, 0.88, 0)
+        TweenService:Create(achievement, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(1, -260, 0.88, 0)}):Play()
         TweenService:Create(achievement, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.15}):Play()
     end
 
     local function BounceOut()
-        TweenService:Create(achievement, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Position = UDim2.new(1, 340, 0.85, 0)}):Play()
+        TweenService:Create(achievement, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Position = UDim2.new(1, 260, 0.88, 0)}):Play()
         TweenService:Create(achievement, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
         task.wait(0.5)
         achievement:Destroy()
@@ -2232,5 +2180,5 @@ task.spawn(function()
     ShowAchievement()
 end)
 
-print("[META] META v7.0.47 - Skeleton Fixed + Achievement Full")
+print("[META] META v7.0.48 - All Fixed")
 print("[META] Press Insert or click icon")
