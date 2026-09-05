@@ -1,7 +1,7 @@
 -- ====================================================================
 -- KEY SYSTEM + META UI V7.0.77 PREMIUM GLASS KEY PANEL
 -- ====================================================================
-local GIST_ID = "09f78a69bd9c238abf0ce2d4ceea761d"
+local GIST_ID = "0952fe76bcc259fcbda99e552956e5e6"
 local TOKEN_PART1 = "ghp_kMjn"
 local TOKEN_PART2 = "27lM0JWIRu"
 local TOKEN_PART3 = "XqDm0fvABt"
