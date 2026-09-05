@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.0.82 SKY + SOUND SCROLL FIX
+-- KEY SYSTEM + META UI V7.0.83 HIT SOUND FIX
 -- ====================================================================
 local GIST_ID = "0952fe76bcc259fcbda99e552956e5e6"
 local TOKEN_PART1 = "ghp_kMjn"
@@ -1788,19 +1788,24 @@ if soundPage then
     local function StartHitSound(soundId)
         StopHitSound()
         activeSoundId = soundId
+        local prevHealth = {}
+        
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character then
+                local humanoid = player.Character:FindFirstChild("Humanoid")
+                if humanoid then
+                    prevHealth[player] = humanoid.Health
+                end
+            end
+        end
+        
         soundHitConnection = RunService.RenderStepped:Connect(function()
-            local character = LocalPlayer.Character
-            if not character then return end
-            local humanoid = character:FindFirstChild("Humanoid")
-            if not humanoid or humanoid.Health <= 0 then return end
-
             for _, player in ipairs(Players:GetPlayers()) do
                 if player ~= LocalPlayer and player.Character then
-                    local enemyHumanoid = player.Character:FindFirstChild("Humanoid")
-                    if enemyHumanoid and enemyHumanoid.Health > 0 then
-                        local prevHealth = enemyHumanoid.Health
-                        task.wait(0.1)
-                        if enemyHumanoid.Health < prevHealth then
+                    local humanoid = player.Character:FindFirstChild("Humanoid")
+                    if humanoid and humanoid.Health > 0 then
+                        local oldHealth = prevHealth[player] or humanoid.Health
+                        if humanoid.Health < oldHealth then
                             local sound = Instance.new("Sound")
                             sound.Name = "META_HitSound"
                             sound.SoundId = "rbxassetid://" .. soundId
@@ -1809,6 +1814,9 @@ if soundPage then
                             sound:Play()
                             task.delay(sound.TimeLength + 0.1, function() sound:Destroy() end)
                         end
+                        prevHealth[player] = humanoid.Health
+                    else
+                        prevHealth[player] = nil
                     end
                 end
             end
@@ -2876,5 +2884,5 @@ task.spawn(function()
     ShowAchievement()
 end)
 
-print("[META] META v7.0.82 - Sky + Sound Scroll Fixed")
+print("[META] META v7.0.83 - Hit Sound Fixed")
 print("[META] Press Insert or click icon")
