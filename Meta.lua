@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.0.65 COMPLETE FULL
+-- KEY SYSTEM + META UI V7.0.67 COMPLETE FULL
 -- ====================================================================
 local GIST_ID = "09f78a69bd9c238abf0ce2d4ceea761d"
 local GITHUB_TOKEN = "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"
@@ -85,36 +85,39 @@ if not isActivated then
     Instance.new("UICorner", KeyFrame).CornerRadius = UDim.new(0, 18)
 
     local KeyStroke = Instance.new("UIStroke", KeyFrame)
-    KeyStroke.Thickness = 1.5
-    KeyStroke.Color = Color3.fromRGB(45, 52, 65)
-    KeyStroke.Transparency = 0.35
+    KeyStroke.Thickness = 1
+    KeyStroke.Color = Color3.fromRGB(255, 255, 255)
+    KeyStroke.Transparency = 0.4
 
-    -- ТОЧКА С BLOOM EFFECT
+    local KeyBloomStroke = Instance.new("UIStroke", KeyFrame)
+    KeyBloomStroke.Thickness = 3
+    KeyBloomStroke.Color = Color3.fromRGB(255, 255, 255)
+    KeyBloomStroke.Transparency = 0.7
+
     local StatusDot = Instance.new("Frame", KeyFrame)
     StatusDot.Size = UDim2.new(0, 16, 0, 16)
     StatusDot.Position = UDim2.new(0, 18, 0, 16)
     StatusDot.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
     StatusDot.BorderSizePixel = 0
+    StatusDot.ZIndex = 5
     Instance.new("UICorner", StatusDot).CornerRadius = UDim.new(1, 0)
 
-    -- Bloom слой 1 (большой, очень прозрачный)
-    local BloomOuter = Instance.new("Frame", StatusDot)
-    BloomOuter.Size = UDim2.new(2.5, 0, 2.5, 0)
-    BloomOuter.Position = UDim2.new(-0.75, 0, -0.75, 0)
+    local BloomOuter = Instance.new("Frame", KeyFrame)
+    BloomOuter.Size = UDim2.new(0, 40, 0, 40)
+    BloomOuter.Position = UDim2.new(0, 6, 0, 4)
     BloomOuter.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
     BloomOuter.BackgroundTransparency = 0.75
     BloomOuter.BorderSizePixel = 0
-    BloomOuter.ZIndex = -1
+    BloomOuter.ZIndex = 3
     Instance.new("UICorner", BloomOuter).CornerRadius = UDim.new(1, 0)
 
-    -- Bloom слой 2 (средний, менее прозрачный)
-    local BloomInner = Instance.new("Frame", StatusDot)
-    BloomInner.Size = UDim2.new(1.8, 0, 1.8, 0)
-    BloomInner.Position = UDim2.new(-0.4, 0, -0.4, 0)
+    local BloomInner = Instance.new("Frame", KeyFrame)
+    BloomInner.Size = UDim2.new(0, 28, 0, 28)
+    BloomInner.Position = UDim2.new(0, 12, 0, 10)
     BloomInner.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
     BloomInner.BackgroundTransparency = 0.55
     BloomInner.BorderSizePixel = 0
-    BloomInner.ZIndex = -1
+    BloomInner.ZIndex = 4
     Instance.new("UICorner", BloomInner).CornerRadius = UDim.new(1, 0)
 
     local function SetDotRed()
@@ -133,7 +136,6 @@ if not isActivated then
 
     SetDotRed()
 
-    -- ЗАГОЛОВОК
     local KeyTitle = Instance.new("TextLabel", KeyFrame)
     KeyTitle.Size = UDim2.new(1, 0, 0, 32)
     KeyTitle.Position = UDim2.new(0, 0, 0, 10)
@@ -704,7 +706,8 @@ local function UpdateSkeletonEnemies()
     SkeletonEnemiesList = {}
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character.Parent then
-            if IsEnemy(player) then                local health, maxHealth = GetSkeletonHealth(player.Character)
+            if IsEnemy(player) then
+                local health, maxHealth = GetSkeletonHealth(player.Character)
                 if health and health > 0 then
                     SkeletonEnemiesList[player] = {char = player.Character, health = health, maxHealth = maxHealth}
                 else
@@ -1293,7 +1296,7 @@ if visualsPage then
     end)
 end
 
--- SKY PAGE (с кнопками-режимами)
+-- SKY PAGE
 local skyPage = ContentPages["Sky"]
 if skyPage then
     skyPage.CanvasSize = UDim2.new(0, 0, 0, 0)
@@ -1408,7 +1411,6 @@ if settingsPage then
     settingsContainer.ClipsDescendants = true
     settingsContainer.Parent = settingsPage
 
-    -- UI COLOR
     local toggleFrame = Instance.new("Frame")
     toggleFrame.Size = UDim2.new(1, 0, 0, 45)
     toggleFrame.Position = UDim2.new(0, 0, 0, 10)
@@ -1631,7 +1633,6 @@ if settingsPage then
     CreateLangButton("Русский", "RU", 0.03)
     CreateLangButton("English", "EN", 0.55)
 
-    -- OPACITY
     local opacityFrame = Instance.new("Frame")
     opacityFrame.Size = UDim2.new(1, -20, 0, 55)
     opacityFrame.Position = UDim2.new(0, 10, 0, 60)
@@ -1736,7 +1737,6 @@ if settingsPage then
     end
     table.insert(langUpdateCallbacks, UpdateOpacityText)
 
-    -- RAINBOW
     local rainbowFrame = Instance.new("Frame")
     rainbowFrame.Size = UDim2.new(1, 0, 0, 45)
     rainbowFrame.Position = UDim2.new(0, 0, 0, 120)
@@ -1825,7 +1825,6 @@ if settingsPage then
     end
     table.insert(langUpdateCallbacks, UpdateRainbowText)
 
-    -- SCALE
     local scaleFrame = Instance.new("Frame")
     scaleFrame.Size = UDim2.new(1, -20, 0, 55)
     scaleFrame.Position = UDim2.new(0, 10, 0, 170)
@@ -1930,7 +1929,6 @@ if settingsPage then
     end
     table.insert(langUpdateCallbacks, UpdateScaleText)
 
-    -- FLYING DOTS
     local flyingFrame = Instance.new("Frame")
     flyingFrame.Name = "Effects"
     flyingFrame.Size = UDim2.new(1, 0, 1, 0)
@@ -2037,7 +2035,8 @@ if settingsPage then
     flyingDesc.TextColor3 = Color3.fromRGB(113, 113, 122)
     flyingDesc.TextSize = 11
     flyingDesc.Font = Enum.Font.Gotham
-    flyingDesc.TextXAlignment = Enum.TextXAlignment.Left    flyingDesc.Parent = flyingToggleFrame
+    flyingDesc.TextXAlignment = Enum.TextXAlignment.Left
+    flyingDesc.Parent = flyingToggleFrame
     local flyingToggleBg = Instance.new("Frame")
     flyingToggleBg.Size = UDim2.new(0, 44, 0, 24)
     flyingToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
@@ -2082,7 +2081,6 @@ if settingsPage then
     end
     table.insert(langUpdateCallbacks, UpdateFlyingText)
 
-    -- RESET
     local resetFrame = Instance.new("Frame")
     resetFrame.Size = UDim2.new(1, 0, 0, 45)
     resetFrame.Position = UDim2.new(0, 0, 0, 280)
@@ -2348,5 +2346,5 @@ task.spawn(function()
     ShowAchievement()
 end)
 
-print("[META] META v7.0.65 - Sky Modes + Bloom Key")
+print("[META] META v7.0.67 - Bloom Key + Sky Modes")
 print("[META] Press Insert or click icon")
