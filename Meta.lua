@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.0.81 SOUND TAB + SKY MODES
+-- KEY SYSTEM + META UI V7.0.82 SKY + SOUND SCROLL FIX
 -- ====================================================================
 local GIST_ID = "0952fe76bcc259fcbda99e552956e5e6"
 local TOKEN_PART1 = "ghp_kMjn"
@@ -1207,7 +1207,7 @@ local function CreateIndicatorLine()
     if IndicatorLine then IndicatorLine:Destroy() end
     IndicatorLine = Instance.new("Frame")
     IndicatorLine.Name = "SelectionIndicator"
-    IndicatorLine.Size = UDim2.new(0.12, 0, 0, 2)
+    IndicatorLine.Size = UDim2.new(0.07, 0, 0, 2)
     IndicatorLine.Position = UDim2.new(0.02, 0, 1, -2)
     IndicatorLine.BackgroundColor3 = IndicatorColor
     IndicatorLine.BorderSizePixel = 0
@@ -1474,7 +1474,7 @@ if skyPage then
     skyScroll.Position = UDim2.new(0, 5, 0, 5)
     skyScroll.BackgroundTransparency = 1
     skyScroll.BorderSizePixel = 0
-    skyScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+    skyScroll.CanvasSize = UDim2.new(0, 0, 0, 150)
     skyScroll.ScrollBarThickness = 3
     skyScroll.ZIndex = 5
     skyScroll.Parent = skyBlock
@@ -1764,6 +1764,135 @@ if soundPage then
     soundStroke.Transparency = 0.3
     soundStroke.Parent = soundBlock
 
+    local soundScroll = Instance.new("ScrollingFrame")
+    soundScroll.Size = UDim2.new(1, -10, 1, -10)
+    soundScroll.Position = UDim2.new(0, 5, 0, 5)
+    soundScroll.BackgroundTransparency = 1
+    soundScroll.BorderSizePixel = 0
+    soundScroll.CanvasSize = UDim2.new(0, 0, 0, 150)
+    soundScroll.ScrollBarThickness = 3
+    soundScroll.ZIndex = 5
+    soundScroll.Parent = soundBlock
+
+    local soundButtons = {}
+    local activeSoundId = nil
+    local soundHitConnection = nil
+
+    local function StopHitSound()
+        if soundHitConnection then
+            soundHitConnection:Disconnect()
+            soundHitConnection = nil
+        end
+    end
+
+    local function StartHitSound(soundId)
+        StopHitSound()
+        activeSoundId = soundId
+        soundHitConnection = RunService.RenderStepped:Connect(function()
+            local character = LocalPlayer.Character
+            if not character then return end
+            local humanoid = character:FindFirstChild("Humanoid")
+            if not humanoid or humanoid.Health <= 0 then return end
+
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer and player.Character then
+                    local enemyHumanoid = player.Character:FindFirstChild("Humanoid")
+                    if enemyHumanoid and enemyHumanoid.Health > 0 then
+                        local prevHealth = enemyHumanoid.Health
+                        task.wait(0.1)
+                        if enemyHumanoid.Health < prevHealth then
+                            local sound = Instance.new("Sound")
+                            sound.Name = "META_HitSound"
+                            sound.SoundId = "rbxassetid://" .. soundId
+                            sound.Volume = 0.8
+                            sound.Parent = SoundService
+                            sound:Play()
+                            task.delay(sound.TimeLength + 0.1, function() sound:Destroy() end)
+                        end
+                    end
+                end
+            end
+        end)
+    end
+
+    local function CreateSoundButton(text, yPos, soundId)
+        local btnFrame = Instance.new("Frame")
+        btnFrame.Size = UDim2.new(0.85, 0, 0, 36)
+        btnFrame.Position = UDim2.new(0.075, 0, 0, yPos)
+        btnFrame.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
+        btnFrame.BackgroundTransparency = 0.4
+        btnFrame.BorderSizePixel = 0
+        btnFrame.Parent = soundScroll
+
+        local btnCorner = Instance.new("UICorner")
+        btnCorner.CornerRadius = UDim.new(0, 6)
+        btnCorner.Parent = btnFrame
+
+        local uiScale = Instance.new("UIScale")
+        uiScale.Scale = 1
+        uiScale.Parent = btnFrame
+
+        local txt = Instance.new("TextLabel")
+        txt.Size = UDim2.new(1, 0, 1, 0)
+        txt.BackgroundTransparency = 1
+        txt.Text = text
+        txt.TextColor3 = Color3.fromRGB(156, 163, 175)
+        txt.TextSize = 12
+        txt.Font = Enum.Font.GothamBold
+        txt.TextXAlignment = Enum.TextXAlignment.Center
+        txt.TextYAlignment = Enum.TextYAlignment.Center
+        txt.Parent = btnFrame
+
+        local clickBtn = Instance.new("TextButton")
+        clickBtn.Size = UDim2.new(1, 0, 1, 0)
+        clickBtn.BackgroundTransparency = 1
+        clickBtn.Text = ""
+        clickBtn.ZIndex = 10
+        clickBtn.Parent = btnFrame
+
+        local function SetActive(active)
+            if active then
+                TweenService:Create(uiScale, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1.05}):Play()
+                TweenService:Create(btnFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = 0.05}):Play()
+                TweenService:Create(txt, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {TextColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+            else
+                TweenService:Create(uiScale, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Scale = 1}):Play()
+                TweenService:Create(btnFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(26, 30, 38), BackgroundTransparency = 0.4}):Play()
+                TweenService:Create(txt, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {TextColor3 = Color3.fromRGB(156, 163, 175)}):Play()
+            end
+        end
+
+        clickBtn.MouseButton1Click:Connect(function()
+            PlayClickSound()
+            if btnFrame:GetAttribute("Active") then
+                btnFrame:SetAttribute("Active", false)
+                SetActive(false)
+                StopHitSound()
+                activeSoundId = nil
+            else
+                for _, otherBtn in pairs(soundButtons) do
+                    if otherBtn ~= btnFrame then
+                        otherBtn:SetAttribute("Active", false)
+                        TweenService:Create(otherBtn.UIScale, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Scale = 1}):Play()
+                        TweenService:Create(otherBtn, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(26, 30, 38), BackgroundTransparency = 0.4}):Play()
+                        TweenService:Create(otherBtn.TextLabel, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {TextColor3 = Color3.fromRGB(156, 163, 175)}):Play()
+                    end
+                end
+                btnFrame:SetAttribute("Active", true)
+                SetActive(true)
+                StartHitSound(soundId)
+            end
+        end)
+
+        btnFrame:SetAttribute("Active", false)
+        table.insert(soundButtons, btnFrame)
+        return btnFrame
+    end
+
+    CreateSoundButton("Sound N1", 15, "139792733528367")
+    CreateSoundButton("Sound N2", 60, "135201580846609")
+    CreateSoundButton("Sound N3", 105, "93446662377809")
+
     local ResetSoundButton = Instance.new("TextButton")
     ResetSoundButton.Size = UDim2.new(0, 60, 0, 22)
     ResetSoundButton.Position = UDim2.new(1, -65, 1, -27)
@@ -1783,7 +1912,16 @@ if soundPage then
 
     ResetSoundButton.MouseButton1Click:Connect(function()
         PlayClickSound()
-        print("[SOUND] Reset")
+        StopHitSound()
+        activeSoundId = nil
+        for _, otherBtn in pairs(soundButtons) do
+            if otherBtn:GetAttribute("Active") then
+                otherBtn:SetAttribute("Active", false)
+                TweenService:Create(otherBtn.UIScale, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Scale = 1}):Play()
+                TweenService:Create(otherBtn, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(26, 30, 38), BackgroundTransparency = 0.4}):Play()
+                TweenService:Create(otherBtn.TextLabel, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {TextColor3 = Color3.fromRGB(156, 163, 175)}):Play()
+            end
+        end
     end)
 end
 
@@ -2738,5 +2876,5 @@ task.spawn(function()
     ShowAchievement()
 end)
 
-print("[META] META v7.0.81 - Sound Tab Added")
+print("[META] META v7.0.82 - Sky + Sound Scroll Fixed")
 print("[META] Press Insert or click icon")
