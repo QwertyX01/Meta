@@ -1,4 +1,4 @@
--- ROCKET::META_UI_V7.0.42
+-- ROCKET::META_UI_V7.0.43
 
 local function SetupAntiCheatBypass()
     pcall(function()
@@ -431,6 +431,7 @@ end)
 
 -- SKELETON ESP (ПОЛНЫЙ РОСТ)
 local SkeletonConnections = {}
+local SkeletonEvents = {}
 local function SetupSkeleton()
     local function createLine()
         local line = Drawing.new("Line")
@@ -449,17 +450,22 @@ local function SetupSkeleton()
     end
 
     local function removeSkeleton(target)
+        if not target then return end
         local data = SkeletonConnections[target]
-        if data and data.Lines then
-            pcall(function()
-                for _, line in pairs(data.Lines) do
-                    line.Visible = false
-                    line:Remove()
-                end
-            end)
+        if data then
+            if data.Lines then
+                pcall(function()
+                    for _, line in pairs(data.Lines) do
+                        line.Visible = false
+                        line:Remove()
+                    end
+                end)
+            end
+            if data.Connection then
+                pcall(function() data.Connection:Disconnect() end)
+            end
+            SkeletonConnections[target] = nil
         end
-        if data and data.Connection then data.Connection:Disconnect() end
-        SkeletonConnections[target] = nil
     end
 
     local function CreateSkeleton(target)
@@ -584,17 +590,17 @@ local function SetupSkeleton()
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= LocalPlayer then CreateSkeleton(p) end
         end
-        SkeletonConnections.PlayerAdded = Players.PlayerAdded:Connect(function(p)
+        SkeletonEvents.PlayerAdded = Players.PlayerAdded:Connect(function(p)
             task.wait(1)
             if p ~= LocalPlayer and _G.SkeletonEnabled then CreateSkeleton(p) end
         end)
-        SkeletonConnections.PlayerRemoving = Players.PlayerRemoving:Connect(function(p)
+        SkeletonEvents.PlayerRemoving = Players.PlayerRemoving:Connect(function(p)
             removeSkeleton(p)
         end)
         _G.UnloadSkeleton = function()
             _G.SkeletonEnabled = false
-            if SkeletonConnections.PlayerAdded then SkeletonConnections.PlayerAdded:Disconnect() end
-            if SkeletonConnections.PlayerRemoving then SkeletonConnections.PlayerRemoving:Disconnect() end
+            if SkeletonEvents.PlayerAdded then SkeletonEvents.PlayerAdded:Disconnect() SkeletonEvents.PlayerAdded = nil end
+            if SkeletonEvents.PlayerRemoving then SkeletonEvents.PlayerRemoving:Disconnect() SkeletonEvents.PlayerRemoving = nil end
             for p, _ in pairs(SkeletonConnections) do
                 removeSkeleton(p)
             end
@@ -2101,5 +2107,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         MainFrame.Visible = not MainFrame.Visible
     end
 end)
-print("[META] META v7.0.42 - Skeleton + Health Bar FIXED")
+print("[META] META v7.0.43 - Skeleton FIXED")
 print("[META] Press Insert or click icon")
