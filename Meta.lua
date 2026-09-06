@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.0.91 FULL COMPLETE
+-- KEY SYSTEM + META UI V7.0.93 SOUNDS + HOLD FIX COMPLETE
 -- ====================================================================
 local GIST_ID = "0952fe76bcc259fcbda99e552956e5e6"
 local TOKEN_PART1 = "ghp_kMjn"
@@ -251,6 +251,30 @@ if not isActivated then
         BloomInner.BackgroundColor3 = Color3.fromRGB(50, 255, 100)
     end
 
+    local function PlayErrorSound()
+        local errorSound = Instance.new("Sound")
+        errorSound.Name = "ErrorSound"
+        errorSound.SoundId = "rbxassetid://94637944517523"
+        errorSound.Volume = 2
+        errorSound.Parent = SoundService
+        errorSound:Play()
+        errorSound.Ended:Connect(function()
+            errorSound:Destroy()
+        end)
+    end
+
+    local function PlaySuccessSound()
+        local successSound = Instance.new("Sound")
+        successSound.Name = "SuccessSound"
+        successSound.SoundId = "rbxassetid://113476032986484"
+        successSound.Volume = 2
+        successSound.Parent = SoundService
+        successSound:Play()
+        successSound.Ended:Connect(function()
+            successSound:Destroy()
+        end)
+    end
+
     SetDotRed()
 
     local KeyTitle = Instance.new("TextLabel", KeyFrame)
@@ -308,6 +332,7 @@ if not isActivated then
             TextBox.PlaceholderText = "Network error!"
             TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
             SetDotRed()
+            PlayErrorSound()
             return
         end
 
@@ -325,6 +350,7 @@ if not isActivated then
                         TextBox.PlaceholderText = "Key expired!"
                         TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
                         SetDotRed()
+                        PlayErrorSound()
                         return
                     end
                     local expireTime = os.time() + duration
@@ -344,12 +370,14 @@ if not isActivated then
                         TextBox.PlaceholderText = "Key expired!"
                         TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
                         SetDotRed()
+                        PlayErrorSound()
                         return
                     end
                     if usedUserId ~= LocalPlayer.Name then
                         TextBox.PlaceholderText = "Key already used!"
                         TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
                         SetDotRed()
+                        PlayErrorSound()
                         return
                     end
                     if readfile then
@@ -366,11 +394,13 @@ if not isActivated then
                     TextBox.PlaceholderText = "Key already used!"
                     TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
                     SetDotRed()
+                    PlayErrorSound()
                     return
                 elseif p1 == "expired" then
                     TextBox.PlaceholderText = "Key expired!"
                     TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
                     SetDotRed()
+                    PlayErrorSound()
                     return
                 end
             end
@@ -380,6 +410,7 @@ if not isActivated then
             TextBox.PlaceholderText = "Invalid key!"
             TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
             SetDotRed()
+            PlayErrorSound()
             return
         end
 
@@ -388,6 +419,7 @@ if not isActivated then
             TextBox.PlaceholderColor3 = Color3.fromRGB(0, 255, 0)
             SetDotGreen()
             StopGlassAnimation()
+            PlaySuccessSound()
             TweenService:Create(KeyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Position = UDim2.new(0.5, -225, 0, -180)}):Play()
             TweenService:Create(KeyFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
             for _, child in pairs(KeyFrame:GetDescendants()) do
@@ -466,8 +498,6 @@ local SetFlyingToggleState, SetESPToggleState = nil, nil
 local SetHealthBarToggleState, SetSkeletonToggleState = nil, nil
 local skyStroke = nil
 local soundStroke = nil
-
--- Глобальные переменные для отключения при истечении ключа
 local skyConnection = nil
 local fireConnection = nil
 local muteConnection = nil
@@ -549,6 +579,7 @@ MainFrame.Parent = ScreenGui
 MainFrame.Draggable = true
 MainFrame.Active = true
 MainFrame.Selectable = true
+MainFrame.Visible = false
 
 local MainScale = Instance.new("UIScale")
 MainScale.Scale = 1
@@ -1881,21 +1912,20 @@ if soundPage then
         fireButton = FindFireButton()
 
         if fireButton then
+            local lastPlayTime = 0
+            
             fireConnection = fireButton.Activated:Connect(function()
                 isHolding = true
                 PlayHitSound()
+                lastPlayTime = tick()
                 
                 if holdConnection then holdConnection:Disconnect() end
                 holdConnection = RunService.Heartbeat:Connect(function()
-                    if isHolding then
+                    if isHolding and tick() - lastPlayTime >= 0.9 then
                         PlayHitSound()
+                        lastPlayTime = tick()
                     end
                 end)
-            end)
-            
-            fireButton.MouseButton1Click:Connect(function()
-                isHolding = true
-                PlayHitSound()
             end)
             
             UserInputService.InputEnded:Connect(function(input)
@@ -2818,7 +2848,6 @@ task.spawn(function()
         while true do
             task.wait(5)
             if os.time() >= keyExpireTime then
-                -- Отключаем небо
                 if skyConnection then
                     skyConnection:Disconnect()
                     skyConnection = nil
@@ -2831,12 +2860,10 @@ task.spawn(function()
                 Lighting.TimeOfDay = "14:00:00"
                 Lighting.Brightness = 1
                 
-                -- Отключаем звук
                 if fireConnection then fireConnection:Disconnect() fireConnection = nil end
                 if muteConnection then muteConnection:Disconnect() muteConnection = nil end
                 if guiMuteConnection then guiMuteConnection:Disconnect() guiMuteConnection = nil end
                 
-                -- Отключаем функции
                 RemoveChams()
                 RemoveESP()
                 RemoveSkeleton()
@@ -2845,11 +2872,9 @@ task.spawn(function()
                 for _, data in ipairs(Dots) do if data and data.Frame then data.Frame:Destroy() end end
                 Dots = {}
                 
-                -- Удаляем UI и иконку
                 if IconButton then IconButton:Destroy() end
                 if ScreenGui then ScreenGui:Destroy() end
                 
-                -- Показываем уведомление
                 local ExpireGui = Instance.new("ScreenGui", CoreGui)
                 ExpireGui.Name = "ExpireNotification"
                 ExpireGui.ResetOnSpawn = false
@@ -2984,6 +3009,22 @@ IconButton.MouseButton1Click:Connect(function()
         MainFrame.Rotation = 0
     end
 end)
+
+-- Показываем MainFrame после активации ключа
+if isActivated then
+    MainFrame.Visible = true
+    MainScale.Scale = 0.1
+    MainFrame.Rotation = -10
+    MainFrame.BackgroundTransparency = 1
+    MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+    
+    TweenService:Create(MainScale, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 0.7}):Play()
+    TweenService:Create(MainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Rotation = -3, BackgroundTransparency = 0.5}):Play()
+    task.wait(0.5)
+    TweenService:Create(MainScale, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+    TweenService:Create(MainFrame, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Rotation = 0, BackgroundTransparency = _G.MenuOpacity / 100}):Play()
+end
+
 UpdateAllTexts()
 if TabButtons[1] then
     TabButtons[1].BackgroundColor3 = Color3.fromRGB(35, 40, 50)
@@ -3079,5 +3120,5 @@ task.spawn(function()
     ShowAchievement()
 end)
 
-print("[META] META v7.0.91 - Full Complete")
+print("[META] META v7.0.93 - Complete Final")
 print("[META] Press Insert or click icon")
