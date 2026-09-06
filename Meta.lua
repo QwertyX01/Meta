@@ -144,53 +144,46 @@ if not isActivated then
     KeyScreenGui.ResetOnSpawn = false
     KeyScreenGui.IgnoreGuiInset = true
 
+    local BorderFrame = Instance.new("Frame", KeyScreenGui)
+    BorderFrame.Size = UDim2.new(0, 486, 0, 426)
+    BorderFrame.Position = UDim2.new(0.5, -243, 0.5, -213)
+    BorderFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    BorderFrame.BorderSizePixel = 0
+    BorderFrame.BackgroundTransparency = 0
+    BorderFrame.ZIndex = 1
+    Instance.new("UICorner", BorderFrame).CornerRadius = UDim.new(0, 14)
+
+    local BorderGradient = Instance.new("UIGradient", BorderFrame)
+    BorderGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(15, 17, 22)),
+        ColorSequenceKeypoint.new(0.25, Color3.fromRGB(35, 40, 55)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(70, 80, 105)),
+        ColorSequenceKeypoint.new(0.75, Color3.fromRGB(35, 40, 55)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 17, 22))
+    })
+    BorderGradient.Rotation = 0
+
+    local borderAnimConnection
+    borderAnimConnection = RunService.Heartbeat:Connect(function()
+        local t = tick()
+        BorderGradient.Rotation = (t * 80) % 360
+        BorderGradient.Offset = Vector2.new(math.sin(t * 1.2) * 0.5, math.cos(t * 0.9) * 0.3)
+    end)
+
     local KeyFrame = Instance.new("Frame", KeyScreenGui)
-    KeyFrame.Size = UDim2.new(0, 540, 0, 470)
-    KeyFrame.Position = UDim2.new(0.5, -270, 0.5, -235)
+    KeyFrame.Size = UDim2.new(0, 480, 0, 420)
+    KeyFrame.Position = UDim2.new(0.5, -240, 0.5, -210)
     KeyFrame.BackgroundColor3 = Color3.fromRGB(17, 19, 24)
     KeyFrame.BackgroundTransparency = 0
     KeyFrame.BorderSizePixel = 0
     KeyFrame.Active = true
     KeyFrame.Draggable = true
-    Instance.new("UICorner", KeyFrame).CornerRadius = UDim.new(0, 14)
-
-    local KeyBorderGradient = Instance.new("UIGradient", KeyFrame)
-    KeyBorderGradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 28, 35)),
-        ColorSequenceKeypoint.new(0.15, Color3.fromRGB(45, 50, 65)),
-        ColorSequenceKeypoint.new(0.3, Color3.fromRGB(70, 78, 95)),
-        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(100, 110, 135)),
-        ColorSequenceKeypoint.new(0.7, Color3.fromRGB(70, 78, 95)),
-        ColorSequenceKeypoint.new(0.85, Color3.fromRGB(45, 50, 65)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(25, 28, 35))
-    })
-    KeyBorderGradient.Rotation = 0
-
-    local KeyBorderStroke = Instance.new("UIStroke", KeyFrame)
-    KeyBorderStroke.Thickness = 3
-    KeyBorderStroke.Color = Color3.fromRGB(255, 255, 255)
-    KeyBorderStroke.Transparency = 0.15
-    KeyBorderStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-
-    local KeyInnerStroke = Instance.new("UIStroke", KeyFrame)
-    KeyInnerStroke.Thickness = 1.5
-    KeyInnerStroke.Color = Color3.fromRGB(255, 255, 255)
-    KeyInnerStroke.Transparency = 0.35
-    KeyInnerStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-
-    local keyBorderConnection
-    keyBorderConnection = RunService.Heartbeat:Connect(function()
-        local t = tick()
-        KeyBorderGradient.Rotation = (t * 60) % 360
-        local wave1 = (math.sin(t * 2) + 1) / 2
-        local wave2 = (math.sin(t * 2 + math.pi * 0.7) + 1) / 2
-        KeyBorderStroke.Transparency = 0.1 + wave1 * 0.25
-        KeyInnerStroke.Transparency = 0.3 + wave2 * 0.3
-    end)
+    KeyFrame.ZIndex = 2
+    Instance.new("UICorner", KeyFrame).CornerRadius = UDim.new(0, 12)
 
     local StatusDot = Instance.new("Frame", KeyFrame)
     StatusDot.Size = UDim2.new(0, 14, 0, 14)
-    StatusDot.Position = UDim2.new(0, 20, 0, 20)
+    StatusDot.Position = UDim2.new(0, 18, 0, 18)
     StatusDot.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
     StatusDot.BorderSizePixel = 0
     StatusDot.ZIndex = 5
@@ -198,7 +191,7 @@ if not isActivated then
 
     local BloomOuter = Instance.new("Frame", KeyFrame)
     BloomOuter.Size = UDim2.new(0, 32, 0, 32)
-    BloomOuter.Position = UDim2.new(0, 11, 0, 11)
+    BloomOuter.Position = UDim2.new(0, 9, 0, 9)
     BloomOuter.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
     BloomOuter.BackgroundTransparency = 0.75
     BloomOuter.BorderSizePixel = 0
@@ -207,7 +200,7 @@ if not isActivated then
 
     local BloomInner = Instance.new("Frame", KeyFrame)
     BloomInner.Size = UDim2.new(0, 22, 0, 22)
-    BloomInner.Position = UDim2.new(0, 16, 0, 16)
+    BloomInner.Position = UDim2.new(0, 14, 0, 14)
     BloomInner.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
     BloomInner.BackgroundTransparency = 0.55
     BloomInner.BorderSizePixel = 0
@@ -278,37 +271,37 @@ if not isActivated then
     SetDotRed()
 
     local KeyTitle = Instance.new("TextLabel", KeyFrame)
-    KeyTitle.Size = UDim2.new(1, 0, 0, 60)
-    KeyTitle.Position = UDim2.new(0, 0, 0, 80)
+    KeyTitle.Size = UDim2.new(1, 0, 0, 50)
+    KeyTitle.Position = UDim2.new(0, 0, 0, 70)
     KeyTitle.Text = "META"
     KeyTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-    KeyTitle.TextSize = 42
+    KeyTitle.TextSize = 36
     KeyTitle.Font = Enum.Font.GothamBlack
     KeyTitle.TextXAlignment = Enum.TextXAlignment.Center
     KeyTitle.TextYAlignment = Enum.TextYAlignment.Center
     KeyTitle.BackgroundTransparency = 1
 
     local KeySubtitle = Instance.new("TextLabel", KeyFrame)
-    KeySubtitle.Size = UDim2.new(1, 0, 0, 25)
-    KeySubtitle.Position = UDim2.new(0, 0, 0, 140)
+    KeySubtitle.Size = UDim2.new(1, 0, 0, 22)
+    KeySubtitle.Position = UDim2.new(0, 0, 0, 120)
     KeySubtitle.Text = "Authorization Required"
     KeySubtitle.TextColor3 = Color3.fromRGB(120, 125, 135)
-    KeySubtitle.TextSize = 14
+    KeySubtitle.TextSize = 13
     KeySubtitle.Font = Enum.Font.Gotham
     KeySubtitle.TextXAlignment = Enum.TextXAlignment.Center
     KeySubtitle.TextYAlignment = Enum.TextYAlignment.Center
     KeySubtitle.BackgroundTransparency = 1
 
     local TextBox = Instance.new("TextBox", KeyFrame)
-    TextBox.Size = UDim2.new(1, -100, 0, 60)
-    TextBox.Position = UDim2.new(0, 50, 0, 230)
+    TextBox.Size = UDim2.new(1, -80, 0, 55)
+    TextBox.Position = UDim2.new(0, 40, 0, 210)
     TextBox.BackgroundColor3 = Color3.fromRGB(22, 25, 32)
     TextBox.BackgroundTransparency = 0
     TextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
     TextBox.PlaceholderText = "Enter the key that the owner gave you"
     TextBox.PlaceholderColor3 = Color3.fromRGB(150, 155, 165)
     TextBox.Text = ""
-    TextBox.TextSize = 15
+    TextBox.TextSize = 14
     TextBox.Font = Enum.Font.Gotham
     TextBox.TextXAlignment = Enum.TextXAlignment.Center
     TextBox.TextYAlignment = Enum.TextYAlignment.Center
@@ -341,18 +334,18 @@ if not isActivated then
     end)
 
     local BottomLine = Instance.new("Frame", KeyFrame)
-    BottomLine.Size = UDim2.new(1, -60, 0, 1)
-    BottomLine.Position = UDim2.new(0, 30, 0, 400)
+    BottomLine.Size = UDim2.new(1, -50, 0, 1)
+    BottomLine.Position = UDim2.new(0, 25, 0, 360)
     BottomLine.BackgroundColor3 = Color3.fromRGB(60, 65, 75)
     BottomLine.BorderSizePixel = 0
 
     local TiktokLink = Instance.new("TextButton", KeyFrame)
-    TiktokLink.Size = UDim2.new(1, -80, 0, 35)
-    TiktokLink.Position = UDim2.new(0, 40, 0, 415)
+    TiktokLink.Size = UDim2.new(1, -60, 0, 30)
+    TiktokLink.Position = UDim2.new(0, 30, 0, 370)
     TiktokLink.BackgroundTransparency = 1
     TiktokLink.Text = "Tiktok: tiktok.com/@qwertyx015"
     TiktokLink.TextColor3 = Color3.fromRGB(120, 180, 255)
-    TiktokLink.TextSize = 13
+    TiktokLink.TextSize = 12
     TiktokLink.Font = Enum.Font.Gotham
     TiktokLink.TextXAlignment = Enum.TextXAlignment.Center
     TiktokLink.ZIndex = 10
@@ -464,13 +457,14 @@ if not isActivated then
             TextBox.PlaceholderText = "Success!"
             TextBox.PlaceholderColor3 = Color3.fromRGB(0, 255, 0)
             SetDotGreen()
-            if keyBorderConnection then keyBorderConnection:Disconnect() end
+            if borderAnimConnection then borderAnimConnection:Disconnect() end
             if placeholderConnection then placeholderConnection:Disconnect() end
             PlaySuccessSound()
-            TweenService:Create(KeyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Position = UDim2.new(0.5, -270, 0.5, -500)}):Play()
+            TweenService:Create(BorderFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Position = UDim2.new(0.5, -243, 0.5, -450), BackgroundTransparency = 1}):Play()
+            TweenService:Create(KeyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Position = UDim2.new(0.5, -240, 0.5, -450)}):Play()
             TweenService:Create(KeyFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
             for _, child in pairs(KeyFrame:GetDescendants()) do
-                if child:IsA("TextLabel") or child:IsA("TextBox") or child:IsA("Frame") or child:IsA("UIStroke") or child:IsA("TextButton") then
+                if child:IsA("TextLabel") or child:IsA("TextBox") or child:IsA("Frame") or child:IsA("TextButton") then
                     TweenService:Create(child, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {TextTransparency = 1, BackgroundTransparency = 1}):Play()
                 end
             end
@@ -479,7 +473,8 @@ if not isActivated then
         end
     end)
 
-    TweenService:Create(KeyFrame, TweenInfo.new(0.7, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -270, 0.35, -235)}):Play()
+    TweenService:Create(BorderFrame, TweenInfo.new(0.7, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -243, 0.35, -213)}):Play()
+    TweenService:Create(KeyFrame, TweenInfo.new(0.7, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -240, 0.35, -210)}):Play()
 
     while not isActivated do task.wait(0.5) end
     KeyScreenGui:Destroy()
@@ -1492,7 +1487,8 @@ if visualsPage then
         desc.TextColor3 = Color3.fromRGB(113, 113, 122)
         desc.TextSize = 11
         desc.Font = Enum.Font.Gotham
-        desc.TextXAlignment = Enum.TextXAlignment.Left        desc.Parent = frame
+        desc.TextXAlignment = Enum.TextXAlignment.Left
+        desc.Parent = frame
         local toggleBg = Instance.new("Frame")
         toggleBg.Size = UDim2.new(0, 44, 0, 24)
         toggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
