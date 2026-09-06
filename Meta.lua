@@ -146,7 +146,7 @@ if not isActivated then
 
     local BorderFrame = Instance.new("Frame", KeyScreenGui)
     BorderFrame.Size = UDim2.new(0, 486, 0, 426)
-    BorderFrame.Position = UDim2.new(0.5, -243, 0.5, -213)
+    BorderFrame.Position = UDim2.new(0.5, -243, -0.5, -213)
     BorderFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     BorderFrame.BorderSizePixel = 0
     BorderFrame.BackgroundTransparency = 0
@@ -172,12 +172,11 @@ if not isActivated then
 
     local KeyFrame = Instance.new("Frame", KeyScreenGui)
     KeyFrame.Size = UDim2.new(0, 480, 0, 420)
-    KeyFrame.Position = UDim2.new(0.5, -240, 0.5, -210)
+    KeyFrame.Position = UDim2.new(0.5, -240, -0.5, -210)
     KeyFrame.BackgroundColor3 = Color3.fromRGB(17, 19, 24)
     KeyFrame.BackgroundTransparency = 0
     KeyFrame.BorderSizePixel = 0
     KeyFrame.Active = true
-    KeyFrame.Draggable = true
     KeyFrame.ZIndex = 2
     Instance.new("UICorner", KeyFrame).CornerRadius = UDim.new(0, 12)
 
@@ -280,6 +279,7 @@ if not isActivated then
     KeyTitle.TextXAlignment = Enum.TextXAlignment.Center
     KeyTitle.TextYAlignment = Enum.TextYAlignment.Center
     KeyTitle.BackgroundTransparency = 1
+    KeyTitle.ZIndex = 5
 
     local KeySubtitle = Instance.new("TextLabel", KeyFrame)
     KeySubtitle.Size = UDim2.new(1, 0, 0, 22)
@@ -291,6 +291,7 @@ if not isActivated then
     KeySubtitle.TextXAlignment = Enum.TextXAlignment.Center
     KeySubtitle.TextYAlignment = Enum.TextYAlignment.Center
     KeySubtitle.BackgroundTransparency = 1
+    KeySubtitle.ZIndex = 5
 
     local TextBox = Instance.new("TextBox", KeyFrame)
     TextBox.Size = UDim2.new(1, -80, 0, 55)
@@ -307,6 +308,7 @@ if not isActivated then
     TextBox.TextYAlignment = Enum.TextYAlignment.Center
     TextBox.TextWrapped = true
     TextBox.ClearTextOnFocus = false
+    TextBox.ZIndex = 5
     Instance.new("UICorner", TextBox).CornerRadius = UDim.new(0, 10)
 
     local InputBorderStroke = Instance.new("UIStroke", TextBox)
@@ -338,6 +340,7 @@ if not isActivated then
     BottomLine.Position = UDim2.new(0, 25, 0, 360)
     BottomLine.BackgroundColor3 = Color3.fromRGB(60, 65, 75)
     BottomLine.BorderSizePixel = 0
+    BottomLine.ZIndex = 5
 
     local TiktokLink = Instance.new("TextButton", KeyFrame)
     TiktokLink.Size = UDim2.new(1, -60, 0, 30)
@@ -473,8 +476,8 @@ if not isActivated then
         end
     end)
 
-    TweenService:Create(BorderFrame, TweenInfo.new(0.7, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -243, 0.35, -213)}):Play()
-    TweenService:Create(KeyFrame, TweenInfo.new(0.7, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -240, 0.35, -210)}):Play()
+    TweenService:Create(BorderFrame, TweenInfo.new(0.7, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -243, 0.5, -213)}):Play()
+    TweenService:Create(KeyFrame, TweenInfo.new(0.7, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -240, 0.5, -210)}):Play()
 
     while not isActivated do task.wait(0.5) end
     KeyScreenGui:Destroy()
