@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.0.86 GUN SOUND FULL INTEGRATION
+-- KEY SYSTEM + META UI V7.0.89 TWO HIT SOUNDS FINAL
 -- ====================================================================
 local GIST_ID = "0952fe76bcc259fcbda99e552956e5e6"
 local TOKEN_PART1 = "ghp_kMjn"
@@ -18,6 +18,7 @@ local UserInputService = game:GetService("UserInputService")
 local SoundService = game:GetService("SoundService")
 local Lighting = game:GetService("Lighting")
 local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
@@ -1777,37 +1778,36 @@ if soundPage then
 
     local soundButtons = {}
     local activeSoundId = nil
-    local soundHitConnection = nil
+    local activeSoundVolume = nil
     local fireButton = nil
+    local fireConnection = nil
     local muteConnection = nil
     local guiMuteConnection = nil
+    local damageConnection = nil
 
-    local function StopGunSound()
-        if soundHitConnection then
-            soundHitConnection:Disconnect()
-            soundHitConnection = nil
-        end
-        if muteConnection then
-            muteConnection:Disconnect()
-            muteConnection = nil
-        end
-        if guiMuteConnection then
-            guiMuteConnection:Disconnect()
-            guiMuteConnection = nil
-        end
+    local isShooting = false
+    local lastShotTime = 0
+
+    local function StopSoundSystem()
+        if fireConnection then fireConnection:Disconnect() fireConnection = nil end
+        if muteConnection then muteConnection:Disconnect() muteConnection = nil end
+        if guiMuteConnection then guiMuteConnection:Disconnect() guiMuteConnection = nil end
+        if damageConnection then damageConnection:Disconnect() damageConnection = nil end
+        isShooting = false
     end
 
-    local function StartGunSound(soundId)
-        StopGunSound()
+    local function StartSoundSystem(soundId, volume)
+        StopSoundSystem()
         activeSoundId = soundId
+        activeSoundVolume = volume
 
         local MY_CUSTOM_SOUND = "rbxassetid://" .. soundId
 
-        local function PlayCustomGunSound()
+        local function PlayHitSound()
             local customSound = Instance.new("Sound")
             customSound.Name = "META_GunSound"
             customSound.SoundId = MY_CUSTOM_SOUND
-            customSound.Volume = 2
+            customSound.Volume = volume
             customSound.Parent = SoundService
             customSound:Play()
             
@@ -1815,6 +1815,24 @@ if soundPage then
                 customSound:Destroy()
             end)
         end
+
+        -- Глушим стандартные выстрелы
+        muteConnection = Workspace.DescendantAdded:Connect(function(child)
+            if child:IsA("Sound") then
+                local parent = child.Parent
+                if parent and parent.Name == "Sound" and parent.Parent and parent.Parent.Name == "Debris" then
+                    child.Volume = 0
+                    child:Stop()
+                end
+            end
+        end)
+
+        guiMuteConnection = LocalPlayer:WaitForChild("PlayerGui").DescendantAdded:Connect(function(child)
+            if child:IsA("Sound") then
+                child.Volume = 0
+                child:Stop()
+            end
+        end)
 
         -- Находим кнопку Fire
         local function FindFireButton()
@@ -1833,33 +1851,31 @@ if soundPage then
         fireButton = FindFireButton()
 
         if fireButton then
-            soundHitConnection = fireButton.Activated:Connect(function()
-                PlayCustomGunSound()
+            fireConnection = fireButton.Activated:Connect(function()
+                isShooting = true
+                lastShotTime = tick()
             end)
         end
 
-        -- Глушим стандартные звуки выстрелов
-        muteConnection = Workspace.DescendantAdded:Connect(function(child)
-            if child:IsA("Sound") then
-                local parent = child.Parent
-                if parent and parent.Name == "Sound" and parent.Parent and parent.Parent.Name == "Debris" then
-                    child.Volume = 0
-                    child:Stop()
+        -- Ловим урон
+        local NetworkRemotes = ReplicatedStorage:FindFirstChild("NetworkRemotes")
+        if NetworkRemotes then
+            local Character = NetworkRemotes:FindFirstChild("Character")
+            if Character then
+                local CharacterDamaged = Character:FindFirstChild("CharacterDamaged")
+                if CharacterDamaged and CharacterDamaged:IsA("RemoteEvent") then
+                    damageConnection = CharacterDamaged.OnClientEvent:Connect(function(data)
+                        if isShooting and tick() - lastShotTime < 1 then
+                            PlayHitSound()
+                            isShooting = false
+                        end
+                    end)
                 end
             end
-        end)
-
-        -- Глушим звук в PlayerGui
-        local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-        guiMuteConnection = PlayerGui.DescendantAdded:Connect(function(child)
-            if child:IsA("Sound") then
-                child.Volume = 0
-                child:Stop()
-            end
-        end)
+        end
     end
 
-    local function CreateSoundButton(text, yPos, soundId)
+    local function CreateSoundButton(text, yPos, soundId, volume)
         local btnFrame = Instance.new("Frame")
         btnFrame.Size = UDim2.new(0.85, 0, 0, 36)
         btnFrame.Position = UDim2.new(0.075, 0, 0, yPos)
@@ -1911,8 +1927,9 @@ if soundPage then
             if btnFrame:GetAttribute("Active") then
                 btnFrame:SetAttribute("Active", false)
                 SetActive(false)
-                StopGunSound()
+                StopSoundSystem()
                 activeSoundId = nil
+                activeSoundVolume = nil
             else
                 for _, otherBtn in pairs(soundButtons) do
                     if otherBtn ~= btnFrame then
@@ -1924,7 +1941,7 @@ if soundPage then
                 end
                 btnFrame:SetAttribute("Active", true)
                 SetActive(true)
-                StartGunSound(soundId)
+                StartSoundSystem(soundId, volume)
             end
         end)
 
@@ -1933,8 +1950,8 @@ if soundPage then
         return btnFrame
     end
 
-    CreateSoundButton("Sound N1", 15, "135201580846609")
-    CreateSoundButton("Sound N2", 60, "93446662377809")
+    CreateSoundButton("Sound N1", 15, "135201580846609", 2)
+    CreateSoundButton("Sound N2", 60, "93446662377809", 10)
 
     local ResetSoundButton = Instance.new("TextButton")
     ResetSoundButton.Size = UDim2.new(0, 60, 0, 22)
@@ -1955,8 +1972,9 @@ if soundPage then
 
     ResetSoundButton.MouseButton1Click:Connect(function()
         PlayClickSound()
-        StopGunSound()
+        StopSoundSystem()
         activeSoundId = nil
+        activeSoundVolume = nil
         for _, otherBtn in pairs(soundButtons) do
             if otherBtn:GetAttribute("Active") then
                 otherBtn:SetAttribute("Active", false)
@@ -2919,5 +2937,5 @@ task.spawn(function()
     ShowAchievement()
 end)
 
-print("[META] META v7.0.86 - Gun Sound Integrated")
+print("[META] META v7.0.89 - Two Hit Sounds Final")
 print("[META] Press Insert or click icon")
