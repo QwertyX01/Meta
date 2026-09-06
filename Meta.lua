@@ -145,21 +145,21 @@ if not isActivated then
     KeyScreenGui.IgnoreGuiInset = true
 
     local BorderFrame = Instance.new("Frame", KeyScreenGui)
-    BorderFrame.Size = UDim2.new(0, 486, 0, 426)
-    BorderFrame.Position = UDim2.new(0.5, -243, -0.5, -213)
+    BorderFrame.Size = UDim2.new(0, 492, 0, 432)
+    BorderFrame.Position = UDim2.new(0.5, -246, -0.5, -216)
     BorderFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     BorderFrame.BorderSizePixel = 0
     BorderFrame.BackgroundTransparency = 0
     BorderFrame.ZIndex = 1
-    Instance.new("UICorner", BorderFrame).CornerRadius = UDim.new(0, 14)
+    Instance.new("UICorner", BorderFrame).CornerRadius = UDim.new(0, 16)
 
     local BorderGradient = Instance.new("UIGradient", BorderFrame)
     BorderGradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(15, 17, 22)),
-        ColorSequenceKeypoint.new(0.25, Color3.fromRGB(35, 40, 55)),
-        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(70, 80, 105)),
-        ColorSequenceKeypoint.new(0.75, Color3.fromRGB(35, 40, 55)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 17, 22))
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(20, 22, 28)),
+        ColorSequenceKeypoint.new(0.25, Color3.fromRGB(45, 50, 65)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(90, 100, 125)),
+        ColorSequenceKeypoint.new(0.75, Color3.fromRGB(45, 50, 65)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 22, 28))
     })
     BorderGradient.Rotation = 0
 
@@ -312,9 +312,9 @@ if not isActivated then
     Instance.new("UICorner", TextBox).CornerRadius = UDim.new(0, 10)
 
     local InputBorderStroke = Instance.new("UIStroke", TextBox)
-    InputBorderStroke.Thickness = 1.5
+    InputBorderStroke.Thickness = 1
     InputBorderStroke.Color = Color3.fromRGB(255, 255, 255)
-    InputBorderStroke.Transparency = 0.35
+    InputBorderStroke.Transparency = 0.25
     InputBorderStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
     local PlaceholderGradient = Instance.new("UIGradient", TextBox)
@@ -463,7 +463,7 @@ if not isActivated then
             if borderAnimConnection then borderAnimConnection:Disconnect() end
             if placeholderConnection then placeholderConnection:Disconnect() end
             PlaySuccessSound()
-            TweenService:Create(BorderFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Position = UDim2.new(0.5, -243, 0.5, -450), BackgroundTransparency = 1}):Play()
+            TweenService:Create(BorderFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Position = UDim2.new(0.5, -246, 0.5, -460), BackgroundTransparency = 1}):Play()
             TweenService:Create(KeyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Position = UDim2.new(0.5, -240, 0.5, -450)}):Play()
             TweenService:Create(KeyFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
             for _, child in pairs(KeyFrame:GetDescendants()) do
@@ -476,7 +476,7 @@ if not isActivated then
         end
     end)
 
-    TweenService:Create(BorderFrame, TweenInfo.new(0.7, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -243, 0.5, -213)}):Play()
+    TweenService:Create(BorderFrame, TweenInfo.new(0.7, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -246, 0.5, -216)}):Play()
     TweenService:Create(KeyFrame, TweenInfo.new(0.7, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -240, 0.5, -210)}):Play()
 
     while not isActivated do task.wait(0.5) end
@@ -521,7 +521,7 @@ local function HideFromScanner(gui)
 end
 
 _G.CustomThemeEnabled = false
-_G.MenuThemeColor = Color3.fromRGB(59, 130, 246)
+_G.MenuThemeColor = Color3.fromRGB(255, 255, 255)
 _G.CurrentLang = "EN"
 _G.MenuOpacity = 12
 _G.RainbowEnabled = false
@@ -2935,7 +2935,7 @@ if settingsPage then
     resetClickArea.Parent = resetFrame
     local function PerformReset()
         _G.CustomThemeEnabled = false
-        _G.MenuThemeColor = Color3.fromRGB(59, 130, 246)
+        _G.MenuThemeColor = Color3.fromRGB(255, 255, 255)
         _G.CurrentLang = "EN"
         _G.MenuOpacity = 12
         _G.RainbowEnabled = false
@@ -3111,8 +3111,8 @@ local IconLetter = Instance.new("TextLabel", IconButton)
 IconLetter.Size = UDim2.new(1, 0, 1, 0)
 IconLetter.BackgroundTransparency = 1
 IconLetter.Text = "M"
-IconLetter.TextColor3 = Color3.fromRGB(59, 130, 246)
-IconLetter.TextTransparency = 0.5
+IconLetter.TextColor3 = Color3.fromRGB(255, 255, 255)
+IconLetter.TextTransparency = 0.3
 IconLetter.TextSize = 32
 IconLetter.Font = Enum.Font.GothamBold
 IconLetter.TextXAlignment = Enum.TextXAlignment.Center
