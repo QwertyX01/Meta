@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.0.94 OPTIMIZED FINAL
+-- KEY SYSTEM + META UI V7.0.95 SOUND N1 N2 LOOPED FIX
 -- ====================================================================
 local GIST_ID = "0952fe76bcc259fcbda99e552956e5e6"
 local TOKEN_PART1 = "ghp_kMjn"
@@ -137,21 +137,6 @@ end
 if not autoLoginSuccess then
     if writefile then writefile(KEY_FILE_NAME, "") end
 end
-
--- Оптимизация при запуске
-task.spawn(function()
-    pcall(function()
-        settings().Rendering.QualityLevel = 1
-        settings().Rendering.MeshPartDetailLevel = Enum.MeshPartDetailLevel.Low
-    end)
-    pcall(function()
-        local Terrain = workspace:FindFirstChild("Terrain")
-        if Terrain then
-            Terrain.WaterWaveSize = 0
-            Terrain.WaterWaveSpeed = 0
-        end
-    end)
-end)
 
 if not isActivated then
     local KeyScreenGui = Instance.new("ScreenGui", CoreGui)
@@ -884,7 +869,7 @@ task.spawn(function()
     end
 end)
 
--- SKELETON ESP (код полностью из v7.0.93)
+-- SKELETON ESP
 local SkeletonLines = {}
 local SkeletonEnemiesList = {}
 local SkeletonCacheTime = 0
@@ -1078,7 +1063,7 @@ local function RemoveSkeleton()
     SkeletonEnemiesList = {}
 end
 
--- HEALTH BAR ESP (код полностью из v7.0.93)
+-- HEALTH BAR ESP
 local HealthBars = {}
 local HealthEnemiesList = {}
 local HealthCacheTime = 0
@@ -1428,7 +1413,7 @@ SearchInput.FocusLost:Connect(function(enterPressed)
     end
 end)
 
--- VISUALS PAGE (полностью из v7.0.93)
+-- VISUALS PAGE
 local visualsPage = ContentPages["Visuals"]
 if visualsPage then
     visualsPage.CanvasSize = UDim2.new(0, 0, 0, 350)
@@ -1497,7 +1482,9 @@ if visualsPage then
         end
         clickArea.MouseButton1Click:Connect(function() PlayClickSound() SetState(not state) end)
         return SetState, label, desc
-    end    local SetChamsState, chamsLabel, chamsDesc = CreateToggle("Chams", "Makes enemies purple", 10, function(v) if v then ApplyChams() else RemoveChams() end _G.ChamsEnabled = v end)
+    end
+
+    local SetChamsState, chamsLabel, chamsDesc = CreateToggle("Chams", "Makes enemies purple", 10, function(v) if v then ApplyChams() else RemoveChams() end _G.ChamsEnabled = v end)
     SetChamsToggleState = SetChamsState
     SetChamsToggleState(_G.ChamsEnabled)
 
@@ -1526,7 +1513,7 @@ if visualsPage then
     end)
 end
 
--- SKY PAGE (полностью из v7.0.93)
+-- SKY PAGE
 local skyPage = ContentPages["Sky"]
 if skyPage then
     skyPage.CanvasSize = UDim2.new(0, 0, 0, 0)
@@ -1820,7 +1807,7 @@ if skyPage then
     end)
 end
 
--- SOUND PAGE (полностью из v7.0.93 с задержкой 0.1)
+-- SOUND PAGE
 local soundPage = ContentPages["Sound"]
 if soundPage then
     soundPage.CanvasSize = UDim2.new(0, 0, 0, 0)
@@ -1860,14 +1847,16 @@ if soundPage then
     local activeSoundId = nil
     local activeSoundVolume = nil
     local fireButton = nil
-    local holdConnection = nil
-    local isHolding = false
+    local fireInputBegan = nil
+    local fireInputEnded = nil
+    local muteConnection = nil
+    local guiMuteConnection = nil
 
     local function StopSoundSystem()
-        if fireConnection then fireConnection:Disconnect() fireConnection = nil end
+        if fireInputBegan then fireInputBegan:Disconnect() fireInputBegan = nil end
+        if fireInputEnded then fireInputEnded:Disconnect() fireInputEnded = nil end
         if muteConnection then muteConnection:Disconnect() muteConnection = nil end
         if guiMuteConnection then guiMuteConnection:Disconnect() guiMuteConnection = nil end
-        if holdConnection then holdConnection:Disconnect() holdConnection = nil end
     end
 
     local function StartSoundSystem(soundId, volume)
@@ -1876,19 +1865,9 @@ if soundPage then
         activeSoundVolume = volume
 
         local MY_CUSTOM_SOUND = "rbxassetid://" .. soundId
-
-        local function PlayHitSound()
-            local customSound = Instance.new("Sound")
-            customSound.Name = "META_GunSound"
-            customSound.SoundId = MY_CUSTOM_SOUND
-            customSound.Volume = volume
-            customSound.Parent = SoundService
-            customSound:Play()
-            
-            customSound.Ended:Connect(function()
-                customSound:Destroy()
-            end)
-        end
+        local holdSound = nil
+        local isHolding = false
+        local pressTime = 0
 
         -- Глушим стандартные выстрелы
         muteConnection = Workspace.DescendantAdded:Connect(function(child)
@@ -1925,23 +1904,51 @@ if soundPage then
         fireButton = FindFireButton()
 
         if fireButton then
-            fireConnection = fireButton.Activated:Connect(function()
-                isHolding = true
-                PlayHitSound()
-                
-                task.spawn(function()
-                    while isHolding do
-                        task.wait(0.1)
+            fireInputBegan = fireButton.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    isHolding = true
+                    pressTime = tick()
+                    
+                    task.spawn(function()
+                        task.wait(0.2)
                         if isHolding then
-                            PlayHitSound()
+                            if holdSound then
+                                holdSound:Stop()
+                                holdSound:Destroy()
+                            end
+                            holdSound = Instance.new("Sound")
+                            holdSound.Name = "META_GunSound"
+                            holdSound.SoundId = MY_CUSTOM_SOUND
+                            holdSound.Volume = volume
+                            holdSound.Looped = true
+                            holdSound.Parent = SoundService
+                            holdSound:Play()
                         end
-                    end
-                end)
+                    end)
+                end
             end)
             
-            UserInputService.InputEnded:Connect(function(input)
+            fireInputEnded = fireButton.InputEnded:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                     isHolding = false
+                    
+                    if tick() - pressTime < 0.2 then
+                        local singleSound = Instance.new("Sound")
+                        singleSound.Name = "META_GunSound"
+                        singleSound.SoundId = MY_CUSTOM_SOUND
+                        singleSound.Volume = volume
+                        singleSound.Parent = SoundService
+                        singleSound:Play()
+                        singleSound.Ended:Connect(function()
+                            singleSound:Destroy()
+                        end)
+                    end
+                    
+                    if holdSound then
+                        holdSound:Stop()
+                        holdSound:Destroy()
+                        holdSound = nil
+                    end
                 end
             end)
         end
@@ -2058,7 +2065,7 @@ if soundPage then
     end)
 end
 
--- SETTINGS PAGE (полностью из v7.0.93)
+-- SETTINGS PAGE (полностью из v7.0.94)
 local settingsPage = ContentPages["Settings"]
 if settingsPage then
     settingsPage.CanvasSize = UDim2.new(0, 0, 0, 600)
@@ -2194,7 +2201,8 @@ if settingsPage then
         end
     end)
     ShiftContainer = function(shiftDown)
-        local targetY = shiftDown and 150 or 0        TweenService:Create(settingsContainer, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 55 + targetY)}):Play()
+        local targetY = shiftDown and 150 or 0
+        TweenService:Create(settingsContainer, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 55 + targetY)}):Play()
     end
     SetToggleState = function(value)
         if value then
@@ -2866,7 +2874,8 @@ task.spawn(function()
                 Lighting.TimeOfDay = "14:00:00"
                 Lighting.Brightness = 1
                 
-                if fireConnection then fireConnection:Disconnect() fireConnection = nil end
+                if fireInputBegan then fireInputBegan:Disconnect() fireInputBegan = nil end
+                if fireInputEnded then fireInputEnded:Disconnect() fireInputEnded = nil end
                 if muteConnection then muteConnection:Disconnect() muteConnection = nil end
                 if guiMuteConnection then guiMuteConnection:Disconnect() guiMuteConnection = nil end
                 
@@ -3126,5 +3135,5 @@ task.spawn(function()
     ShowAchievement()
 end)
 
-print("[META] META v7.0.94 - Optimized Final")
+print("[META] META v7.0.95 - Sound N1 N2 Looped")
 print("[META] Press Insert or click icon")
