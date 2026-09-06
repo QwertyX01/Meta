@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.0.93 SOUNDS + HOLD FIX COMPLETE
+-- KEY SYSTEM + META UI V7.0.94 OPTIMIZED FINAL
 -- ====================================================================
 local GIST_ID = "0952fe76bcc259fcbda99e552956e5e6"
 local TOKEN_PART1 = "ghp_kMjn"
@@ -138,6 +138,21 @@ if not autoLoginSuccess then
     if writefile then writefile(KEY_FILE_NAME, "") end
 end
 
+-- Оптимизация при запуске
+task.spawn(function()
+    pcall(function()
+        settings().Rendering.QualityLevel = 1
+        settings().Rendering.MeshPartDetailLevel = Enum.MeshPartDetailLevel.Low
+    end)
+    pcall(function()
+        local Terrain = workspace:FindFirstChild("Terrain")
+        if Terrain then
+            Terrain.WaterWaveSize = 0
+            Terrain.WaterWaveSpeed = 0
+        end
+    end)
+end)
+
 if not isActivated then
     local KeyScreenGui = Instance.new("ScreenGui", CoreGui)
     KeyScreenGui.Name = "MetaCompactKeySystem"
@@ -155,12 +170,12 @@ if not isActivated then
     Instance.new("UICorner", KeyFrame).CornerRadius = UDim.new(0, 18)
 
     local GlassStroke = Instance.new("UIStroke", KeyFrame)
-    GlassStroke.Thickness = 2
-    GlassStroke.Color = Color3.fromRGB(80, 180, 255)
-    GlassStroke.Transparency = 0.2
+    GlassStroke.Thickness = 1
+    GlassStroke.Color = Color3.fromRGB(100, 180, 255)
+    GlassStroke.Transparency = 0.3
 
     local GlassGlow = Instance.new("UIStroke", KeyFrame)
-    GlassGlow.Thickness = 4
+    GlassGlow.Thickness = 3
     GlassGlow.Color = Color3.fromRGB(40, 120, 255)
     GlassGlow.Transparency = 0.7
 
@@ -170,8 +185,8 @@ if not isActivated then
         GlassConnection = RunService.Heartbeat:Connect(function()
             local t = tick()
             local hueShift = (math.sin(t * 1.5) + 1) / 2
-            local r = 60 + hueShift * 40
-            local g = 140 + hueShift * 60
+            local r = 80 + hueShift * 30
+            local g = 150 + hueShift * 40
             local b = 255
             GlassStroke.Color = Color3.fromRGB(r, g, b)
             GlassGlow.Color = Color3.fromRGB(r * 0.6, g * 0.6, b)
@@ -280,10 +295,10 @@ if not isActivated then
     local KeyTitle = Instance.new("TextLabel", KeyFrame)
     KeyTitle.Size = UDim2.new(1, 0, 0, 32)
     KeyTitle.Position = UDim2.new(0, 0, 0, 10)
-    KeyTitle.Text = "META"
+    KeyTitle.Text = "META Key"
     KeyTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-    KeyTitle.TextSize = 26
-    KeyTitle.Font = Enum.Font.GothamBold
+    KeyTitle.TextSize = 24
+    KeyTitle.Font = Enum.Font.Gotham
     KeyTitle.TextXAlignment = Enum.TextXAlignment.Center
     KeyTitle.BackgroundTransparency = 1
 
@@ -869,7 +884,7 @@ task.spawn(function()
     end
 end)
 
--- SKELETON ESP
+-- SKELETON ESP (код полностью из v7.0.93)
 local SkeletonLines = {}
 local SkeletonEnemiesList = {}
 local SkeletonCacheTime = 0
@@ -1063,7 +1078,7 @@ local function RemoveSkeleton()
     SkeletonEnemiesList = {}
 end
 
--- HEALTH BAR ESP
+-- HEALTH BAR ESP (код полностью из v7.0.93)
 local HealthBars = {}
 local HealthEnemiesList = {}
 local HealthCacheTime = 0
@@ -1413,7 +1428,7 @@ SearchInput.FocusLost:Connect(function(enterPressed)
     end
 end)
 
--- VISUALS PAGE
+-- VISUALS PAGE (полностью из v7.0.93)
 local visualsPage = ContentPages["Visuals"]
 if visualsPage then
     visualsPage.CanvasSize = UDim2.new(0, 0, 0, 350)
@@ -1482,9 +1497,7 @@ if visualsPage then
         end
         clickArea.MouseButton1Click:Connect(function() PlayClickSound() SetState(not state) end)
         return SetState, label, desc
-    end
-
-    local SetChamsState, chamsLabel, chamsDesc = CreateToggle("Chams", "Makes enemies purple", 10, function(v) if v then ApplyChams() else RemoveChams() end _G.ChamsEnabled = v end)
+    end    local SetChamsState, chamsLabel, chamsDesc = CreateToggle("Chams", "Makes enemies purple", 10, function(v) if v then ApplyChams() else RemoveChams() end _G.ChamsEnabled = v end)
     SetChamsToggleState = SetChamsState
     SetChamsToggleState(_G.ChamsEnabled)
 
@@ -1513,7 +1526,7 @@ if visualsPage then
     end)
 end
 
--- SKY PAGE
+-- SKY PAGE (полностью из v7.0.93)
 local skyPage = ContentPages["Sky"]
 if skyPage then
     skyPage.CanvasSize = UDim2.new(0, 0, 0, 0)
@@ -1807,7 +1820,7 @@ if skyPage then
     end)
 end
 
--- SOUND PAGE
+-- SOUND PAGE (полностью из v7.0.93 с задержкой 0.1)
 local soundPage = ContentPages["Sound"]
 if soundPage then
     soundPage.CanvasSize = UDim2.new(0, 0, 0, 0)
@@ -1912,18 +1925,16 @@ if soundPage then
         fireButton = FindFireButton()
 
         if fireButton then
-            local lastPlayTime = 0
-            
             fireConnection = fireButton.Activated:Connect(function()
                 isHolding = true
                 PlayHitSound()
-                lastPlayTime = tick()
                 
-                if holdConnection then holdConnection:Disconnect() end
-                holdConnection = RunService.Heartbeat:Connect(function()
-                    if isHolding and tick() - lastPlayTime >= 0.9 then
-                        PlayHitSound()
-                        lastPlayTime = tick()
+                task.spawn(function()
+                    while isHolding do
+                        task.wait(0.1)
+                        if isHolding then
+                            PlayHitSound()
+                        end
                     end
                 end)
             end)
@@ -1931,10 +1942,6 @@ if soundPage then
             UserInputService.InputEnded:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                     isHolding = false
-                    if holdConnection then
-                        holdConnection:Disconnect()
-                        holdConnection = nil
-                    end
                 end
             end)
         end
@@ -2051,7 +2058,7 @@ if soundPage then
     end)
 end
 
--- SETTINGS PAGE
+-- SETTINGS PAGE (полностью из v7.0.93)
 local settingsPage = ContentPages["Settings"]
 if settingsPage then
     settingsPage.CanvasSize = UDim2.new(0, 0, 0, 600)
@@ -2187,8 +2194,7 @@ if settingsPage then
         end
     end)
     ShiftContainer = function(shiftDown)
-        local targetY = shiftDown and 150 or 0
-        TweenService:Create(settingsContainer, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 55 + targetY)}):Play()
+        local targetY = shiftDown and 150 or 0        TweenService:Create(settingsContainer, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 55 + targetY)}):Play()
     end
     SetToggleState = function(value)
         if value then
@@ -3120,5 +3126,5 @@ task.spawn(function()
     ShowAchievement()
 end)
 
-print("[META] META v7.0.93 - Complete Final")
+print("[META] META v7.0.94 - Optimized Final")
 print("[META] Press Insert or click icon")
