@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.0.89 TWO HIT SOUNDS FINAL
+-- KEY SYSTEM + META UI V7.0.90 KEY EXPIRE SYSTEM
 -- ====================================================================
 local GIST_ID = "0952fe76bcc259fcbda99e552956e5e6"
 local TOKEN_PART1 = "ghp_kMjn"
@@ -69,9 +69,41 @@ local function updateGist(filename, oldContent, enteredKey, expireTimestamp, use
     print("[META UPDATE] Body:", res.Body)
 end
 
+local function CheckExpiredKeys(filename, dbText)
+    local updatedContent = dbText
+    local changed = false
+    local lines = {}
+    
+    for line in string.gmatch(dbText, "[^\r\n]+") do
+        local key, status, expireTime, userId = string.match(line, "([^:]+):([^:]+):([^:]+):?([^:]*)")
+        if key and (status == "used" or status == "expired") and expireTime then
+            local expTime = tonumber(expireTime) or 0
+            if expTime > 0 and os.time() > expTime then
+                table.insert(lines, key .. ":expired:" .. expireTime .. ":" .. (userId or ""))
+                changed = true
+            else
+                table.insert(lines, line)
+            end
+        else
+            table.insert(lines, line)
+        end
+    end
+    
+    if changed then
+        updatedContent = table.concat(lines, "\n")
+        http({
+            Url = "https://api.github.com/gists/" .. GIST_ID,
+            Method = "PATCH",
+            Headers = {["Authorization"] = "token " .. GITHUB_TOKEN, ["Content-Type"] = "application/json"},
+            Body = HttpService:JSONEncode({files = {[filename] = {content = updatedContent}}})
+        })
+    end
+end
+
 local isActivated = false
 local autoLoginSuccess = false
 local cachedDbText = nil
+local keyExpireTime = nil
 
 if readfile then
     local fileExists, content = pcall(function() return readfile(KEY_FILE_NAME) end)
@@ -92,6 +124,7 @@ if readfile then
                     if isKeyStillValid and os.time() < clientData.expires then
                         autoLoginSuccess = true
                         isActivated = true
+                        keyExpireTime = clientData.expires
                     end
                 end
             else
@@ -151,8 +184,6 @@ if not isActivated then
             GlassConnection:Disconnect()
             GlassConnection = nil
         end
-        TweenService:Create(GlassStroke, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {Color = Color3.fromRGB(80, 180, 255), Transparency = 0.2}):Play()
-        TweenService:Create(GlassGlow, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {Color = Color3.fromRGB(40, 120, 255), Transparency = 0.7}):Play()
     end
 
     StartGlassAnimation()
@@ -204,9 +235,6 @@ if not isActivated then
             blinkConnection:Disconnect()
             blinkConnection = nil
         end
-        TweenService:Create(StatusDot, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {BackgroundTransparency = 0}):Play()
-        TweenService:Create(BloomOuter, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {BackgroundTransparency = 0.75}):Play()
-        TweenService:Create(BloomInner, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {BackgroundTransparency = 0.55}):Play()
     end
 
     local function SetDotRed()
@@ -218,9 +246,9 @@ if not isActivated then
 
     local function SetDotGreen()
         StopBlinking()
-        TweenService:Create(StatusDot, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(50, 255, 100), BackgroundTransparency = 0}):Play()
-        TweenService:Create(BloomOuter, TweenInfo.new(0.6, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(50, 255, 100), BackgroundTransparency = 0.6}):Play()
-        TweenService:Create(BloomInner, TweenInfo.new(0.6, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(50, 255, 100), BackgroundTransparency = 0.4}):Play()
+        StatusDot.BackgroundColor3 = Color3.fromRGB(50, 255, 100)
+        BloomOuter.BackgroundColor3 = Color3.fromRGB(50, 255, 100)
+        BloomInner.BackgroundColor3 = Color3.fromRGB(50, 255, 100)
     end
 
     SetDotRed()
@@ -283,6 +311,8 @@ if not isActivated then
             return
         end
 
+        CheckExpiredKeys(filename, dbText)
+
         local keyFound = false
         for line in string.gmatch(dbText, "[^\r\n]+") do
             local key, p1, p2, p3, p4 = string.match(line, "([^:]+):([^:]+):([^:]*):?([^:]*)")
@@ -306,10 +336,10 @@ if not isActivated then
                     end
                     if writefile then writefile(KEY_FILE_NAME, HttpService:JSONEncode({key = text, expires = expireTime, userId = LocalPlayer.UserId})) end
                     isActivated = true
+                    keyExpireTime = expireTime
                 elseif p1 == "used" then
                     local expireTime = tonumber(p2) or 0
                     local usedUserId = tostring(p3) or ""
-                    local remainingLimit = tonumber(p4)
                     if os.time() > expireTime then
                         TextBox.PlaceholderText = "Key expired!"
                         TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
@@ -328,6 +358,7 @@ if not isActivated then
                             local cData = HttpService:JSONDecode(fContent)
                             if cData.key == text and cData.userId == LocalPlayer.UserId then
                                 isActivated = true
+                                keyExpireTime = expireTime
                                 break
                             end
                         end
@@ -705,8 +736,7 @@ local function ApplyChams()
             if p.Character then
                 for _, child in ipairs(p.Character:GetChildren()) do
                     if child:IsA("Highlight") and child:GetAttribute("META_Chams") then child:Destroy() end
-                end
-            end
+                end            end
         end
     end
 end
@@ -1783,17 +1813,11 @@ if soundPage then
     local fireConnection = nil
     local muteConnection = nil
     local guiMuteConnection = nil
-    local damageConnection = nil
-
-    local isShooting = false
-    local lastShotTime = 0
 
     local function StopSoundSystem()
         if fireConnection then fireConnection:Disconnect() fireConnection = nil end
         if muteConnection then muteConnection:Disconnect() muteConnection = nil end
         if guiMuteConnection then guiMuteConnection:Disconnect() guiMuteConnection = nil end
-        if damageConnection then damageConnection:Disconnect() damageConnection = nil end
-        isShooting = false
     end
 
     local function StartSoundSystem(soundId, volume)
@@ -1852,26 +1876,8 @@ if soundPage then
 
         if fireButton then
             fireConnection = fireButton.Activated:Connect(function()
-                isShooting = true
-                lastShotTime = tick()
+                PlayHitSound()
             end)
-        end
-
-        -- Ловим урон
-        local NetworkRemotes = ReplicatedStorage:FindFirstChild("NetworkRemotes")
-        if NetworkRemotes then
-            local Character = NetworkRemotes:FindFirstChild("Character")
-            if Character then
-                local CharacterDamaged = Character:FindFirstChild("CharacterDamaged")
-                if CharacterDamaged and CharacterDamaged:IsA("RemoteEvent") then
-                    damageConnection = CharacterDamaged.OnClientEvent:Connect(function(data)
-                        if isShooting and tick() - lastShotTime < 1 then
-                            PlayHitSound()
-                            isShooting = false
-                        end
-                    end)
-                end
-            end
         end
     end
 
@@ -1950,7 +1956,7 @@ if soundPage then
         return btnFrame
     end
 
-    CreateSoundButton("Sound N1", 15, "135201580846609", 2)
+    CreateSoundButton("Sound N1", 15, "135201580846609", 3)
     CreateSoundButton("Sound N2", 60, "93446662377809", 10)
 
     local ResetSoundButton = Instance.new("TextButton")
@@ -2777,6 +2783,95 @@ if settingsPage then
     table.insert(langUpdateCallbacks, UpdateResetText)
 end
 
+-- KEY EXPIRE CHECK
+task.spawn(function()
+    if keyExpireTime then
+        while true do
+            task.wait(5)
+            if os.time() >= keyExpireTime then
+                -- Отключаем все функции
+                RemoveChams()
+                RemoveESP()
+                RemoveSkeleton()
+                RemoveHealthBar()
+                if DotConnection then DotConnection:Disconnect() DotConnection = nil end
+                for _, data in ipairs(Dots) do if data and data.Frame then data.Frame:Destroy() end end
+                Dots = {}
+                
+                -- Удаляем UI и иконку
+                if IconButton then IconButton:Destroy() end
+                if ScreenGui then ScreenGui:Destroy() end
+                
+                -- Показываем уведомление
+                local ExpireGui = Instance.new("ScreenGui", CoreGui)
+                ExpireGui.Name = "ExpireNotification"
+                ExpireGui.ResetOnSpawn = false
+                
+                local ExpireFrame = Instance.new("Frame", ExpireGui)
+                ExpireFrame.Size = UDim2.new(0, 260, 0, 75)
+                ExpireFrame.Position = UDim2.new(1, 260, 0.88, 0)
+                ExpireFrame.AnchorPoint = Vector2.new(0, 1)
+                ExpireFrame.BackgroundColor3 = Color3.fromRGB(17, 20, 26)
+                ExpireFrame.BackgroundTransparency = 0.15
+                ExpireFrame.BorderSizePixel = 0
+                ExpireFrame.ZIndex = 999
+                
+                local ExpireCorner = Instance.new("UICorner")
+                ExpireCorner.CornerRadius = UDim.new(0, 10)
+                ExpireCorner.Parent = ExpireFrame
+                
+                local ExpireStroke = Instance.new("UIStroke")
+                ExpireStroke.Thickness = 2
+                ExpireStroke.Color = Color3.fromRGB(255, 50, 50)
+                ExpireStroke.Transparency = 0.3
+                ExpireStroke.Parent = ExpireFrame
+                
+                local ExpireTitle = Instance.new("TextLabel")
+                ExpireTitle.Size = UDim2.new(1, -25, 0, 20)
+                ExpireTitle.Position = UDim2.new(0, 12, 0, 8)
+                ExpireTitle.BackgroundTransparency = 1
+                ExpireTitle.Text = "META"
+                ExpireTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+                ExpireTitle.TextSize = 15
+                ExpireTitle.Font = Enum.Font.GothamBold
+                ExpireTitle.TextXAlignment = Enum.TextXAlignment.Left
+                ExpireTitle.Parent = ExpireFrame
+                
+                local ExpireBeta = Instance.new("TextLabel")
+                ExpireBeta.Size = UDim2.new(0, 40, 0, 15)
+                ExpireBeta.Position = UDim2.new(0, 50, 0, 11)
+                ExpireBeta.BackgroundTransparency = 1
+                ExpireBeta.Text = "beta"
+                ExpireBeta.TextColor3 = Color3.fromRGB(120, 120, 120)
+                ExpireBeta.TextSize = 10
+                ExpireBeta.Font = Enum.Font.Gotham
+                ExpireBeta.TextXAlignment = Enum.TextXAlignment.Left
+                ExpireBeta.Parent = ExpireFrame
+                
+                local ExpireDesc = Instance.new("TextLabel")
+                ExpireDesc.Size = UDim2.new(1, -25, 0, 35)
+                ExpireDesc.Position = UDim2.new(0, 12, 0, 32)
+                ExpireDesc.BackgroundTransparency = 1
+                ExpireDesc.Text = "The key's time has expired."
+                ExpireDesc.TextColor3 = Color3.fromRGB(156, 163, 175)
+                ExpireDesc.TextSize = 10
+                ExpireDesc.Font = Enum.Font.Gotham
+                ExpireDesc.TextXAlignment = Enum.TextXAlignment.Left
+                ExpireDesc.TextYAlignment = Enum.TextYAlignment.Top
+                ExpireDesc.TextWrapped = true
+                ExpireDesc.Parent = ExpireFrame
+                
+                TweenService:Create(ExpireFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(1, -260, 0.88, 0)}):Play()
+                
+                task.wait(5)
+                ExpireGui:Destroy()
+                
+                break
+            end
+        end
+    end
+end)
+
 -- ICON BUTTON WITH M LETTER
 local IconButton = Instance.new("ImageButton")
 IconButton.Name = "MetaIcon"
@@ -2937,5 +3032,5 @@ task.spawn(function()
     ShowAchievement()
 end)
 
-print("[META] META v7.0.89 - Two Hit Sounds Final")
+print("[META] META v7.0.90 - Key Expire System")
 print("[META] Press Insert or click icon")
