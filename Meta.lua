@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.0.97 FULL COMPLETE WITH CHAMS COLOR PICKER
+-- KEY SYSTEM + META UI V7.0.98 CHAMS + SKELETON COLOR PICKERS
 -- ====================================================================
 local GIST_ID = "0952fe76bcc259fcbda99e552956e5e6"
 local TOKEN_PART1 = "ghp_kMjn"
@@ -439,7 +439,7 @@ if not isActivated then
 end
 
 -- ====================================================================
--- META UI FULL
+-- META UI
 -- ====================================================================
 local function SetupAntiCheatBypass()
     pcall(function()
@@ -487,6 +487,7 @@ _G.ESPEnabled = false
 _G.HealthBarEnabled = false
 _G.SkeletonEnabled = false
 _G.ChamsColor = Color3.fromRGB(110, 60, 170)
+_G.SkeletonColor = Color3.fromRGB(255, 255, 255)
 
 local Dots = {}
 local DotConnection = nil
@@ -881,7 +882,7 @@ local function CreateSkeletonLine()
     local line = Drawing.new("Line")
     line.Thickness = 2
     line.Visible = false
-    line.Color = Color3.fromRGB(255, 255, 255)
+    line.Color = _G.SkeletonColor or Color3.fromRGB(255, 255, 255)
     line.Transparency = 1
     return line
 end
@@ -998,7 +999,7 @@ SkeletonConnection = RunService.RenderStepped:Connect(function()
                 lines[idx].To = to
                 lines[idx].Visible = true
                 lines[idx].Thickness = 2
-                lines[idx].Color = Color3.fromRGB(255, 255, 255)
+                lines[idx].Color = _G.SkeletonColor or Color3.fromRGB(255, 255, 255)
             else
                 lines[idx].Visible = false
             end
@@ -1415,10 +1416,10 @@ SearchInput.FocusLost:Connect(function(enterPressed)
     end
 end)
 
--- VISUALS PAGE WITH CHAMS COLOR PICKER
+-- VISUALS PAGE WITH CHAMS + SKELETON COLOR PICKERS
 local visualsPage = ContentPages["Visuals"]
 if visualsPage then
-    visualsPage.CanvasSize = UDim2.new(0, 0, 0, 500)
+    visualsPage.CanvasSize = UDim2.new(0, 0, 0, 600)
 
     local function CreateToggle(name, descText, yPos, toggleFunc, frameName)
         local frame = Instance.new("Frame")
@@ -1487,6 +1488,7 @@ if visualsPage then
         return SetState, label, desc, frame
     end
 
+    -- CHAMS COLOR PICKER
     local chamsColorPicker = Instance.new("Frame")
     chamsColorPicker.Name = "ChamsColorPicker"
     chamsColorPicker.Size = UDim2.new(1, -30, 0, 140)
@@ -1537,7 +1539,6 @@ if visualsPage then
         local saturation = clampedDistance / radius
         local pickedColor = Color3.fromHSV(hue, saturation, 1)
         _G.ChamsColor = pickedColor
-        
         for _, p in ipairs(Players:GetPlayers()) do
             if p.Character then
                 for _, child in ipairs(p.Character:GetChildren()) do
@@ -1569,7 +1570,87 @@ if visualsPage then
         end
     end)
 
-    local function ShiftVisualsElements(shiftDown)
+    -- SKELETON COLOR PICKER
+    local skeletonColorPicker = Instance.new("Frame")
+    skeletonColorPicker.Name = "SkeletonColorPicker"
+    skeletonColorPicker.Size = UDim2.new(1, -30, 0, 140)
+    skeletonColorPicker.Position = UDim2.new(0, 15, 0, 175)
+    skeletonColorPicker.BackgroundTransparency = 1
+    skeletonColorPicker.Visible = false
+    skeletonColorPicker.ZIndex = 30
+    skeletonColorPicker.Parent = visualsPage
+
+    local skeletonWheel = Instance.new("ImageLabel")
+    skeletonWheel.Size = UDim2.new(0, 120, 0, 120)
+    skeletonWheel.Position = UDim2.new(0.5, -60, 0.5, -60)
+    skeletonWheel.BackgroundTransparency = 1
+    skeletonWheel.Image = "rbxassetid://7393858625"
+    skeletonWheel.ZIndex = 31
+    skeletonWheel.Parent = skeletonColorPicker
+
+    local skeletonPickerDot = Instance.new("Frame")
+    skeletonPickerDot.Size = UDim2.new(0, 10, 0, 10)
+    skeletonPickerDot.Position = UDim2.new(0.5, -5, 0.5, -5)
+    skeletonPickerDot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    skeletonPickerDot.ZIndex = 32
+    skeletonPickerDot.Parent = skeletonWheel
+    local skeletonDotCorner = Instance.new("UICorner")
+    skeletonDotCorner.CornerRadius = UDim.new(1, 0)
+    skeletonDotCorner.Parent = skeletonPickerDot
+
+    local skeletonDragArea = Instance.new("TextButton")
+    skeletonDragArea.Size = UDim2.new(1, 0, 1, 0)
+    skeletonDragArea.BackgroundTransparency = 1
+    skeletonDragArea.Text = ""
+    skeletonDragArea.ZIndex = 33
+    skeletonDragArea.Parent = skeletonWheel
+
+    local isDraggingSkeletonColor = false
+    local function UpdateSkeletonWheelColor(inputPosition)
+        local wheelCenter = skeletonWheel.AbsolutePosition + (skeletonWheel.AbsoluteSize / 2)
+        local delta = Vector2.new(inputPosition.X, inputPosition.Y) - wheelCenter
+        local distance = delta.Magnitude
+        local radius = skeletonWheel.AbsoluteSize.X / 2
+        local clampedDistance = math.clamp(distance, 0, radius)
+        local angle = math.atan2(delta.Y, delta.X)
+        local xPos = clampedDistance * math.cos(angle)
+        local yPos = clampedDistance * math.sin(angle)
+        skeletonPickerDot.Position = UDim2.new(0, xPos + radius - 5, 0, yPos + radius - 5)
+        if angle < 0 then angle = angle + (math.pi * 2) end
+        local hue = angle / (math.pi * 2)
+        local saturation = clampedDistance / radius
+        local pickedColor = Color3.fromHSV(hue, saturation, 1)
+        _G.SkeletonColor = pickedColor
+        for _, player in ipairs(Players:GetPlayers()) do
+            if SkeletonLines[player] then
+                for _, line in pairs(SkeletonLines[player]) do
+                    line.Color = pickedColor
+                end
+            end
+        end
+    end
+
+    skeletonDragArea.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isDraggingSkeletonColor = true
+            visualsPage.ScrollingEnabled = false
+            UpdateSkeletonWheelColor(input.Position)
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if isDraggingSkeletonColor and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
+            UpdateSkeletonWheelColor(input.Position)
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isDraggingSkeletonColor = false
+            visualsPage.ScrollingEnabled = true
+        end
+    end)
+
+    -- SHIFT FUNCTIONS
+    local function ShiftChamsElements(shiftDown)
         local targetY = shiftDown and 150 or 0
         local espFrame = visualsPage:FindFirstChild("ESPFrame")
         local skeletonFrame = visualsPage:FindFirstChild("SkeletonFrame")
@@ -1579,29 +1660,50 @@ if visualsPage then
         if healthFrame then TweenService:Create(healthFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 175 + targetY)}):Play() end
     end
 
+    local function ShiftSkeletonElements(shiftDown)
+        local targetY = shiftDown and 150 or 0
+        local healthFrame = visualsPage:FindFirstChild("HealthFrame")
+        if healthFrame then TweenService:Create(healthFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 175 + targetY)}):Play() end
+    end
+
+    -- CHAMS TOGGLE
     local SetChamsState, chamsLabel, chamsDesc = CreateToggle("Chams", "Makes enemies purple", 10, function(v)
         if v then
             ApplyChams()
             chamsColorPicker.Visible = true
-            ShiftVisualsElements(true)
+            ShiftChamsElements(true)
         else
             RemoveChams()
             chamsColorPicker.Visible = false
-            ShiftVisualsElements(false)
+            ShiftChamsElements(false)
         end
         _G.ChamsEnabled = v
     end, "ChamsFrame")
     SetChamsToggleState = SetChamsState
     SetChamsToggleState(_G.ChamsEnabled)
 
+    -- ESP TOGGLE
     local SetESPState, espLabel, espDesc = CreateToggle("Tracers and 3D Box", "Lines with boxes leading to enemies", 65, function(v) if v then ApplyESP() else RemoveESP() end _G.ESPEnabled = v end, "ESPFrame")
     SetESPToggleState = SetESPState
     SetESPToggleState(_G.ESPEnabled)
 
-    local SetSkeletonState, skeletonLabel, skeletonDesc = CreateToggle("Skeleton", "Skeleton for enemies", 120, function(v) if v then ApplySkeleton() else RemoveSkeleton() end _G.SkeletonEnabled = v end, "SkeletonFrame")
+    -- SKELETON TOGGLE
+    local SetSkeletonState, skeletonLabel, skeletonDesc = CreateToggle("Skeleton", "Skeleton for enemies", 120, function(v)
+        if v then
+            ApplySkeleton()
+            skeletonColorPicker.Visible = true
+            ShiftSkeletonElements(true)
+        else
+            RemoveSkeleton()
+            skeletonColorPicker.Visible = false
+            ShiftSkeletonElements(false)
+        end
+        _G.SkeletonEnabled = v
+    end, "SkeletonFrame")
     SetSkeletonToggleState = SetSkeletonState
     SetSkeletonToggleState(_G.SkeletonEnabled)
 
+    -- HEALTH BAR TOGGLE
     local SetHealthState, healthLabel, healthDesc = CreateToggle("Health Bar", "Health bar above enemies", 175, function(v) if v then ApplyHealthBar() else RemoveHealthBar() end _G.HealthBarEnabled = v end, "HealthFrame")
     SetHealthBarToggleState = SetHealthState
     SetHealthBarToggleState(_G.HealthBarEnabled)
@@ -1619,12 +1721,11 @@ if visualsPage then
     end)
 end
 
--- SKY PAGE
+-- SKY PAGE (полностью из v7.0.97)
 local skyPage = ContentPages["Sky"]
 if skyPage then
     skyPage.CanvasSize = UDim2.new(0, 0, 0, 0)
     skyPage.ScrollBarThickness = 0
-
     local skyBlock = Instance.new("Frame")
     skyBlock.Name = "SkyBlock"
     skyBlock.Size = UDim2.new(1, -10, 1, -10)
@@ -1634,17 +1735,14 @@ if skyPage then
     skyBlock.BorderSizePixel = 0
     skyBlock.ClipsDescendants = true
     skyBlock.Parent = skyPage
-
     local skyCorner = Instance.new("UICorner")
     skyCorner.CornerRadius = UDim.new(0, 8)
     skyCorner.Parent = skyBlock
-
     skyStroke = Instance.new("UIStroke")
     skyStroke.Thickness = 2
     skyStroke.Color = _G.MenuThemeColor
     skyStroke.Transparency = 0.3
     skyStroke.Parent = skyBlock
-
     local skyScroll = Instance.new("ScrollingFrame")
     skyScroll.Size = UDim2.new(1, -10, 1, -10)
     skyScroll.Position = UDim2.new(0, 5, 0, 5)
@@ -1654,19 +1752,12 @@ if skyPage then
     skyScroll.ScrollBarThickness = 3
     skyScroll.ZIndex = 5
     skyScroll.Parent = skyBlock
-
     local modeButtons = {}
     local activeSkyMode = nil
-
     local function ResetSky()
-        if skyConnection then
-            skyConnection:Disconnect()
-            skyConnection = nil
-        end
+        if skyConnection then skyConnection:Disconnect() skyConnection = nil end
         for _, obj in ipairs(Lighting:GetChildren()) do
-            if obj.Name == "DeltaPurpleFilter" or obj.Name == "DeltaOrangeFilter" or obj.Name == "DeltaBlackSkyFilter" or obj.Name == "DeltaVibeBloom" or obj.Name == "DeltaVibeAtmosphere" then
-                obj:Destroy()
-            end
+            if obj.Name == "DeltaPurpleFilter" or obj.Name == "DeltaOrangeFilter" or obj.Name == "DeltaBlackSkyFilter" or obj.Name == "DeltaVibeBloom" or obj.Name == "DeltaVibeAtmosphere" then obj:Destroy() end
         end
         Lighting.TimeOfDay = "14:00:00"
         Lighting.Brightness = 1
@@ -1674,7 +1765,6 @@ if skyPage then
         Lighting.Ambient = Color3.fromRGB(70, 70, 70)
         Lighting.GlobalShadows = false
     end
-
     local function StartPurpleSky()
         ResetSky()
         activeSkyMode = "Purple"
@@ -1710,7 +1800,6 @@ if skyPage then
             Lighting.Ambient = Color3.fromRGB(50, 45, 60)
         end)
     end
-
     local function StartNightSky()
         ResetSky()
         activeSkyMode = "Night"
@@ -1739,7 +1828,6 @@ if skyPage then
             Lighting.Ambient = Color3.fromRGB(90, 95, 105)
         end)
     end
-
     local function StartEveningSky()
         ResetSky()
         activeSkyMode = "Evening"
@@ -1779,7 +1867,6 @@ if skyPage then
             Lighting.Ambient = Color3.fromRGB(100, 90, 85)
         end)
     end
-
     local function CreateModeButton(text, yPos, skyFunc)
         local btnFrame = Instance.new("Frame")
         btnFrame.Size = UDim2.new(0.85, 0, 0, 36)
@@ -1845,11 +1932,9 @@ if skyPage then
         table.insert(modeButtons, btnFrame)
         return btnFrame
     end
-
     CreateModeButton("Night Sky (Mode)", 15, StartNightSky)
     CreateModeButton("Evening Sky (Mode)", 60, StartEveningSky)
     CreateModeButton("Purple Sky (My Love Mode)", 105, StartPurpleSky)
-
     local ResetSkyButton = Instance.new("TextButton")
     ResetSkyButton.Size = UDim2.new(0, 60, 0, 22)
     ResetSkyButton.Position = UDim2.new(1, -65, 1, -27)
@@ -1885,7 +1970,6 @@ local soundPage = ContentPages["Sound"]
 if soundPage then
     soundPage.CanvasSize = UDim2.new(0, 0, 0, 0)
     soundPage.ScrollBarThickness = 0
-
     local soundBlock = Instance.new("Frame")
     soundBlock.Name = "SoundBlock"
     soundBlock.Size = UDim2.new(1, -10, 1, -10)
@@ -1903,7 +1987,6 @@ if soundPage then
     soundStroke.Color = _G.MenuThemeColor
     soundStroke.Transparency = 0.3
     soundStroke.Parent = soundBlock
-
     local soundScroll = Instance.new("ScrollingFrame")
     soundScroll.Size = UDim2.new(1, -10, 1, -10)
     soundScroll.Position = UDim2.new(0, 5, 0, 5)
@@ -1913,19 +1996,16 @@ if soundPage then
     soundScroll.ScrollBarThickness = 3
     soundScroll.ZIndex = 5
     soundScroll.Parent = soundBlock
-
     local soundButtons = {}
     local activeSoundId = nil
     local activeSoundVolume = nil
     local fireButton = nil
-
     local function StopSoundSystem()
         if fireInputBegan then fireInputBegan:Disconnect() fireInputBegan = nil end
         if fireInputEnded then fireInputEnded:Disconnect() fireInputEnded = nil end
         if muteConnection then muteConnection:Disconnect() muteConnection = nil end
         if guiMuteConnection then guiMuteConnection:Disconnect() guiMuteConnection = nil end
     end
-
     local function StartSoundSystem(soundId, volume)
         StopSoundSystem()
         activeSoundId = soundId
@@ -1934,7 +2014,6 @@ if soundPage then
         local holdSound = nil
         local isHolding = false
         local pressTime = 0
-
         muteConnection = Workspace.DescendantAdded:Connect(function(child)
             if child:IsA("Sound") then
                 local parent = child.Parent
@@ -1944,14 +2023,12 @@ if soundPage then
                 end
             end
         end)
-
         guiMuteConnection = LocalPlayer:WaitForChild("PlayerGui").DescendantAdded:Connect(function(child)
             if child:IsA("Sound") then
                 child.Volume = 0
                 child:Stop()
             end
         end)
-
         local function FindFireButton()
             local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
             for _, child in ipairs(PlayerGui:GetDescendants()) do
@@ -1964,9 +2041,7 @@ if soundPage then
             end
             return nil
         end
-
         fireButton = FindFireButton()
-
         if fireButton then
             fireInputBegan = fireButton.InputBegan:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -1987,7 +2062,6 @@ if soundPage then
                     end)
                 end
             end)
-            
             fireInputEnded = fireButton.InputEnded:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                     isHolding = false
@@ -2005,7 +2079,6 @@ if soundPage then
             end)
         end
     end
-
     local function CreateSoundButton(text, yPos, soundId, volume)
         local btnFrame = Instance.new("Frame")
         btnFrame.Size = UDim2.new(0.85, 0, 0, 36)
@@ -2073,10 +2146,8 @@ if soundPage then
         table.insert(soundButtons, btnFrame)
         return btnFrame
     end
-
     CreateSoundButton("Sound N1", 15, "135201580846609", 3)
     CreateSoundButton("Sound N2", 60, "93446662377809", 10)
-
     local ResetSoundButton = Instance.new("TextButton")
     ResetSoundButton.Size = UDim2.new(0, 60, 0, 22)
     ResetSoundButton.Position = UDim2.new(1, -65, 1, -27)
@@ -2108,7 +2179,7 @@ if soundPage then
     end)
 end
 
--- SETTINGS PAGE (все функции из v7.0.94)
+-- SETTINGS PAGE (полностью из v7.0.97)
 local settingsPage = ContentPages["Settings"]
 if settingsPage then
     settingsPage.CanvasSize = UDim2.new(0, 0, 0, 600)
@@ -2845,6 +2916,7 @@ if settingsPage then
         _G.SkeletonEnabled = false
         _G.HealthBarEnabled = false
         _G.ChamsColor = Color3.fromRGB(110, 60, 170)
+        _G.SkeletonColor = Color3.fromRGB(255, 255, 255)
         MainFrame.BackgroundTransparency = 0.12
         MainFrame.Size = UDim2.new(0, 640, 0, 470)
         MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
@@ -3076,5 +3148,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] META v7.0.97 - Full Complete with Chams Color Picker")
+print("[META] META v7.0.98 - Chams + Skeleton Color Pickers")
 print("[META] Press Insert or click icon")
