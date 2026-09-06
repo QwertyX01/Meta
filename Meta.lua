@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.0.99 CHAMS + SKELETON COLOR PICKERS
+-- KEY SYSTEM + META UI V7.0.99 NEW KEY PANEL
 -- ====================================================================
 local GIST_ID = "0952fe76bcc259fcbda99e552956e5e6"
 local TOKEN_PART1 = "ghp_kMjn"
@@ -140,69 +140,88 @@ end
 
 if not isActivated then
     local KeyScreenGui = Instance.new("ScreenGui", CoreGui)
-    KeyScreenGui.Name = "MetaKeySystem"
+    KeyScreenGui.Name = "MetaCompactKeySystem"
     KeyScreenGui.ResetOnSpawn = false
     KeyScreenGui.IgnoreGuiInset = true
 
+    -- ===== НОВАЯ KEY PANEL 540x470 =====
     local KeyFrame = Instance.new("Frame", KeyScreenGui)
-    KeyFrame.Size = UDim2.new(0, 540, 0, 450)
-    KeyFrame.Position = UDim2.new(0.5, -270, 0.5, -225)
-    KeyFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-    KeyFrame.BackgroundColor3 = Color3.fromRGB(16, 18, 24)
-    KeyFrame.BackgroundTransparency = 0.04
+    KeyFrame.Size = UDim2.new(0, 540, 0, 470)
+    KeyFrame.Position = UDim2.new(0.5, -270, 0.5, -235)
+    KeyFrame.BackgroundColor3 = Color3.fromRGB(20, 22, 26)
+    KeyFrame.BackgroundTransparency = 0
     KeyFrame.BorderSizePixel = 0
     KeyFrame.Active = true
     KeyFrame.Draggable = true
-    KeyFrame.ZIndex = 1
-    Instance.new("UICorner", KeyFrame).CornerRadius = UDim.new(0, 18)
+    Instance.new("UICorner", KeyFrame).CornerRadius = UDim.new(0, 14)
 
-    -- WHITE BORDER BASE
-    local WhiteBorder = Instance.new("UIStroke", KeyFrame)
-    WhiteBorder.Thickness = 4
-    WhiteBorder.Color = Color3.fromRGB(255, 255, 255)
-    WhiteBorder.Transparency = 0.25
-    WhiteBorder.ZIndex = 2
+    -- Толстая белая обводка
+    local GlassStroke = Instance.new("UIStroke", KeyFrame)
+    GlassStroke.Thickness = 2.5
+    GlassStroke.Color = Color3.fromRGB(255, 255, 255)
+    GlassStroke.Transparency = 0.15
 
-    -- BLACK WAVE GRADIENT OVERLAY
-    local WaveGradient = Instance.new("UIGradient", KeyFrame)
-    WaveGradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 0, 0)),
-        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))
+    -- Дополнительная обводка для глубины
+    local GlassGlow = Instance.new("UIStroke", KeyFrame)
+    GlassGlow.Thickness = 4
+    GlassGlow.Color = Color3.fromRGB(0, 0, 0)
+    GlassGlow.Transparency = 0.7
+
+    -- ===== ГРАДИЕНТНАЯ ОБВОДКА =====
+    local GradientStroke = Instance.new("UIStroke", KeyFrame)
+    GradientStroke.Thickness = 3
+    GradientStroke.Color = Color3.fromRGB(255, 255, 255)
+    GradientStroke.Transparency = 0.1
+
+    local GradientOverlay = Instance.new("Frame", KeyFrame)
+    GradientOverlay.Size = UDim2.new(1, 0, 1, 0)
+    GradientOverlay.Position = UDim2.new(0, 0, 0, 0)
+    GradientOverlay.BackgroundTransparency = 1
+    GradientOverlay.ZIndex = 0
+
+    local UIGradient = Instance.new("UIGradient", GradientStroke)
+    UIGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+        ColorSequenceKeypoint.new(0.25, Color3.fromRGB(255, 255, 0)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 0)),
+        ColorSequenceKeypoint.new(0.75, Color3.fromRGB(0, 255, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 255))
     })
-    WaveGradient.Rotation = 0
-    WaveGradient.ZIndex = 3
+    UIGradient.Rotation = 0
 
-    local waveConnection
-    local function StartWaveAnimation()
-        if waveConnection then waveConnection:Disconnect() end
-        waveConnection = RunService.RenderStepped:Connect(function()
-            local t = tick()
-            WaveGradient.Rotation = (t * 30) % 360
+    local gradientConnection = nil
+    local gradientAngle = 0
+
+    local function StartGradientAnimation()
+        if gradientConnection then gradientConnection:Disconnect() end
+        gradientConnection = RunService.Heartbeat:Connect(function()
+            gradientAngle = gradientAngle + 0.8
+            if gradientAngle >= 360 then gradientAngle = 0 end
+            UIGradient.Rotation = gradientAngle
         end)
     end
 
-    local function StopWaveAnimation()
-        if waveConnection then
-            waveConnection:Disconnect()
-            waveConnection = nil
+    local function StopGradientAnimation()
+        if gradientConnection then
+            gradientConnection:Disconnect()
+            gradientConnection = nil
         end
     end
 
-    StartWaveAnimation()
+    StartGradientAnimation()
 
-    -- STATUS DOT
+    -- ===== СТАТУС ТОЧКА =====
     local StatusDot = Instance.new("Frame", KeyFrame)
-    StatusDot.Size = UDim2.new(0, 16, 0, 16)
-    StatusDot.Position = UDim2.new(0, 20, 0, 20)
+    StatusDot.Size = UDim2.new(0, 14, 0, 14)
+    StatusDot.Position = UDim2.new(0, 15, 0, 15)
     StatusDot.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
     StatusDot.BorderSizePixel = 0
     StatusDot.ZIndex = 5
     Instance.new("UICorner", StatusDot).CornerRadius = UDim.new(1, 0)
 
     local BloomOuter = Instance.new("Frame", KeyFrame)
-    BloomOuter.Size = UDim2.new(0, 40, 0, 40)
-    BloomOuter.Position = UDim2.new(0, 8, 0, 8)
+    BloomOuter.Size = UDim2.new(0, 32, 0, 32)
+    BloomOuter.Position = UDim2.new(0, 6, 0, 6)
     BloomOuter.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
     BloomOuter.BackgroundTransparency = 0.75
     BloomOuter.BorderSizePixel = 0
@@ -210,8 +229,8 @@ if not isActivated then
     Instance.new("UICorner", BloomOuter).CornerRadius = UDim.new(1, 0)
 
     local BloomInner = Instance.new("Frame", KeyFrame)
-    BloomInner.Size = UDim2.new(0, 28, 0, 28)
-    BloomInner.Position = UDim2.new(0, 14, 0, 14)
+    BloomInner.Size = UDim2.new(0, 22, 0, 22)
+    BloomInner.Position = UDim2.new(0, 11, 0, 11)
     BloomInner.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
     BloomInner.BackgroundTransparency = 0.55
     BloomInner.BorderSizePixel = 0
@@ -281,91 +300,83 @@ if not isActivated then
 
     SetDotRed()
 
-    -- HEADER
-    local HeaderFrame = Instance.new("Frame", KeyFrame)
-    HeaderFrame.Size = UDim2.new(1, -40, 0, 60)
-    HeaderFrame.Position = UDim2.new(0, 20, 0, 10)
-    HeaderFrame.BackgroundTransparency = 1
-    HeaderFrame.ZIndex = 5
+    -- ===== ЗАГОЛОВОК "META" =====
+    local KeyTitle = Instance.new("TextLabel", KeyFrame)
+    KeyTitle.Size = UDim2.new(1, 0, 0, 44)
+    KeyTitle.Position = UDim2.new(0, 0, 0, 10)
+    KeyTitle.Text = "META"
+    KeyTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    KeyTitle.TextSize = 32
+    KeyTitle.Font = Enum.Font.GothamBlack
+    KeyTitle.TextXAlignment = Enum.TextXAlignment.Center
+    KeyTitle.TextYAlignment = Enum.TextYAlignment.Center
+    KeyTitle.BackgroundTransparency = 1
 
-    local MetaTitle = Instance.new("TextLabel", HeaderFrame)
-    MetaTitle.Size = UDim2.new(0, 200, 0, 30)
-    MetaTitle.Position = UDim2.new(0, 35, 0, 5)
-    MetaTitle.BackgroundTransparency = 1
-    MetaTitle.Text = "Meta | Key"
-    MetaTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-    MetaTitle.TextSize = 22
-    MetaTitle.Font = Enum.Font.GothamBold
-    MetaTitle.TextXAlignment = Enum.TextXAlignment.Left
-    MetaTitle.TextYAlignment = Enum.TextYAlignment.Center
-    MetaTitle.ZIndex = 5
+    local HeaderLine = Instance.new("Frame", KeyFrame)
+    HeaderLine.Size = UDim2.new(1, -30, 0, 1)
+    HeaderLine.Position = UDim2.new(0, 15, 0, 54)
+    HeaderLine.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    HeaderLine.BorderSizePixel = 0
 
-    local SeparatorLine = Instance.new("Frame", KeyFrame)
-    SeparatorLine.Size = UDim2.new(1, -40, 0, 1)
-    SeparatorLine.Position = UDim2.new(0, 20, 0, 75)
-    SeparatorLine.BackgroundColor3 = Color3.fromRGB(70, 72, 80)
-    SeparatorLine.BorderSizePixel = 0
-    SeparatorLine.ZIndex = 5
+    -- ===== ПОЛЕ ВВОДА С БЕЛОЙ ОБВОДКОЙ =====
+    local TextBox = Instance.new("TextBox", KeyFrame)
+    TextBox.Size = UDim2.new(1, -40, 0, 44)
+    TextBox.Position = UDim2.new(0, 20, 0, 140)
+    TextBox.BackgroundColor3 = Color3.fromRGB(30, 32, 38)
+    TextBox.BackgroundTransparency = 0
+    TextBox.TextColor3 = Color3.fromRGB(225, 230, 240)
+    TextBox.PlaceholderText = "Enter the key that the owner gave you."
+    TextBox.PlaceholderColor3 = Color3.fromRGB(180, 180, 190)
+    TextBox.Text = ""
+    TextBox.TextSize = 14
+    TextBox.Font = Enum.Font.Gotham
+    Instance.new("UICorner", TextBox).CornerRadius = UDim.new(0, 8)
 
-    -- INPUT FIELD
-    local InputContainer = Instance.new("Frame", KeyFrame)
-    InputContainer.Size = UDim2.new(1, -60, 0, 52)
-    InputContainer.Position = UDim2.new(0, 30, 0, 110)
-    InputContainer.BackgroundColor3 = Color3.fromRGB(24, 27, 34)
-    InputContainer.BackgroundTransparency = 0.15
-    InputContainer.BorderSizePixel = 0
-    InputContainer.ZIndex = 5
-    Instance.new("UICorner", InputContainer).CornerRadius = UDim.new(0, 10)
+    -- Белая тонкая обводка поля ввода
+    local TextBoxStroke = Instance.new("UIStroke", TextBox)
+    TextBoxStroke.Thickness = 1
+    TextBoxStroke.Color = Color3.fromRGB(255, 255, 255)
+    TextBoxStroke.Transparency = 0.3
 
-    local InputWhiteStroke = Instance.new("UIStroke", InputContainer)
-    InputWhiteStroke.Thickness = 1
-    InputWhiteStroke.Color = Color3.fromRGB(255, 255, 255)
-    InputWhiteStroke.Transparency = 0.6
-    InputWhiteStroke.ZIndex = 6
-
-    local InputGradient = Instance.new("UIGradient", InputContainer)
-    InputGradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 0, 0)),
-        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))
+    -- Градиент для плейсхолдера
+    local PlaceholderGradient = Instance.new("UIGradient", TextBox)
+    PlaceholderGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(120, 180, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
     })
-    InputGradient.Rotation = 0
-    InputGradient.ZIndex = 7
+    PlaceholderGradient.Offset = Vector2.new(-1, 0)
 
-    local inputWaveConnection
-    local function StartInputWave()
-        if inputWaveConnection then inputWaveConnection:Disconnect() end
-        inputWaveConnection = RunService.RenderStepped:Connect(function()
-            local t = tick()
-            InputGradient.Rotation = (t * 25) % 360
+    local placeholderConnection = nil
+    local placeholderOffset = -1
+
+    local function StartPlaceholderAnimation()
+        if placeholderConnection then placeholderConnection:Disconnect() end
+        placeholderConnection = RunService.Heartbeat:Connect(function()
+            placeholderOffset = placeholderOffset + 0.015
+            if placeholderOffset > 1 then placeholderOffset = -1 end
+            PlaceholderGradient.Offset = Vector2.new(placeholderOffset, 0)
         end)
     end
 
-    StartInputWave()
+    StartPlaceholderAnimation()
 
-    local KeyTextBox = Instance.new("TextBox", InputContainer)
-    KeyTextBox.Size = UDim2.new(1, -20, 1, 0)
-    KeyTextBox.Position = UDim2.new(0, 10, 0, 0)
-    KeyTextBox.BackgroundTransparency = 1
-    KeyTextBox.TextColor3 = Color3.fromRGB(235, 238, 245)
-    KeyTextBox.PlaceholderText = "Enter the key I gave you."
-    KeyTextBox.PlaceholderColor3 = Color3.fromRGB(170, 175, 185)
-    KeyTextBox.Text = ""
-    KeyTextBox.TextSize = 16
-    KeyTextBox.Font = Enum.Font.Gotham
-    KeyTextBox.ZIndex = 8
+    local BottomLine = Instance.new("Frame", KeyFrame)
+    BottomLine.Size = UDim2.new(1, -30, 0, 1)
+    BottomLine.Position = UDim2.new(0, 15, 0, 400)
+    BottomLine.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    BottomLine.BorderSizePixel = 0
 
-    -- TIKTOK LINK
     local TiktokLink = Instance.new("TextButton", KeyFrame)
-    TiktokLink.Size = UDim2.new(1, -60, 0, 22)
-    TiktokLink.Position = UDim2.new(0, 30, 0, 180)
+    TiktokLink.Size = UDim2.new(1, -40, 0, 30)
+    TiktokLink.Position = UDim2.new(0, 20, 0, 415)
     TiktokLink.BackgroundTransparency = 1
     TiktokLink.Text = "Tiktok: tiktok.com/@qwertyx015"
-    TiktokLink.TextColor3 = Color3.fromRGB(130, 170, 255)
-    TiktokLink.TextSize = 13
+    TiktokLink.TextColor3 = Color3.fromRGB(120, 180, 255)
+    TiktokLink.TextSize = 12
     TiktokLink.Font = Enum.Font.Gotham
     TiktokLink.TextXAlignment = Enum.TextXAlignment.Center
-    TiktokLink.ZIndex = 5
+    TiktokLink.ZIndex = 10
 
     TiktokLink.MouseButton1Click:Connect(function()
         setclipboard("https://tiktok.com/@qwertyx015")
@@ -374,19 +385,19 @@ if not isActivated then
         TiktokLink.Text = "Tiktok: tiktok.com/@qwertyx015"
     end)
 
-    KeyTextBox.FocusLost:Connect(function(enterPressed)
+    TextBox.FocusLost:Connect(function(enterPressed)
         if not enterPressed then return end
-        local text = KeyTextBox.Text
-        if text == "" then KeyTextBox.PlaceholderText = "Field is empty!" return end
-        KeyTextBox.Text = ""
-        KeyTextBox.PlaceholderText = "Checking key..."
-        KeyTextBox.PlaceholderColor3 = Color3.fromRGB(255, 255, 255)
+        local text = TextBox.Text
+        if text == "" then TextBox.PlaceholderText = "Field is empty!" return end
+        TextBox.Text = ""
+        TextBox.PlaceholderText = "Checking key..."
+        TextBox.PlaceholderColor3 = Color3.fromRGB(255, 255, 255)
         task.wait(0.3)
 
         local dbText, filename = getGistData()
         if not dbText then
-            KeyTextBox.PlaceholderText = "Network error!"
-            KeyTextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
+            TextBox.PlaceholderText = "Network error!"
+            TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
             SetDotRed()
             PlayErrorSound()
             return
@@ -403,8 +414,8 @@ if not isActivated then
                     local duration = tonumber(p2) or 86400
                     local limit = tonumber(p3) or 1
                     if limit <= 0 then
-                        KeyTextBox.PlaceholderText = "Key expired!"
-                        KeyTextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
+                        TextBox.PlaceholderText = "Key expired!"
+                        TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
                         SetDotRed()
                         PlayErrorSound()
                         return
@@ -423,15 +434,15 @@ if not isActivated then
                     local expireTime = tonumber(p2) or 0
                     local usedUserId = tostring(p3) or ""
                     if os.time() > expireTime then
-                        KeyTextBox.PlaceholderText = "Key expired!"
-                        KeyTextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
+                        TextBox.PlaceholderText = "Key expired!"
+                        TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
                         SetDotRed()
                         PlayErrorSound()
                         return
                     end
                     if usedUserId ~= LocalPlayer.Name then
-                        KeyTextBox.PlaceholderText = "Key already used!"
-                        KeyTextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
+                        TextBox.PlaceholderText = "Key already used!"
+                        TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
                         SetDotRed()
                         PlayErrorSound()
                         return
@@ -447,14 +458,14 @@ if not isActivated then
                             end
                         end
                     end
-                    KeyTextBox.PlaceholderText = "Key already used!"
-                    KeyTextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
+                    TextBox.PlaceholderText = "Key already used!"
+                    TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
                     SetDotRed()
                     PlayErrorSound()
                     return
                 elseif p1 == "expired" then
-                    KeyTextBox.PlaceholderText = "Key expired!"
-                    KeyTextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
+                    TextBox.PlaceholderText = "Key expired!"
+                    TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
                     SetDotRed()
                     PlayErrorSound()
                     return
@@ -463,34 +474,41 @@ if not isActivated then
         end
 
         if not keyFound then
-            KeyTextBox.PlaceholderText = "Invalid key!"
-            KeyTextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
+            TextBox.PlaceholderText = "Invalid key!"
+            TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
             SetDotRed()
             PlayErrorSound()
             return
         end
 
         if isActivated then
-            KeyTextBox.PlaceholderText = "Success!"
-            KeyTextBox.PlaceholderColor3 = Color3.fromRGB(0, 255, 0)
+            TextBox.PlaceholderText = "Success!"
+            TextBox.PlaceholderColor3 = Color3.fromRGB(0, 255, 0)
             SetDotGreen()
-            StopWaveAnimation()
-            StopInputWave()
+            StopGradientAnimation()
+            StopBlinking()
+            if placeholderConnection then placeholderConnection:Disconnect() end
             PlaySuccessSound()
+            TweenService:Create(KeyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Position = UDim2.new(0.5, -270, 0.5, -600)}):Play()
+            TweenService:Create(KeyFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
+            for _, child in pairs(KeyFrame:GetDescendants()) do
+                if child:IsA("TextLabel") or child:IsA("TextBox") or child:IsA("Frame") or child:IsA("UIStroke") or child:IsA("TextButton") then
+                    TweenService:Create(child, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {TextTransparency = 1, BackgroundTransparency = 1}):Play()
+                end
+            end
             task.wait(0.5)
             KeyScreenGui:Destroy()
         end
     end)
 
-    task.wait(0.1)
-    TweenService:Create(KeyFrame, TweenInfo.new(0.7, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, 0, 0.5, 0)}):Play()
+    TweenService:Create(KeyFrame, TweenInfo.new(0.7, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -270, 0.35, -235)}):Play()
 
     while not isActivated do task.wait(0.5) end
     KeyScreenGui:Destroy()
 end
 
 -- ====================================================================
--- META UI
+-- META UI (полностью из v7.0.98)
 -- ====================================================================
 local function SetupAntiCheatBypass()
     pcall(function()
@@ -808,10 +826,10 @@ local function SetupPlayer(p)
     if p == LocalPlayer then return end
     if ChamsConnections[p] then ChamsConnections[p]:Disconnect() end
     ChamsConnections[p] = p.CharacterAdded:Connect(function(char)
-        task.wait(0.1)
+        task.wait(0.6)
         PaintCharacter(char, p)
     end)
-    if p.Character then task.wait(0.1) PaintCharacter(p.Character, p) end
+    if p.Character then task.wait(0.2) PaintCharacter(p.Character, p) end
 end
 
 local function ApplyChams()
@@ -1467,10 +1485,10 @@ SearchInput.FocusLost:Connect(function(enterPressed)
     end
 end)
 
--- VISUALS PAGE WITH CHAMS + SKELETON COLOR PICKERS
+-- VISUALS PAGE WITH ADAPTIVE COLOR PICKERS
 local visualsPage = ContentPages["Visuals"]
 if visualsPage then
-    visualsPage.CanvasSize = UDim2.new(0, 0, 0, 600)
+    visualsPage.CanvasSize = UDim2.new(0, 0, 0, 700)
 
     local function CreateToggle(name, descText, yPos, toggleFunc, frameName)
         local frame = Instance.new("Frame")
@@ -1491,8 +1509,7 @@ if visualsPage then
         local desc = Instance.new("TextLabel")
         desc.Size = UDim2.new(0.7, 0, 0, 16)
         desc.Position = UDim2.new(0, 0, 0, 22)
-        desc.BackgroundTransparency = 1
-        desc.Text = descText
+        desc.BackgroundTransparency = 1        desc.Text = descText
         desc.TextColor3 = Color3.fromRGB(113, 113, 122)
         desc.TextSize = 11
         desc.Font = Enum.Font.Gotham
@@ -1539,6 +1556,7 @@ if visualsPage then
         return SetState, label, desc, frame
     end
 
+    -- CHAMS COLOR PICKER (мгновенный показ)
     local chamsColorPicker = Instance.new("Frame")
     chamsColorPicker.Name = "ChamsColorPicker"
     chamsColorPicker.Size = UDim2.new(1, -30, 0, 140)
@@ -1547,7 +1565,6 @@ if visualsPage then
     chamsColorPicker.Visible = false
     chamsColorPicker.ZIndex = 30
     chamsColorPicker.Parent = visualsPage
-
     local chamsWheel = Instance.new("ImageLabel")
     chamsWheel.Size = UDim2.new(0, 120, 0, 120)
     chamsWheel.Position = UDim2.new(0.5, -60, 0.5, -60)
@@ -1555,7 +1572,6 @@ if visualsPage then
     chamsWheel.Image = "rbxassetid://7393858625"
     chamsWheel.ZIndex = 31
     chamsWheel.Parent = chamsColorPicker
-
     local chamsPickerDot = Instance.new("Frame")
     chamsPickerDot.Size = UDim2.new(0, 10, 0, 10)
     chamsPickerDot.Position = UDim2.new(0.5, -5, 0.5, -5)
@@ -1565,14 +1581,12 @@ if visualsPage then
     local chamsDotCorner = Instance.new("UICorner")
     chamsDotCorner.CornerRadius = UDim.new(1, 0)
     chamsDotCorner.Parent = chamsPickerDot
-
     local chamsDragArea = Instance.new("TextButton")
     chamsDragArea.Size = UDim2.new(1, 0, 1, 0)
     chamsDragArea.BackgroundTransparency = 1
     chamsDragArea.Text = ""
     chamsDragArea.ZIndex = 33
     chamsDragArea.Parent = chamsWheel
-
     local isDraggingChamsColor = false
     local function UpdateChamsWheelColor(inputPosition)
         local wheelCenter = chamsWheel.AbsolutePosition + (chamsWheel.AbsoluteSize / 2)
@@ -1600,7 +1614,6 @@ if visualsPage then
             end
         end
     end
-
     chamsDragArea.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
             isDraggingChamsColor = true
@@ -1620,6 +1633,7 @@ if visualsPage then
         end
     end)
 
+    -- SKELETON COLOR PICKER (адаптивный)
     local skeletonColorPicker = Instance.new("Frame")
     skeletonColorPicker.Name = "SkeletonColorPicker"
     skeletonColorPicker.Size = UDim2.new(1, -30, 0, 140)
@@ -1628,7 +1642,6 @@ if visualsPage then
     skeletonColorPicker.Visible = false
     skeletonColorPicker.ZIndex = 30
     skeletonColorPicker.Parent = visualsPage
-
     local skeletonWheel = Instance.new("ImageLabel")
     skeletonWheel.Size = UDim2.new(0, 120, 0, 120)
     skeletonWheel.Position = UDim2.new(0.5, -60, 0.5, -60)
@@ -1636,7 +1649,6 @@ if visualsPage then
     skeletonWheel.Image = "rbxassetid://7393858625"
     skeletonWheel.ZIndex = 31
     skeletonWheel.Parent = skeletonColorPicker
-
     local skeletonPickerDot = Instance.new("Frame")
     skeletonPickerDot.Size = UDim2.new(0, 10, 0, 10)
     skeletonPickerDot.Position = UDim2.new(0.5, -5, 0.5, -5)
@@ -1646,14 +1658,12 @@ if visualsPage then
     local skeletonDotCorner = Instance.new("UICorner")
     skeletonDotCorner.CornerRadius = UDim.new(1, 0)
     skeletonDotCorner.Parent = skeletonPickerDot
-
     local skeletonDragArea = Instance.new("TextButton")
     skeletonDragArea.Size = UDim2.new(1, 0, 1, 0)
     skeletonDragArea.BackgroundTransparency = 1
     skeletonDragArea.Text = ""
     skeletonDragArea.ZIndex = 33
     skeletonDragArea.Parent = skeletonWheel
-
     local isDraggingSkeletonColor = false
     local function UpdateSkeletonWheelColor(inputPosition)
         local wheelCenter = skeletonWheel.AbsolutePosition + (skeletonWheel.AbsoluteSize / 2)
@@ -1678,7 +1688,6 @@ if visualsPage then
             end
         end
     end
-
     skeletonDragArea.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
             isDraggingSkeletonColor = true
@@ -1698,33 +1707,59 @@ if visualsPage then
         end
     end)
 
-    local function ShiftChamsElements(shiftDown)
-        local targetY = shiftDown and 150 or 0
+    -- Адаптивные сдвиги
+    local function UpdateVisualsLayout()
+        local chamsOpen = _G.ChamsEnabled and chamsColorPicker.Visible
+        local skeletonOpen = _G.SkeletonEnabled and skeletonColorPicker.Visible
+        
+        local chamsShift = 0
+        local skeletonShift = 0
+        
+        if chamsOpen then
+            chamsShift = 150
+        end
+        
+        if skeletonOpen then
+            if chamsOpen then
+                skeletonShift = 300
+            else
+                skeletonShift = 150
+            end
+        end
+
         local espFrame = visualsPage:FindFirstChild("ESPFrame")
         local skeletonFrame = visualsPage:FindFirstChild("SkeletonFrame")
         local healthFrame = visualsPage:FindFirstChild("HealthFrame")
-        if espFrame then TweenService:Create(espFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 65 + targetY)}):Play() end
-        if skeletonFrame then TweenService:Create(skeletonFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 120 + targetY)}):Play() end
-        if healthFrame then TweenService:Create(healthFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 175 + targetY)}):Play() end
-    end
-
-    local function ShiftSkeletonElements(shiftDown)
-        local targetY = shiftDown and 150 or 0
-        local healthFrame = visualsPage:FindFirstChild("HealthFrame")
-        if healthFrame then TweenService:Create(healthFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 175 + targetY)}):Play() end
+        
+        if espFrame then
+            TweenService:Create(espFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 65 + chamsShift)}):Play()
+        end
+        if skeletonFrame then
+            TweenService:Create(skeletonFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 120 + skeletonShift)}):Play()
+        end
+        if healthFrame then
+            TweenService:Create(healthFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 175 + skeletonShift)}):Play()
+        end
+        
+        -- Сдвиг Skeleton пикера
+        if chamsOpen then
+            TweenService:Create(skeletonColorPicker, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 15, 0, 325)}):Play()
+        else
+            TweenService:Create(skeletonColorPicker, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 15, 0, 175)}):Play()
+        end
     end
 
     local SetChamsState, chamsLabel, chamsDesc = CreateToggle("Chams", "Makes enemies purple", 10, function(v)
         if v then
-            chamsColorPicker.Visible = true
+            _G.ChamsEnabled = true
             ApplyChams()
-            ShiftChamsElements(true)
+            chamsColorPicker.Visible = true
         else
+            _G.ChamsEnabled = false
             RemoveChams()
             chamsColorPicker.Visible = false
-            ShiftChamsElements(false)
         end
-        _G.ChamsEnabled = v
+        UpdateVisualsLayout()
     end, "ChamsFrame")
     SetChamsToggleState = SetChamsState
     SetChamsToggleState(_G.ChamsEnabled)
@@ -1735,15 +1770,15 @@ if visualsPage then
 
     local SetSkeletonState, skeletonLabel, skeletonDesc = CreateToggle("Skeleton", "Skeleton for enemies", 120, function(v)
         if v then
-            skeletonColorPicker.Visible = true
+            _G.SkeletonEnabled = true
             ApplySkeleton()
-            ShiftSkeletonElements(true)
+            skeletonColorPicker.Visible = true
         else
+            _G.SkeletonEnabled = false
             RemoveSkeleton()
             skeletonColorPicker.Visible = false
-            ShiftSkeletonElements(false)
         end
-        _G.SkeletonEnabled = v
+        UpdateVisualsLayout()
     end, "SkeletonFrame")
     SetSkeletonToggleState = SetSkeletonState
     SetSkeletonToggleState(_G.SkeletonEnabled)
@@ -3192,5 +3227,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] META v7.0.99 - New Key Panel + Wave Border")
+print("[META] META v7.0.99 - New Key Panel")
 print("[META] Press Insert or click icon")
