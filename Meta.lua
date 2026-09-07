@@ -1,5 +1,3 @@
-
-
 -- ====================================================================
 -- KEY SYSTEM + META UI V7.1.20 FIXED
 -- ====================================================================
@@ -10,7 +8,6 @@ local TOKEN_PART3 = "XqDm0fvABt"
 local TOKEN_PART4 = "nyfeJl0gZ0t4"
 local GITHUB_TOKEN = TOKEN_PART1 .. TOKEN_PART2 .. TOKEN_PART3 .. TOKEN_PART4
 local KEY_FILE_NAME = "meta_bloxstrike_auth.txt"
-
 local HttpService = game:GetService("HttpService")
 local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
@@ -23,7 +20,18 @@ local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
-
+local http
+if syn and syn.request then
+    http = syn.request
+elseif http and http.request then
+    http = http.request
+elseif http_request then
+    http = http_request
+elseif request then
+    http = request
+else
+    return print("HTTP не поддерживается")
+end
 local function getGistData()
     local res = http({Url = "https://api.github.com/gists/" .. GIST_ID, Method = "GET"})
     if res.StatusCode == 200 then
@@ -32,7 +40,6 @@ local function getGistData()
     end
     return nil
 end
-
 local function updateGist(filename, oldContent, enteredKey, expireTimestamp, userId, remainingLimit)
     local updatedContent = oldContent
     local newLine
@@ -41,7 +48,6 @@ local function updateGist(filename, oldContent, enteredKey, expireTimestamp, use
     else
         newLine = enteredKey .. ":expired:" .. tostring(expireTimestamp) .. ":" .. tostring(userId)
     end
-
     local found = false
     local lines = {}
     for line in string.gmatch(oldContent, "[^\r\n]+") do
@@ -54,25 +60,19 @@ local function updateGist(filename, oldContent, enteredKey, expireTimestamp, use
         end
     end
     if not found then table.insert(lines, newLine) end
-
     updatedContent = table.concat(lines, "\n")
-
     local res = http({
         Url = "https://api.github.com/gists/" .. GIST_ID,
         Method = "PATCH",
         Headers = {["Authorization"] = "token " .. GITHUB_TOKEN, ["Content-Type"] = "application/json"},
         Body = HttpService:JSONEncode({files = {[filename] = {content = updatedContent}}})
     })
-
     print("[META UPDATE] Status:", res.StatusCode)
-    print("[META UPDATE] Body:", res.Body)
 end
-
 local function CheckExpiredKeys(filename, dbText)
     local updatedContent = dbText
     local changed = false
     local lines = {}
-    
     for line in string.gmatch(dbText, "[^\r\n]+") do
         local key, status, expireTime, userId = string.match(line, "([^:]+):([^:]+):([^:]+):?([^:]*)")
         if key and (status == "used" or status == "expired") and expireTime then
@@ -87,7 +87,6 @@ local function CheckExpiredKeys(filename, dbText)
             table.insert(lines, line)
         end
     end
-    
     if changed then
         updatedContent = table.concat(lines, "\n")
         http({
@@ -98,22 +97,19 @@ local function CheckExpiredKeys(filename, dbText)
         })
     end
 end
-
 local isActivated = false
 local autoLoginSuccess = false
-local cachedDbText = nil
 local keyExpireTime = nil
-
 if readfile then
     local fileExists, content = pcall(function() return readfile(KEY_FILE_NAME) end)
     if fileExists and content ~= "" then
         local success, clientData = pcall(function() return HttpService:JSONDecode(content) end)
         if success and clientData.key and clientData.expires and clientData.userId then
             if clientData.userId == LocalPlayer.UserId then
-                cachedDbText = getGistData()
-                if cachedDbText then
+                local dbText = getGistData()
+                if dbText then
                     local isKeyStillValid = false
-                    for line in string.gmatch(cachedDbText, "[^\r\n]+") do
+                    for line in string.gmatch(dbText, "[^\r\n]+") do
                         local key = string.match(line, "([^:]+):")
                         if key == clientData.key then
                             isKeyStillValid = true
@@ -132,37 +128,30 @@ if readfile then
         end
     end
 end
-
 if not autoLoginSuccess then
     if writefile then writefile(KEY_FILE_NAME, "") end
 end
-
 if not isActivated then
     local KeyScreenGui = Instance.new("ScreenGui", CoreGui)
     KeyScreenGui.Name = "MetaCompactKeySystem"
     KeyScreenGui.ResetOnSpawn = false
     KeyScreenGui.IgnoreGuiInset = true
-
     local KeyFrame = Instance.new("Frame", KeyScreenGui)
     KeyFrame.Size = UDim2.new(0, 460, 0, 470)
     KeyFrame.Position = UDim2.new(0.5, -230, -0.5, -235)
     KeyFrame.BackgroundColor3 = Color3.fromRGB(17, 19, 24)
-    KeyFrame.BackgroundTransparency = 0
     KeyFrame.BorderSizePixel = 0
     KeyFrame.Active = true
     KeyFrame.Draggable = true
     KeyFrame.ZIndex = 1
     Instance.new("UICorner", KeyFrame).CornerRadius = UDim.new(0, 12)
-
     local BorderFrame = Instance.new("Frame", KeyFrame)
     BorderFrame.Size = UDim2.new(1, 12, 1, 12)
     BorderFrame.Position = UDim2.new(0, -6, 0, -6)
     BorderFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     BorderFrame.BorderSizePixel = 0
-    BorderFrame.BackgroundTransparency = 0
     BorderFrame.ZIndex = 1
     Instance.new("UICorner", BorderFrame).CornerRadius = UDim.new(0, 16)
-
     local BorderGradient = Instance.new("UIGradient", BorderFrame)
     BorderGradient.Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.fromRGB(20, 22, 28)),
@@ -172,14 +161,11 @@ if not isActivated then
         ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 22, 28))
     })
     BorderGradient.Rotation = 0
-
-    local borderAnimConnection
-    borderAnimConnection = RunService.Heartbeat:Connect(function()
+    local borderAnimConnection = RunService.Heartbeat:Connect(function()
         local t = tick()
         BorderGradient.Rotation = (t * 80) % 360
         BorderGradient.Offset = Vector2.new(math.sin(t * 1.2) * 0.5, math.cos(t * 0.9) * 0.3)
     end)
-
     local StatusDot = Instance.new("Frame", KeyFrame)
     StatusDot.Size = UDim2.new(0, 14, 0, 14)
     StatusDot.Position = UDim2.new(0, 18, 0, 18)
@@ -187,7 +173,6 @@ if not isActivated then
     StatusDot.BorderSizePixel = 0
     StatusDot.ZIndex = 5
     Instance.new("UICorner", StatusDot).CornerRadius = UDim.new(1, 0)
-
     local BloomOuter = Instance.new("Frame", KeyFrame)
     BloomOuter.Size = UDim2.new(0, 32, 0, 32)
     BloomOuter.Position = UDim2.new(0, 9, 0, 9)
@@ -196,7 +181,6 @@ if not isActivated then
     BloomOuter.BorderSizePixel = 0
     BloomOuter.ZIndex = 3
     Instance.new("UICorner", BloomOuter).CornerRadius = UDim.new(1, 0)
-
     local BloomInner = Instance.new("Frame", KeyFrame)
     BloomInner.Size = UDim2.new(0, 22, 0, 22)
     BloomInner.Position = UDim2.new(0, 14, 0, 14)
@@ -205,10 +189,8 @@ if not isActivated then
     BloomInner.BorderSizePixel = 0
     BloomInner.ZIndex = 4
     Instance.new("UICorner", BloomInner).CornerRadius = UDim.new(1, 0)
-
     local isBlinking = true
-    local blinkConnection = nil
-
+    local blinkConnection
     local function StartBlinking()
         if blinkConnection then blinkConnection:Disconnect() end
         isBlinking = true
@@ -220,7 +202,6 @@ if not isActivated then
             BloomInner.BackgroundTransparency = 0.45 + pulse * 0.3
         end)
     end
-
     local function StopBlinking()
         isBlinking = false
         if blinkConnection then
@@ -228,21 +209,18 @@ if not isActivated then
             blinkConnection = nil
         end
     end
-
     local function SetDotRed()
         StatusDot.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
         BloomOuter.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
         BloomInner.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
         StartBlinking()
     end
-
     local function SetDotGreen()
         StopBlinking()
         StatusDot.BackgroundColor3 = Color3.fromRGB(50, 255, 100)
         BloomOuter.BackgroundColor3 = Color3.fromRGB(50, 255, 100)
         BloomInner.BackgroundColor3 = Color3.fromRGB(50, 255, 100)
     end
-
     local function PlayErrorSound()
         local errorSound = Instance.new("Sound")
         errorSound.Name = "ErrorSound"
@@ -250,11 +228,8 @@ if not isActivated then
         errorSound.Volume = 2
         errorSound.Parent = SoundService
         errorSound:Play()
-        errorSound.Ended:Connect(function()
-            errorSound:Destroy()
-        end)
+        errorSound.Ended:Connect(function() errorSound:Destroy() end)
     end
-
     local function PlaySuccessSound()
         local successSound = Instance.new("Sound")
         successSound.Name = "SuccessSound"
@@ -262,13 +237,9 @@ if not isActivated then
         successSound.Volume = 2
         successSound.Parent = SoundService
         successSound:Play()
-        successSound.Ended:Connect(function()
-            successSound:Destroy()
-        end)
+        successSound.Ended:Connect(function() successSound:Destroy() end)
     end
-
     SetDotRed()
-
     local KeyTitle = Instance.new("TextLabel", KeyFrame)
     KeyTitle.Size = UDim2.new(1, 0, 0, 50)
     KeyTitle.Position = UDim2.new(0, 0, 0, 70)
@@ -280,7 +251,6 @@ if not isActivated then
     KeyTitle.TextYAlignment = Enum.TextYAlignment.Center
     KeyTitle.BackgroundTransparency = 1
     KeyTitle.ZIndex = 5
-
     local KeySubtitle = Instance.new("TextLabel", KeyFrame)
     KeySubtitle.Size = UDim2.new(1, 0, 0, 22)
     KeySubtitle.Position = UDim2.new(0, 0, 0, 120)
@@ -292,12 +262,10 @@ if not isActivated then
     KeySubtitle.TextYAlignment = Enum.TextYAlignment.Center
     KeySubtitle.BackgroundTransparency = 1
     KeySubtitle.ZIndex = 5
-
     local TextBox = Instance.new("TextBox", KeyFrame)
     TextBox.Size = UDim2.new(1, -80, 0, 55)
     TextBox.Position = UDim2.new(0, 40, 0, 210)
     TextBox.BackgroundColor3 = Color3.fromRGB(22, 25, 32)
-    TextBox.BackgroundTransparency = 0
     TextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
     TextBox.PlaceholderText = "Enter the key that the owner gave you"
     TextBox.PlaceholderColor3 = Color3.fromRGB(150, 155, 165)
@@ -310,13 +278,11 @@ if not isActivated then
     TextBox.ClearTextOnFocus = false
     TextBox.ZIndex = 5
     Instance.new("UICorner", TextBox).CornerRadius = UDim.new(0, 10)
-
     local InputBorderStroke = Instance.new("UIStroke", TextBox)
     InputBorderStroke.Thickness = 1
     InputBorderStroke.Color = Color3.fromRGB(255, 255, 255)
     InputBorderStroke.Transparency = 0.25
     InputBorderStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-
     local PlaceholderGradient = Instance.new("UIGradient", TextBox)
     PlaceholderGradient.Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.fromRGB(140, 145, 155)),
@@ -327,14 +293,11 @@ if not isActivated then
         ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 125, 135))
     })
     PlaceholderGradient.Rotation = 0
-
-    local placeholderConnection
-    placeholderConnection = RunService.Heartbeat:Connect(function()
+    local placeholderConnection = RunService.Heartbeat:Connect(function()
         local t = tick()
         PlaceholderGradient.Offset = Vector2.new(math.sin(t * 1.5) * 0.8, 0)
         PlaceholderGradient.Rotation = math.sin(t * 0.6) * 10
     end)
-
     local EnterButton = Instance.new("Frame", KeyFrame)
     EnterButton.Size = UDim2.new(1, -80, 0, 45)
     EnterButton.Position = UDim2.new(0, 40, 0, 280)
@@ -342,7 +305,6 @@ if not isActivated then
     EnterButton.BorderSizePixel = 0
     EnterButton.ZIndex = 5
     Instance.new("UICorner", EnterButton).CornerRadius = UDim.new(0, 10)
-
     local EnterGradient = Instance.new("UIGradient", EnterButton)
     EnterGradient.Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 160, 70)),
@@ -352,14 +314,11 @@ if not isActivated then
         ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 160, 70))
     })
     EnterGradient.Rotation = 0
-
-    local enterGradientConnection
-    enterGradientConnection = RunService.Heartbeat:Connect(function()
+    local enterGradientConnection = RunService.Heartbeat:Connect(function()
         local t = tick()
         EnterGradient.Offset = Vector2.new(math.sin(t * 1.5) * 0.8, 0)
         EnterGradient.Rotation = math.sin(t * 0.6) * 10
     end)
-
     local EnterText = Instance.new("TextLabel", EnterButton)
     EnterText.Size = UDim2.new(1, 0, 1, 0)
     EnterText.BackgroundTransparency = 1
@@ -370,13 +329,11 @@ if not isActivated then
     EnterText.TextXAlignment = Enum.TextXAlignment.Center
     EnterText.TextYAlignment = Enum.TextYAlignment.Center
     EnterText.ZIndex = 6
-
     local EnterClick = Instance.new("TextButton", EnterButton)
     EnterClick.Size = UDim2.new(1, 0, 1, 0)
     EnterClick.BackgroundTransparency = 1
     EnterClick.Text = ""
     EnterClick.ZIndex = 10
-
     local function TryActivateKey()
         local text = TextBox.Text
         if text == "" then TextBox.PlaceholderText = "Field is empty!" return end
@@ -384,7 +341,6 @@ if not isActivated then
         TextBox.PlaceholderText = "Checking key..."
         TextBox.PlaceholderColor3 = Color3.fromRGB(255, 255, 255)
         task.wait(0.3)
-
         local dbText, filename = getGistData()
         if not dbText then
             TextBox.PlaceholderText = "Network error!"
@@ -393,9 +349,7 @@ if not isActivated then
             PlayErrorSound()
             return
         end
-
         CheckExpiredKeys(filename, dbText)
-
         local keyFound = false
         for line in string.gmatch(dbText, "[^\r\n]+") do
             local key, p1, p2, p3, p4 = string.match(line, "([^:]+):([^:]+):([^:]*):?([^:]*)")
@@ -463,7 +417,6 @@ if not isActivated then
                 end
             end
         end
-
         if not keyFound then
             TextBox.PlaceholderText = "Invalid key!"
             TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
@@ -471,7 +424,6 @@ if not isActivated then
             PlayErrorSound()
             return
         end
-
         if isActivated then
             TextBox.PlaceholderText = "Success!"
             TextBox.PlaceholderColor3 = Color3.fromRGB(0, 255, 0)
@@ -491,25 +443,19 @@ if not isActivated then
             KeyScreenGui:Destroy()
         end
     end
-
     EnterClick.MouseButton1Click:Connect(function()
         PlayClickSound()
         TryActivateKey()
     end)
-
     TextBox.FocusLost:Connect(function(enterPressed)
-        if enterPressed then
-            TryActivateKey()
-        end
+        if enterPressed then TryActivateKey() end
     end)
-
     local BottomLine = Instance.new("Frame", KeyFrame)
     BottomLine.Size = UDim2.new(1, -50, 0, 1)
     BottomLine.Position = UDim2.new(0, 25, 0, 400)
     BottomLine.BackgroundColor3 = Color3.fromRGB(60, 65, 75)
     BottomLine.BorderSizePixel = 0
     BottomLine.ZIndex = 5
-
     local TiktokLink = Instance.new("TextButton", KeyFrame)
     TiktokLink.Size = UDim2.new(1, -60, 0, 30)
     TiktokLink.Position = UDim2.new(0, 30, 0, 410)
@@ -520,26 +466,18 @@ if not isActivated then
     TiktokLink.Font = Enum.Font.Gotham
     TiktokLink.TextXAlignment = Enum.TextXAlignment.Center
     TiktokLink.ZIndex = 10
-
     TiktokLink.MouseButton1Click:Connect(function()
         setclipboard("https://tiktok.com/@qwertyx015")
         TiktokLink.Text = "Copied!"
         task.wait(1)
         TiktokLink.Text = "Tiktok: tiktok.com/@qwertyx015"
     end)
-
     TweenService:Create(KeyFrame, TweenInfo.new(0.7, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -230, 0.5, -235)}):Play()
-
     while not isActivated do task.wait(0.5) end
     KeyScreenGui:Destroy()
 end
-
--- ====================================================================
--- META UI
--- ====================================================================
 local function SetupAntiCheatBypass()
     pcall(function()
-        local ReplicatedStorage = game:GetService("ReplicatedStorage")
         local Network = require(ReplicatedStorage.Database.Security.Network)
         local OriginalCreatePacket = Network.CreatePacket
         Network.CreatePacket = function(namespace, packetName, schema, options)
@@ -566,11 +504,9 @@ local function SetupAntiCheatBypass()
     end)
 end
 SetupAntiCheatBypass()
-
 local function HideFromScanner(gui)
     pcall(function() sethiddenproperty(gui, "RobloxLocked", true) sethiddenproperty(gui, "Archivable", false) end)
 end
-
 _G.CustomThemeEnabled = false
 _G.MenuThemeColor = Color3.fromRGB(255, 255, 255)
 _G.CurrentLang = "EN"
@@ -586,7 +522,6 @@ _G.ParticleEffectGuiEnabled = false
 _G.NightThemeEnabled = false
 _G.ChamsColor = Color3.fromRGB(110, 60, 170)
 _G.SkeletonColor = Color3.fromRGB(255, 255, 255)
-
 local Dots = {}
 local DotConnection = nil
 local opacitySliderFill, opacitySliderHandle, opacityValue = nil, nil, nil
@@ -608,7 +543,6 @@ local guiMuteConnection = nil
 local MainBorderFrame = nil
 local MainBorderGradient = nil
 local mainBorderConnection = nil
-
 local LANG = {
     RU = {
         Tabs = {"Аимбот", "Визуал", "Настройки", "Скай", "Звук"},
@@ -645,9 +579,7 @@ local LANG = {
         }
     }
 }
-
 local function GetLang() return _G.CurrentLang == "RU" and LANG.RU or LANG.EN end
-
 local function PlayTabSound()
     local sound = Instance.new("Sound")
     sound.Name = "UISound"
@@ -657,7 +589,6 @@ local function PlayTabSound()
     sound:Play()
     task.delay(sound.TimeLength + 0.1, function() sound:Destroy() end)
 end
-
 local function PlayClickSound()
     local sound = Instance.new("Sound")
     sound.Name = "UISound"
@@ -667,7 +598,6 @@ local function PlayClickSound()
     sound:Play()
     task.delay(sound.TimeLength + 0.1, function() sound:Destroy() end)
 end
-
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "RobloxGui"
 ScreenGui.ResetOnSpawn = false
@@ -676,7 +606,6 @@ ScreenGui.DisplayOrder = 999999998
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = CoreGui
 HideFromScanner(ScreenGui)
-
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "GameUI"
 MainFrame.Size = UDim2.new(0, 640 * (_G.MenuScale / 45), 0, 470 * (_G.MenuScale / 45))
@@ -690,7 +619,6 @@ MainFrame.Draggable = true
 MainFrame.Active = true
 MainFrame.Selectable = true
 MainFrame.Visible = false
-
 MainBorderFrame = Instance.new("Frame", MainFrame)
 MainBorderFrame.Name = "MainBorderFrame"
 MainBorderFrame.Size = UDim2.new(1, 8, 1, 8)
@@ -700,7 +628,6 @@ MainBorderFrame.BorderSizePixel = 0
 MainBorderFrame.BackgroundTransparency = _G.MenuOpacity / 100
 MainBorderFrame.ZIndex = 1
 Instance.new("UICorner", MainBorderFrame).CornerRadius = UDim.new(0, 15)
-
 MainBorderGradient = Instance.new("UIGradient", MainBorderFrame)
 MainBorderGradient.Color = ColorSequence.new({
     ColorSequenceKeypoint.new(0, Color3.fromRGB(160, 160, 160)),
@@ -710,33 +637,27 @@ MainBorderGradient.Color = ColorSequence.new({
     ColorSequenceKeypoint.new(1, Color3.fromRGB(160, 160, 160))
 })
 MainBorderGradient.Rotation = 0
-
 mainBorderConnection = RunService.Heartbeat:Connect(function()
     local t = tick()
     MainBorderGradient.Rotation = (t * 60) % 360
     MainBorderGradient.Offset = Vector2.new(math.sin(t * 1.0) * 0.3, math.cos(t * 0.8) * 0.2)
 end)
-
 local MainScale = Instance.new("UIScale")
 MainScale.Scale = 1
 MainScale.Parent = MainFrame
-
 local MainCorner = Instance.new("UICorner")
 MainCorner.CornerRadius = UDim.new(0, 12)
 MainCorner.Parent = MainFrame
-
 local MainStroke = Instance.new("UIStroke")
 MainStroke.Thickness = 2
 MainStroke.Color = _G.MenuThemeColor
 MainStroke.Transparency = 0.4
 MainStroke.Parent = MainFrame
-
 local Header = Instance.new("Frame")
 Header.Name = "Topbar"
 Header.Size = UDim2.new(1, 0, 0, 38)
 Header.BackgroundTransparency = 1
 Header.Parent = MainFrame
-
 local MetaLabel = Instance.new("TextLabel")
 MetaLabel.Size = UDim2.new(0.1, 0, 1, 0)
 MetaLabel.Position = UDim2.new(0, 15, 0, 0)
@@ -748,7 +669,6 @@ MetaLabel.Font = Enum.Font.GothamBold
 MetaLabel.TextXAlignment = Enum.TextXAlignment.Left
 MetaLabel.TextYAlignment = Enum.TextYAlignment.Center
 MetaLabel.Parent = Header
-
 local BetaLabel = Instance.new("TextLabel")
 BetaLabel.Size = UDim2.new(0, 50, 1, 0)
 BetaLabel.Position = UDim2.new(0, 75, 0, 0)
@@ -760,7 +680,6 @@ BetaLabel.Font = Enum.Font.Gotham
 BetaLabel.TextXAlignment = Enum.TextXAlignment.Left
 BetaLabel.TextYAlignment = Enum.TextYAlignment.Center
 BetaLabel.Parent = Header
-
 local GameNameLabel = Instance.new("TextLabel")
 GameNameLabel.Size = UDim2.new(0.35, 0, 1, 0)
 GameNameLabel.Position = UDim2.new(0.32, 0, 0, 0)
@@ -772,13 +691,11 @@ GameNameLabel.Font = Enum.Font.Gotham
 GameNameLabel.TextXAlignment = Enum.TextXAlignment.Left
 GameNameLabel.TextYAlignment = Enum.TextYAlignment.Center
 GameNameLabel.Parent = Header
-
 pcall(function()
     local MarketplaceService = game:GetService("MarketplaceService")
     local info = MarketplaceService:GetProductInfo(game.PlaceId)
     if info and info.Name then GameNameLabel.Text = info.Name end
 end)
-
 local SearchContainer = Instance.new("Frame")
 SearchContainer.Name = "SearchBar"
 SearchContainer.Size = UDim2.new(0.3, 0, 0.7, 0)
@@ -787,17 +704,14 @@ SearchContainer.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
 SearchContainer.BackgroundTransparency = 0.5
 SearchContainer.BorderSizePixel = 0
 SearchContainer.Parent = Header
-
 local SearchCorner = Instance.new("UICorner")
 SearchCorner.CornerRadius = UDim.new(0, 6)
 SearchCorner.Parent = SearchContainer
-
 local SearchStroke = Instance.new("UIStroke")
 SearchStroke.Thickness = 1
 SearchStroke.Color = _G.MenuThemeColor
 SearchStroke.Transparency = 0.6
 SearchStroke.Parent = SearchContainer
-
 local SearchInput = Instance.new("TextBox")
 SearchInput.Size = UDim2.new(1, -12, 1, 0)
 SearchInput.Position = UDim2.new(0, 8, 0, 0)
@@ -810,7 +724,6 @@ SearchInput.TextXAlignment = Enum.TextXAlignment.Left
 SearchInput.TextYAlignment = Enum.TextYAlignment.Center
 SearchInput.ClearTextOnFocus = false
 SearchInput.Parent = SearchContainer
-
 local SearchClose = Instance.new("TextButton")
 SearchClose.Size = UDim2.new(0, 16, 1, 0)
 SearchClose.Position = UDim2.new(1, -20, 0, 0)
@@ -821,26 +734,22 @@ SearchClose.TextSize = 11
 SearchClose.Font = Enum.Font.Gotham
 SearchClose.Visible = false
 SearchClose.Parent = SearchContainer
-
 SearchClose.MouseButton1Click:Connect(function()
     SearchInput.Text = "Search..."
     SearchClose.Visible = false
     PlayClickSound()
 end)
-
 local Separator = Instance.new("Frame")
 Separator.Size = UDim2.new(1, -20, 0, 1)
 Separator.Position = UDim2.new(0, 10, 0, 38)
 Separator.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
 Separator.BorderSizePixel = 0
 Separator.Parent = MainFrame
-
 local TabContainer = Instance.new("Frame")
 TabContainer.Size = UDim2.new(1, 0, 0, 48)
 TabContainer.Position = UDim2.new(0, 0, 0, 39)
 TabContainer.BackgroundTransparency = 1
 TabContainer.Parent = MainFrame
-
 local TabNames = {"Aimbot", "Visuals", "Settings", "Sky", "Sound"}
 local TabButtons = {}
 local ContentPages = {}
@@ -848,7 +757,6 @@ local activeIndex = 1
 local langUpdateCallbacks = {}
 local rainbowConnection = nil
 local langButtonData = {}
-
 local function IsEnemy(p)
     if not p or p == LocalPlayer then return false end
     if p.Team and LocalPlayer.Team then
@@ -863,8 +771,6 @@ local function IsEnemy(p)
     if mySide ~= "" and enemySide ~= "" then return mySide ~= enemySide end
     return false
 end
-
--- CHAMS
 local ChamsConnections = {}
 local function PaintCharacter(character, p)
     if not character or not p then return end
@@ -885,7 +791,6 @@ local function PaintCharacter(character, p)
         HideFromScanner(highlight)
     end
 end
-
 local function SetupPlayer(p)
     if p == LocalPlayer then return end
     if ChamsConnections[p] then ChamsConnections[p]:Disconnect() end
@@ -895,7 +800,6 @@ local function SetupPlayer(p)
     end)
     if p.Character then task.wait(0.2) PaintCharacter(p.Character, p) end
 end
-
 local function ApplyChams()
     if _G.UnloadChams then _G.UnloadChams() end
     _G.ChamsEnabled = true
@@ -914,12 +818,9 @@ local function ApplyChams()
         end
     end
 end
-
 local function RemoveChams()
     if _G.UnloadChams then _G.UnloadChams() end
 end
-
--- ESP
 local ESPConnections = {}
 local function SetupESP()
     local function NewLine()
@@ -997,20 +898,16 @@ local function SetupESP()
     return ApplyESP, RemoveESP
 end
 local ApplyESP, RemoveESP = SetupESP()
-
 task.spawn(function()
     while true do
         task.wait(1)
         if _G.ESPEnabled then RemoveESP() ApplyESP() end
     end
 end)
-
--- SKELETON ESP
 local SkeletonLines = {}
 local SkeletonEnemiesList = {}
 local SkeletonCacheTime = 0
 local SkeletonConnection = nil
-
 local function CreateSkeletonLine()
     local line = Drawing.new("Line")
     line.Thickness = 2
@@ -1019,14 +916,12 @@ local function CreateSkeletonLine()
     line.Transparency = 1
     return line
 end
-
 local function GetSkeletonPos(part)
     if not part or not part:IsA("BasePart") then return nil end
     local pos = Camera:WorldToViewportPoint(part.Position)
     if pos.Z > 0 then return Vector2.new(pos.X, pos.Y) end
     return nil
 end
-
 local function RemoveSkeletonData(target)
     local data = SkeletonLines[target]
     if data then
@@ -1039,7 +934,6 @@ local function RemoveSkeletonData(target)
         SkeletonLines[target] = nil
     end
 end
-
 local function GetSkeletonHealth(character)
     if not character then return nil, nil end
     local humanoid = character:FindFirstChild("Humanoid")
@@ -1052,7 +946,6 @@ local function GetSkeletonHealth(character)
     if healthAttr and maxHealthAttr and healthAttr > 0 then return healthAttr, maxHealthAttr end
     return nil, nil
 end
-
 local function UpdateSkeletonEnemies()
     if tick() - SkeletonCacheTime < 0.5 then return end
     SkeletonCacheTime = tick()
@@ -1074,7 +967,6 @@ local function UpdateSkeletonEnemies()
         end
     end
 end
-
 SkeletonConnection = RunService.RenderStepped:Connect(function()
     if not _G.SkeletonEnabled then
         for _, data in pairs(SkeletonLines) do
@@ -1082,50 +974,40 @@ SkeletonConnection = RunService.RenderStepped:Connect(function()
         end
         return
     end
-
     UpdateSkeletonEnemies()
-
     for player, data in pairs(SkeletonEnemiesList) do
         if not player or not player.Character or not player.Character.Parent then
             RemoveSkeletonData(player)
             continue
         end
-
         local char = player.Character
         local health, maxHealth = GetSkeletonHealth(char)
         if not health or health <= 0 then
             RemoveSkeletonData(player)
             continue
         end
-
         local head = char:FindFirstChild("Head")
         local upperTorso = char:FindFirstChild("UpperTorso")
         local lowerTorso = char:FindFirstChild("LowerTorso")
         local hrp = char:FindFirstChild("HumanoidRootPart")
-
         if not head or not upperTorso then
             RemoveSkeletonData(player)
             continue
         end
-
         local headPos = GetSkeletonPos(head)
         local upperTorsoPos = GetSkeletonPos(upperTorso)
         local lowerTorsoPos = GetSkeletonPos(lowerTorso)
         local hrpPos = GetSkeletonPos(hrp)
-
         if not headPos or not upperTorsoPos then
             RemoveSkeletonData(player)
             continue
         end
-
         if not SkeletonLines[player] then
             SkeletonLines[player] = {}
             for i = 1, 15 do table.insert(SkeletonLines[player], CreateSkeletonLine()) end
         end
-
         local lines = SkeletonLines[player]
         local idx = 1
-
         local function setLine(from, to, show)
             if from and to and show then
                 lines[idx].From = from
@@ -1138,7 +1020,6 @@ SkeletonConnection = RunService.RenderStepped:Connect(function()
             end
             idx = idx + 1
         end
-
         local leftUpperArm = char:FindFirstChild("LeftUpperArm")
         local leftLowerArm = char:FindFirstChild("LeftLowerArm")
         local leftHand = char:FindFirstChild("LeftHand")
@@ -1151,7 +1032,6 @@ SkeletonConnection = RunService.RenderStepped:Connect(function()
         local rightUpperLeg = char:FindFirstChild("RightUpperLeg")
         local rightLowerLeg = char:FindFirstChild("RightLowerLeg")
         local rightFoot = char:FindFirstChild("RightFoot")
-
         setLine(headPos, upperTorsoPos, true)
         setLine(upperTorsoPos, lowerTorsoPos, lowerTorsoPos ~= nil)
         setLine(upperTorsoPos, hrpPos, hrpPos ~= nil)
@@ -1161,7 +1041,6 @@ SkeletonConnection = RunService.RenderStepped:Connect(function()
         setLine(upperTorsoPos, rightUpperArm and GetSkeletonPos(rightUpperArm), rightUpperArm ~= nil)
         setLine(rightUpperArm and GetSkeletonPos(rightUpperArm), rightLowerArm and GetSkeletonPos(rightLowerArm), rightUpperArm ~= nil and rightLowerArm ~= nil)
         setLine(rightLowerArm and GetSkeletonPos(rightLowerArm), rightHand and GetSkeletonPos(rightHand), rightLowerArm ~= nil and rightHand ~= nil)
-
         if lowerTorsoPos then
             setLine(lowerTorsoPos, leftUpperLeg and GetSkeletonPos(leftUpperLeg), leftUpperLeg ~= nil)
             setLine(lowerTorsoPos, rightUpperLeg and GetSkeletonPos(rightUpperLeg), rightUpperLeg ~= nil)
@@ -1172,40 +1051,32 @@ SkeletonConnection = RunService.RenderStepped:Connect(function()
             setLine(upperTorsoPos, leftUpperLeg and GetSkeletonPos(leftUpperLeg), leftUpperLeg ~= nil)
             setLine(upperTorsoPos, rightUpperLeg and GetSkeletonPos(rightUpperLeg), rightUpperLeg ~= nil)
         end
-
         setLine(leftUpperLeg and GetSkeletonPos(leftUpperLeg), leftLowerLeg and GetSkeletonPos(leftLowerLeg), leftUpperLeg ~= nil and leftLowerLeg ~= nil)
         setLine(rightUpperLeg and GetSkeletonPos(rightUpperLeg), rightLowerLeg and GetSkeletonPos(rightLowerLeg), rightUpperLeg ~= nil and rightLowerLeg ~= nil)
         setLine(leftLowerLeg and GetSkeletonPos(leftLowerLeg), leftFoot and GetSkeletonPos(leftFoot), leftLowerLeg ~= nil and leftFoot ~= nil)
         setLine(rightLowerLeg and GetSkeletonPos(rightLowerLeg), rightFoot and GetSkeletonPos(rightFoot), rightLowerLeg ~= nil and rightFoot ~= nil)
-
         while idx <= #lines do
             lines[idx].Visible = false
             idx = idx + 1
         end
     end
-
     for player, _ in pairs(SkeletonLines) do
         if not SkeletonEnemiesList[player] then RemoveSkeletonData(player) end
     end
 end)
-
 local function ApplySkeleton()
     _G.SkeletonEnabled = true
 end
-
 local function RemoveSkeleton()
     _G.SkeletonEnabled = false
     for player, _ in pairs(SkeletonLines) do RemoveSkeletonData(player) end
     SkeletonEnemiesList = {}
 end
-
--- HEALTH BAR ESP
 local HealthBars = {}
 local HealthEnemiesList = {}
 local HealthCacheTime = 0
 local HealthHistoryData = {}
 local HealthConnection = nil
-
 local function CreateHealthBar()
     local bg = Drawing.new("Square")
     bg.Thickness = 0
@@ -1214,14 +1085,12 @@ local function CreateHealthBar()
     bg.Color = Color3.fromRGB(15, 17, 25)
     bg.Transparency = 0.7
     bg.ZIndex = 0
-
     local bar = Drawing.new("Square")
     bar.Thickness = 0
     bar.Filled = true
     bar.Visible = false
     bar.Transparency = 0.85
     bar.ZIndex = 1
-
     local border = Drawing.new("Square")
     border.Thickness = 1.2
     border.Filled = false
@@ -1229,10 +1098,8 @@ local function CreateHealthBar()
     border.Color = Color3.fromRGB(80, 90, 120)
     border.Transparency = 0.5
     border.ZIndex = 2
-
     return {Bg = bg, Bar = bar, Border = border}
 end
-
 local function GetHealthValue(character)
     if not character then return nil, nil end
     local humanoid = character:FindFirstChild("Humanoid")
@@ -1245,7 +1112,6 @@ local function GetHealthValue(character)
     if healthAttr and maxHealthAttr and healthAttr > 0 then return healthAttr, maxHealthAttr end
     return nil, nil
 end
-
 local function GetHealthBarColor(health, maxHealth, prevHealth)
     local percent = health / maxHealth
     local isDamaged = prevHealth and prevHealth > health and (prevHealth - health) > 5
@@ -1256,7 +1122,6 @@ local function GetHealthBarColor(health, maxHealth, prevHealth)
     elseif percent <= 0.80 then return Color3.fromRGB(150, 255, 50)
     else return Color3.fromRGB(50, 255, 150) end
 end
-
 local function RemoveHealthBarData(target)
     local data = HealthBars[target]
     if data then
@@ -1272,7 +1137,6 @@ local function RemoveHealthBarData(target)
     end
     HealthHistoryData[target] = nil
 end
-
 local function UpdateHealthEnemiesList()
     if tick() - HealthCacheTime < 0.5 then return end
     HealthCacheTime = tick()
@@ -1294,7 +1158,6 @@ local function UpdateHealthEnemiesList()
         end
     end
 end
-
 HealthConnection = RunService.RenderStepped:Connect(function()
     if not _G.HealthBarEnabled then
         for _, data in pairs(HealthBars) do
@@ -1304,76 +1167,61 @@ HealthConnection = RunService.RenderStepped:Connect(function()
         end
         return
     end
-
     UpdateHealthEnemiesList()
-
     for player, data in pairs(HealthEnemiesList) do
         if not player or not player.Character or not player.Character.Parent then
             RemoveHealthBarData(player)
             continue
         end
-
         local char = player.Character
         local health, maxHealth = GetHealthValue(char)
         if not health or health <= 0 then
             RemoveHealthBarData(player)
             continue
         end
-
         local prevHealth = HealthHistoryData[player]
         HealthHistoryData[player] = health
-
         local head = char:FindFirstChild("Head")
         if not head then
             RemoveHealthBarData(player)
             continue
         end
-
         local headPos, headVis = Camera:WorldToViewportPoint(head.Position)
         local distance = (Camera.CFrame.Position - head.Position).Magnitude
-
         if headVis and headPos.Z > 0 and distance <= 1000 then
             local barWidth = 50
             local barHeight = 5
             local scale = 1 / (headPos.Z * 0.015 + 0.5)
             if scale > 1.5 then scale = 1.5 end
             if scale < 0.4 then scale = 0.4 end
-
             local finalWidth = barWidth * scale
             local finalHeight = barHeight * scale
             local offsetY = 4 * scale
             local barX = headPos.X - finalWidth / 2
             local barY = headPos.Y - finalHeight - offsetY
-
             if barX < 5 then barX = 5 end
             if barX + finalWidth > Camera.ViewportSize.X - 5 then barX = Camera.ViewportSize.X - finalWidth - 5 end
             if barY < 5 then barY = 5 end
-
             if not HealthBars[player] then HealthBars[player] = CreateHealthBar() end
-
             local barData = HealthBars[player]
             local hpPercent = health / maxHealth
             local filledWidth = finalWidth * hpPercent
-
             barData.Bg.Size = Vector2.new(finalWidth, finalHeight)
             barData.Bg.Position = Vector2.new(barX, barY)
             barData.Bg.Visible = true
             barData.Bg.Transparency = 0.7
             barData.Bg.Color = Color3.fromRGB(15, 17, 25)
             barData.Bg.Thickness = 0
-
             barData.Bar.Size = Vector2.new(math.max(filledWidth, 0.5), finalHeight)
             barData.Bar.Position = Vector2.new(barX, barY)
             barData.Bar.Visible = true
             barData.Bar.Transparency = 0.85
             barData.Bar.Thickness = 0
             barData.Bar.Color = GetHealthBarColor(health, maxHealth, prevHealth)
-
             if prevHealth and prevHealth > health and (prevHealth - health) > 5 then
                 barData.Bar.Color = Color3.fromRGB(255, 255, 255)
                 barData.Bar.Transparency = 0.7
             end
-
             barData.Border.Size = Vector2.new(finalWidth, finalHeight)
             barData.Border.Position = Vector2.new(barX, barY)
             barData.Border.Visible = true
@@ -1388,33 +1236,25 @@ HealthConnection = RunService.RenderStepped:Connect(function()
             end
         end
     end
-
     for player, _ in pairs(HealthBars) do
         if not HealthEnemiesList[player] then RemoveHealthBarData(player) end
     end
 end)
-
 local function ApplyHealthBar()
     _G.HealthBarEnabled = true
 end
-
 local function RemoveHealthBar()
     _G.HealthBarEnabled = false
     for player, _ in pairs(HealthBars) do RemoveHealthBarData(player) end
     HealthEnemiesList = {}
     HealthHistoryData = {}
 end
-
--- PARTICLE EFFECT GUI
 local ParticleGuiContainer = nil
 local ParticleGuiConnection = nil
-
 local function CreateParticleGui()
     if ParticleGuiContainer then ParticleGuiContainer:Destroy() end
     if ParticleGuiConnection then ParticleGuiConnection:Disconnect() end
-    
     local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-    
     ParticleGuiContainer = Instance.new("ScreenGui")
     ParticleGuiContainer.Name = "META_ParticleEffectGui"
     ParticleGuiContainer.ResetOnSpawn = false
@@ -1423,9 +1263,7 @@ local function CreateParticleGui()
     ParticleGuiContainer.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     ParticleGuiContainer.Parent = PlayerGui
     HideFromScanner(ParticleGuiContainer)
-    
     local particles = {}
-    
     local function SpawnParticle()
         local dot = Instance.new("Frame", ParticleGuiContainer)
         local size = math.random(2, 5)
@@ -1437,7 +1275,6 @@ local function CreateParticleGui()
         dot.BorderSizePixel = 0
         dot.ZIndex = 999999
         Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
-        
         local data = {
             Frame = dot,
             SpeedY = math.random(20, 50) / 10,
@@ -1448,11 +1285,8 @@ local function CreateParticleGui()
             PosY = 1
         }
         table.insert(particles, data)
-        
         task.delay(5, function()
-            if dot and dot.Parent then
-                dot:Destroy()
-            end
+            if dot and dot.Parent then dot:Destroy() end
             for i, p in pairs(particles) do
                 if p == data then
                     table.remove(particles, i)
@@ -1461,15 +1295,11 @@ local function CreateParticleGui()
             end
         end)
     end
-    
     for i = 1, 50 do
         task.delay(math.random(0, 50) / 10, function()
-            if ParticleGuiContainer then
-                SpawnParticle()
-            end
+            if ParticleGuiContainer then SpawnParticle() end
         end)
     end
-    
     ParticleGuiConnection = RunService.Heartbeat:Connect(function()
         if not ParticleGuiContainer then return end
         for _, data in pairs(particles) do
@@ -1477,26 +1307,22 @@ local function CreateParticleGui()
                 data.PosY = data.PosY - data.SpeedY / 200
                 data.PosX = data.PosX + data.SpeedX / 200
                 data.Angle = data.Angle + data.RotSpeed / 30
-                
                 if data.PosY < -0.05 then
                     data.PosY = 1
                     data.PosX = math.random(0, 100) / 100
                 end
                 if data.PosX < -0.05 then data.PosX = 1.05 end
                 if data.PosX > 1.05 then data.PosX = -0.05 end
-                
                 data.Frame.Position = UDim2.new(data.PosX, 0, data.PosY, 0)
                 data.Frame.Rotation = math.deg(data.Angle)
             end
         end
     end)
 end
-
 local function ApplyParticleGui()
     _G.ParticleEffectGuiEnabled = true
     CreateParticleGui()
 end
-
 local function RemoveParticleGui()
     _G.ParticleEffectGuiEnabled = false
     if ParticleGuiConnection then
@@ -1508,11 +1334,8 @@ local function RemoveParticleGui()
         ParticleGuiContainer = nil
     end
 end
-
--- UI: INDICATOR, TABS
 local IndicatorLine = nil
 local IndicatorColor = _G.MenuThemeColor
-
 local function CreateIndicatorLine()
     if IndicatorLine then IndicatorLine:Destroy() end
     IndicatorLine = Instance.new("Frame")
@@ -1527,21 +1350,18 @@ local function CreateIndicatorLine()
     corner.CornerRadius = UDim.new(1, 0)
     corner.Parent = IndicatorLine
 end
-
 local function UpdateIndicatorPosition(index)
     if not IndicatorLine then return end
     local width = 0.07
     local xPos = 0.02 + (index - 1) * (width + 0.015)
     TweenService:Create(IndicatorLine, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(xPos, 0, 1, -2), Size = UDim2.new(width + 0.015, 0, 0, 2)}):Play()
 end
-
 local function UpdateIndicatorColor(color)
     IndicatorColor = color
     if IndicatorLine then
         TweenService:Create(IndicatorLine, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = color}):Play()
     end
 end
-
 local function SwitchToTab(index)
     if index < 1 or index > #TabButtons then return end
     for i, b in ipairs(TabButtons) do
@@ -1559,7 +1379,6 @@ local function SwitchToTab(index)
     activeIndex = index
     UpdateIndicatorPosition(index)
 end
-
 local function SearchInMenu(query)
     query = string.lower(query)
     if not ContentPages then return end
@@ -1588,17 +1407,14 @@ local function SearchInMenu(query)
         end
     end
 end
-
 local function UpdateTabsLanguage()
     local lang = GetLang()
     for i, btn in ipairs(TabButtons) do btn.Text = lang.Tabs[i] end
 end
-
 local function UpdateAllTexts()
     UpdateTabsLanguage()
     for _, cb in ipairs(langUpdateCallbacks) do pcall(cb) end
 end
-
 for i, name in ipairs(TabNames) do
     local btn = Instance.new("TextButton")
     btn.Name = "Tab" .. i
@@ -1641,10 +1457,8 @@ for i, name in ipairs(TabNames) do
     page.Parent = MainFrame
     ContentPages[name] = page
 end
-
 CreateIndicatorLine()
 UpdateIndicatorPosition(1)
-
 SearchInput.FocusLost:Connect(function(enterPressed)
     if enterPressed and SearchInput.Text ~= "" and SearchInput.Text ~= "Search..." then
         SearchInMenu(SearchInput.Text)
@@ -1652,13 +1466,10 @@ SearchInput.FocusLost:Connect(function(enterPressed)
         SearchInput.Text = "Search..."
     end
 end)
-
--- VISUALS PAGE WITH TWO COLOR PICKERS + PARTICLE GUI
 local visualsPage = ContentPages["Visuals"]
 if visualsPage then
     visualsPage.CanvasSize = UDim2.new(0, 0, 0, 700)
     visualsPage.ScrollBarThickness = 3
-
     local function CreateToggle(name, descText, yPos, toggleFunc, frameName)
         local frame = Instance.new("Frame")
         frame.Name = frameName or name
@@ -1725,8 +1536,6 @@ if visualsPage then
         clickArea.MouseButton1Click:Connect(function() PlayClickSound() SetState(not state) end)
         return SetState, label, desc, frame
     end
-
-    -- CHAMS COLOR PICKER
     local chamsColorPicker = Instance.new("Frame")
     chamsColorPicker.Name = "ChamsColorPicker"
     chamsColorPicker.Size = UDim2.new(1, -30, 0, 140)
@@ -1802,8 +1611,6 @@ if visualsPage then
             visualsPage.ScrollingEnabled = true
         end
     end)
-
-    -- SKELETON COLOR PICKER (появляется только при включении Chams)
     local skeletonColorPicker = Instance.new("Frame")
     skeletonColorPicker.Name = "SkeletonColorPicker"
     skeletonColorPicker.Size = UDim2.new(1, -30, 0, 140)
@@ -1876,7 +1683,6 @@ if visualsPage then
             visualsPage.ScrollingEnabled = true
         end
     end)
-
     local function ShiftChamsElements(shiftDown)
         local targetY = shiftDown and 300 or 0
         local espFrame = visualsPage:FindFirstChild("ESPFrame")
@@ -1888,7 +1694,6 @@ if visualsPage then
         if healthFrame then TweenService:Create(healthFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 175 + targetY)}):Play() end
         if particleFrame then TweenService:Create(particleFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 230 + targetY)}):Play() end
     end
-
     local SetChamsState, chamsLabel, chamsDesc = CreateToggle("Chams", "Makes enemies purple", 10, function(v)
         if v then
             ApplyChams()
@@ -1905,11 +1710,9 @@ if visualsPage then
     end, "ChamsFrame")
     SetChamsToggleState = SetChamsState
     SetChamsToggleState(_G.ChamsEnabled)
-
     local SetESPState, espLabel, espDesc = CreateToggle("Tracers and 3D Box", "Lines with boxes leading to enemies", 65, function(v) if v then ApplyESP() else RemoveESP() end _G.ESPEnabled = v end, "ESPFrame")
     SetESPToggleState = SetESPState
     SetESPToggleState(_G.ESPEnabled)
-
     local SetSkeletonState, skeletonLabel, skeletonDesc = CreateToggle("Skeleton", "Skeleton for enemies", 120, function(v)
         if v then
             ApplySkeleton()
@@ -1920,15 +1723,12 @@ if visualsPage then
     end, "SkeletonFrame")
     SetSkeletonToggleState = SetSkeletonState
     SetSkeletonToggleState(_G.SkeletonEnabled)
-
     local SetHealthState, healthLabel, healthDesc = CreateToggle("Health Bar", "Health bar above enemies", 175, function(v) if v then ApplyHealthBar() else RemoveHealthBar() end _G.HealthBarEnabled = v end, "HealthFrame")
     SetHealthBarToggleState = SetHealthState
     SetHealthBarToggleState(_G.HealthBarEnabled)
-
     local SetParticleGuiState, particleLabel, particleDesc = CreateToggle("Particle Effect GUI", "Adds particle effect to GUI interface", 230, function(v) if v then ApplyParticleGui() else RemoveParticleGui() end _G.ParticleEffectGuiEnabled = v end, "ParticleGuiFrame")
     SetParticleGuiToggleState = SetParticleGuiState
     SetParticleGuiToggleState(_G.ParticleEffectGuiEnabled)
-
     table.insert(langUpdateCallbacks, function()
         local lang = GetLang()
         chamsLabel.Text = lang.Toggles.Chams[1]
@@ -1943,8 +1743,6 @@ if visualsPage then
         particleDesc.Text = lang.Toggles.ParticleEffectGui[2]
     end)
 end
-
--- SKY PAGE
 local skyPage = ContentPages["Sky"]
 if skyPage then
     skyPage.CanvasSize = UDim2.new(0, 0, 0, 0)
@@ -2133,7 +1931,8 @@ if skyPage then
         end
         clickBtn.MouseButton1Click:Connect(function()
             PlayClickSound()
-            for _, otherBtn in pairs(modeButtons) do                if otherBtn ~= btnFrame then
+            for _, otherBtn in pairs(modeButtons) do
+                if otherBtn ~= btnFrame then
                     otherBtn:SetAttribute("Active", false)
                     TweenService:Create(otherBtn.UIScale, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Scale = 1}):Play()
                     TweenService:Create(otherBtn, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(26, 30, 38), BackgroundTransparency = 0.4}):Play()
@@ -2186,8 +1985,6 @@ if skyPage then
         activeSkyMode = nil
     end)
 end
-
--- SOUND PAGE
 local soundPage = ContentPages["Sound"]
 if soundPage then
     soundPage.CanvasSize = UDim2.new(0, 0, 0, 0)
@@ -2400,8 +2197,6 @@ if soundPage then
         end
     end)
 end
-
--- SETTINGS PAGE
 local settingsPage = ContentPages["Settings"]
 if settingsPage then
     settingsPage.CanvasSize = UDim2.new(0, 0, 0, 650)
@@ -2411,7 +2206,6 @@ if settingsPage then
     settingsContainer.BackgroundTransparency = 1
     settingsContainer.ClipsDescendants = true
     settingsContainer.Parent = settingsPage
-
     local toggleFrame = Instance.new("Frame")
     toggleFrame.Size = UDim2.new(1, 0, 0, 45)
     toggleFrame.Position = UDim2.new(0, 0, 0, 10)
@@ -2461,7 +2255,6 @@ if settingsPage then
     clickArea.Text = ""
     clickArea.ZIndex = 10
     clickArea.Parent = toggleFrame
-
     pickerContainer = Instance.new("Frame")
     pickerContainer.Name = "ColorPicker"
     pickerContainer.Size = UDim2.new(1, -30, 0, 140)
@@ -2569,7 +2362,6 @@ if settingsPage then
     end
     table.insert(langUpdateCallbacks, UpdateUIColorText)
     clickArea.MouseButton1Click:Connect(function() PlayClickSound() SetToggleState(not _G.CustomThemeEnabled) end)
-
     local langFrame = Instance.new("Frame")
     langFrame.Size = UDim2.new(1, -20, 0, 42)
     langFrame.Position = UDim2.new(0, 10, 0, 10)
@@ -2635,7 +2427,6 @@ if settingsPage then
     end
     CreateLangButton("Русский", "RU", 0.03)
     CreateLangButton("English", "EN", 0.55)
-
     local opacityFrame = Instance.new("Frame")
     opacityFrame.Size = UDim2.new(1, -20, 0, 55)
     opacityFrame.Position = UDim2.new(0, 10, 0, 60)
@@ -2742,7 +2533,6 @@ if settingsPage then
         opacityDesc.Text = lang.Toggles.Opacity[2]
     end
     table.insert(langUpdateCallbacks, UpdateOpacityText)
-
     local rainbowFrame = Instance.new("Frame")
     rainbowFrame.Size = UDim2.new(1, 0, 0, 45)
     rainbowFrame.Position = UDim2.new(0, 0, 0, 120)
@@ -2858,7 +2648,6 @@ if settingsPage then
         rainbowDesc.Text = lang.Toggles.Rainbow[2]
     end
     table.insert(langUpdateCallbacks, UpdateRainbowText)
-
     local scaleFrame = Instance.new("Frame")
     scaleFrame.Size = UDim2.new(1, -20, 0, 55)
     scaleFrame.Position = UDim2.new(0, 10, 0, 170)
@@ -2962,7 +2751,6 @@ if settingsPage then
         scaleDesc.Text = lang.Toggles.Scale[2]
     end
     table.insert(langUpdateCallbacks, UpdateScaleText)
-
     local flyingFrame = Instance.new("Frame")
     flyingFrame.Name = "Effects"
     flyingFrame.Size = UDim2.new(1, 0, 1, 0)
@@ -3114,7 +2902,6 @@ if settingsPage then
         flyingDesc.Text = lang.Toggles.FlyingDots[2]
     end
     table.insert(langUpdateCallbacks, UpdateFlyingText)
-
     local nightThemeFrame = Instance.new("Frame")
     nightThemeFrame.Size = UDim2.new(1, 0, 0, 45)
     nightThemeFrame.Position = UDim2.new(0, 0, 0, 280)
@@ -3201,7 +2988,6 @@ if settingsPage then
         nightDesc.Text = lang.Toggles.NightTheme[2]
     end
     table.insert(langUpdateCallbacks, UpdateNightThemeText)
-
     local resetFrame = Instance.new("Frame")
     resetFrame.Size = UDim2.new(1, 0, 0, 45)
     resetFrame.Position = UDim2.new(0, 0, 0, 330)
@@ -3258,9 +3044,7 @@ if settingsPage then
         _G.ChamsColor = Color3.fromRGB(110, 60, 170)
         _G.SkeletonColor = Color3.fromRGB(255, 255, 255)
         MainFrame.BackgroundTransparency = 0.12
-        if MainBorderFrame then
-            MainBorderFrame.BackgroundTransparency = 0.12
-        end
+        if MainBorderFrame then MainBorderFrame.BackgroundTransparency = 0.12 end
         if MainBorderGradient then
             MainBorderGradient.Color = ColorSequence.new({
                 ColorSequenceKeypoint.new(0, Color3.fromRGB(160, 160, 160)),
@@ -3326,8 +3110,6 @@ if settingsPage then
     end
     table.insert(langUpdateCallbacks, UpdateResetText)
 end
-
--- KEY EXPIRE CHECK
 task.spawn(function()
     if keyExpireTime then
         while true do
@@ -3382,16 +3164,6 @@ task.spawn(function()
                 ExpireTitle.Font = Enum.Font.GothamBold
                 ExpireTitle.TextXAlignment = Enum.TextXAlignment.Left
                 ExpireTitle.Parent = ExpireFrame
-                local ExpireBeta = Instance.new("TextLabel")
-                ExpireBeta.Size = UDim2.new(0, 40, 0, 15)
-                ExpireBeta.Position = UDim2.new(0, 50, 0, 11)
-                ExpireBeta.BackgroundTransparency = 1
-                ExpireBeta.Text = "beta"
-                ExpireBeta.TextColor3 = Color3.fromRGB(120, 120, 120)
-                ExpireBeta.TextSize = 10
-                ExpireBeta.Font = Enum.Font.Gotham
-                ExpireBeta.TextXAlignment = Enum.TextXAlignment.Left
-                ExpireBeta.Parent = ExpireFrame
                 local ExpireDesc = Instance.new("TextLabel")
                 ExpireDesc.Size = UDim2.new(1, -25, 0, 35)
                 ExpireDesc.Position = UDim2.new(0, 12, 0, 32)
@@ -3412,8 +3184,6 @@ task.spawn(function()
         end
     end
 end)
-
--- ICON BUTTON
 local IconButton = Instance.new("ImageButton")
 IconButton.Name = "MetaIcon"
 IconButton.Size = UDim2.new(0, 55, 0, 55)
@@ -3444,7 +3214,6 @@ IconLetter.Font = Enum.Font.GothamBold
 IconLetter.TextXAlignment = Enum.TextXAlignment.Center
 IconLetter.TextYAlignment = Enum.TextYAlignment.Center
 IconLetter.ZIndex = 1000
-
 local IconLetterGradient = Instance.new("UIGradient", IconLetter)
 IconLetterGradient.Color = ColorSequence.new({
     ColorSequenceKeypoint.new(0, Color3.fromRGB(180, 180, 180)),
@@ -3454,9 +3223,7 @@ IconLetterGradient.Color = ColorSequence.new({
     ColorSequenceKeypoint.new(1, Color3.fromRGB(180, 180, 180))
 })
 IconLetterGradient.Rotation = 0
-
-local iconLetterConnection
-iconLetterConnection = RunService.Heartbeat:Connect(function()
+local iconLetterConnection = RunService.Heartbeat:Connect(function()
     local t = tick()
     IconLetterGradient.Rotation = (t * 50) % 360
     IconLetterGradient.Offset = Vector2.new(math.sin(t * 1.2) * 0.5, 0)
@@ -3465,7 +3232,6 @@ iconLetterConnection = RunService.Heartbeat:Connect(function()
     local scale = 1 + pulse * 0.05
     IconLetter.TextSize = 32 * scale
 end)
-
 IconButton.MouseButton1Click:Connect(function()
     PlayClickSound()
     if MainFrame.Visible then
@@ -3479,9 +3245,7 @@ IconButton.MouseButton1Click:Connect(function()
         MainScale.Scale = 1
         MainFrame.Rotation = 0
         MainFrame.BackgroundTransparency = _G.MenuOpacity / 100
-        if MainBorderFrame then
-            MainBorderFrame.BackgroundTransparency = _G.MenuOpacity / 100
-        end
+        if MainBorderFrame then MainBorderFrame.BackgroundTransparency = _G.MenuOpacity / 100 end
     else
         MainFrame.Visible = true
         MainScale.Scale = 0.1
@@ -3499,12 +3263,9 @@ IconButton.MouseButton1Click:Connect(function()
         task.wait(0.05)
         TweenService:Create(MainScale, TweenInfo.new(0.1, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
         MainFrame.Rotation = 0
-        if MainBorderFrame then
-            MainBorderFrame.BackgroundTransparency = _G.MenuOpacity / 100
-        end
+        if MainBorderFrame then MainBorderFrame.BackgroundTransparency = _G.MenuOpacity / 100 end
     end
 end)
-
 if isActivated then
     MainFrame.Visible = true
     MainScale.Scale = 0.1
@@ -3516,11 +3277,8 @@ if isActivated then
     task.wait(0.5)
     TweenService:Create(MainScale, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
     TweenService:Create(MainFrame, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Rotation = 0, BackgroundTransparency = _G.MenuOpacity / 100}):Play()
-    if MainBorderFrame then
-        MainBorderFrame.BackgroundTransparency = _G.MenuOpacity / 100
-    end
+    if MainBorderFrame then MainBorderFrame.BackgroundTransparency = _G.MenuOpacity / 100 end
 end
-
 UpdateAllTexts()
 if TabButtons[1] then
     TabButtons[1].BackgroundColor3 = Color3.fromRGB(35, 40, 50)
@@ -3533,6 +3291,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         MainFrame.Visible = not MainFrame.Visible
     end
 end)
-
-print("[META] META v7.1.20 FIXED - Night Theme + Two Color Pickers")
+print("[META] META v7.1.20 FIXED")
 print("[META] Press Insert or click icon")
