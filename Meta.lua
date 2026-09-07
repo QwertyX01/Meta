@@ -144,7 +144,6 @@ if not isActivated then
     KeyScreenGui.ResetOnSpawn = false
     KeyScreenGui.IgnoreGuiInset = true
 
-    -- Основная панель 460x470
     local KeyFrame = Instance.new("Frame", KeyScreenGui)
     KeyFrame.Size = UDim2.new(0, 460, 0, 470)
     KeyFrame.Position = UDim2.new(0.5, -230, -0.5, -235)
@@ -156,7 +155,6 @@ if not isActivated then
     KeyFrame.ZIndex = 1
     Instance.new("UICorner", KeyFrame).CornerRadius = UDim.new(0, 12)
 
-    -- Внешняя рамка с градиентом (обводка) — дочерний элемент KeyFrame
     local BorderFrame = Instance.new("Frame", KeyFrame)
     BorderFrame.Size = UDim2.new(1, 12, 1, 12)
     BorderFrame.Position = UDim2.new(0, -6, 0, -6)
@@ -338,7 +336,6 @@ if not isActivated then
         PlaceholderGradient.Rotation = math.sin(t * 0.6) * 10
     end)
 
-    -- Кнопка ENTER
     local EnterButton = Instance.new("Frame", KeyFrame)
     EnterButton.Size = UDim2.new(1, -80, 0, 45)
     EnterButton.Position = UDim2.new(0, 40, 0, 280)
@@ -605,6 +602,9 @@ local fireInputBegan = nil
 local fireInputEnded = nil
 local muteConnection = nil
 local guiMuteConnection = nil
+local MainBorderFrame = nil
+local MainBorderGradient = nil
+local mainBorderConnection = nil
 
 local LANG = {
     RU = {
@@ -677,12 +677,38 @@ MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(17, 20, 26)
 MainFrame.BackgroundTransparency = _G.MenuOpacity / 100
-MainFrame.ClipsDescendants = true
+MainFrame.ClipsDescendants = false
 MainFrame.Parent = ScreenGui
 MainFrame.Draggable = true
 MainFrame.Active = true
 MainFrame.Selectable = true
 MainFrame.Visible = false
+
+MainBorderFrame = Instance.new("Frame", MainFrame)
+MainBorderFrame.Name = "MainBorderFrame"
+MainBorderFrame.Size = UDim2.new(1, 8, 1, 8)
+MainBorderFrame.Position = UDim2.new(0, -4, 0, -4)
+MainBorderFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+MainBorderFrame.BorderSizePixel = 0
+MainBorderFrame.BackgroundTransparency = _G.MenuOpacity / 100
+MainBorderFrame.ZIndex = 1
+Instance.new("UICorner", MainBorderFrame).CornerRadius = UDim.new(0, 15)
+
+MainBorderGradient = Instance.new("UIGradient", MainBorderFrame)
+MainBorderGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(160, 160, 160)),
+    ColorSequenceKeypoint.new(0.25, Color3.fromRGB(200, 200, 200)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
+    ColorSequenceKeypoint.new(0.75, Color3.fromRGB(200, 200, 200)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(160, 160, 160))
+})
+MainBorderGradient.Rotation = 0
+
+mainBorderConnection = RunService.Heartbeat:Connect(function()
+    local t = tick()
+    MainBorderGradient.Rotation = (t * 60) % 360
+    MainBorderGradient.Offset = Vector2.new(math.sin(t * 1.0) * 0.3, math.cos(t * 0.8) * 0.2)
+end)
 
 local MainScale = Instance.new("UIScale")
 MainScale.Scale = 1
@@ -2573,6 +2599,9 @@ if settingsPage then
         opacityValue.Text = tostring(val) .. "%"
         _G.MenuOpacity = val
         MainFrame.BackgroundTransparency = val / 100
+        if MainBorderFrame then
+            MainBorderFrame.BackgroundTransparency = val / 100
+        end
     end
     opacitySliderHandle.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -2671,6 +2700,13 @@ if settingsPage then
                 SearchStroke.Color = color
                 if skyStroke then skyStroke.Color = color end
                 if soundStroke then soundStroke.Color = color end
+                if MainBorderGradient then
+                    MainBorderGradient.Color = ColorSequence.new({
+                        ColorSequenceKeypoint.new(0, color),
+                        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
+                        ColorSequenceKeypoint.new(1, color)
+                    })
+                end
             end)
         else
             if rainbowConnection then
@@ -2681,6 +2717,15 @@ if settingsPage then
                 SearchStroke.Color = _G.MenuThemeColor
                 if skyStroke then skyStroke.Color = _G.MenuThemeColor end
                 if soundStroke then soundStroke.Color = _G.MenuThemeColor end
+                if MainBorderGradient then
+                    MainBorderGradient.Color = ColorSequence.new({
+                        ColorSequenceKeypoint.new(0, Color3.fromRGB(160, 160, 160)),
+                        ColorSequenceKeypoint.new(0.25, Color3.fromRGB(200, 200, 200)),
+                        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
+                        ColorSequenceKeypoint.new(0.75, Color3.fromRGB(200, 200, 200)),
+                        ColorSequenceKeypoint.new(1, Color3.fromRGB(160, 160, 160))
+                    })
+                end
             end
         end
     end
@@ -3003,6 +3048,9 @@ if settingsPage then
         _G.ChamsColor = Color3.fromRGB(110, 60, 170)
         _G.SkeletonColor = Color3.fromRGB(255, 255, 255)
         MainFrame.BackgroundTransparency = 0.12
+        if MainBorderFrame then
+            MainBorderFrame.BackgroundTransparency = 0.12
+        end
         MainFrame.Size = UDim2.new(0, 640, 0, 470)
         MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
         MainFrame.Rotation = 0
@@ -3187,6 +3235,9 @@ IconButton.MouseButton1Click:Connect(function()
         MainScale.Scale = 1
         MainFrame.Rotation = 0
         MainFrame.BackgroundTransparency = _G.MenuOpacity / 100
+        if MainBorderFrame then
+            MainBorderFrame.BackgroundTransparency = _G.MenuOpacity / 100
+        end
     else
         MainFrame.Visible = true
         MainScale.Scale = 0.1
@@ -3204,6 +3255,9 @@ IconButton.MouseButton1Click:Connect(function()
         task.wait(0.05)
         TweenService:Create(MainScale, TweenInfo.new(0.1, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
         MainFrame.Rotation = 0
+        if MainBorderFrame then
+            MainBorderFrame.BackgroundTransparency = _G.MenuOpacity / 100
+        end
     end
 end)
 
@@ -3218,6 +3272,9 @@ if isActivated then
     task.wait(0.5)
     TweenService:Create(MainScale, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
     TweenService:Create(MainFrame, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Rotation = 0, BackgroundTransparency = _G.MenuOpacity / 100}):Play()
+    if MainBorderFrame then
+        MainBorderFrame.BackgroundTransparency = _G.MenuOpacity / 100
+    end
 end
 
 UpdateAllTexts()
