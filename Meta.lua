@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.1.00 NEW KEY PANEL
+-- KEY SYSTEM + META UI V7.1.10
 -- ====================================================================
 local GIST_ID = "0952fe76bcc259fcbda99e552956e5e6"
 local TOKEN_PART1 = "ghp_kMjn"
@@ -536,7 +536,7 @@ if not isActivated then
 end
 
 -- ====================================================================
--- META UI (полностью из v7.0.98)
+-- META UI
 -- ====================================================================
 local function SetupAntiCheatBypass()
     pcall(function()
@@ -583,6 +583,7 @@ _G.ChamsEnabled = false
 _G.ESPEnabled = false
 _G.HealthBarEnabled = false
 _G.SkeletonEnabled = false
+_G.ParticleEffectGuiEnabled = false
 _G.ChamsColor = Color3.fromRGB(110, 60, 170)
 _G.SkeletonColor = Color3.fromRGB(255, 255, 255)
 
@@ -595,6 +596,7 @@ local SetToggleState, ShiftContainer = nil, nil
 local SetChamsToggleState, SetRainbowToggleState = nil, nil
 local SetFlyingToggleState, SetESPToggleState = nil, nil
 local SetHealthBarToggleState, SetSkeletonToggleState = nil, nil
+local SetParticleGuiToggleState = nil
 local skyStroke = nil
 local soundStroke = nil
 local skyConnection = nil
@@ -619,6 +621,7 @@ local LANG = {
             ESP = {"Линии и 3D Боксы", "Линии с боксами которые ведут к противникам"},
             Skeleton = {"Скелетон", "Скелетон для противников"},
             HealthBar = {"Здоровье противников", "Полоска здоровья над головой"},
+            ParticleEffectGui = {"Эффект частиц GUI", "Добавляет эффект точек на GUI интерфейса"},
             Reset = {"Сброс настроек", "Вернуть все настройки к стандартным"}
         }
     },
@@ -634,6 +637,7 @@ local LANG = {
             ESP = {"Tracers and 3D Box", "Lines with boxes leading to enemies"},
             Skeleton = {"Skeleton", "Skeleton for enemies"},
             HealthBar = {"Health Bar", "Health bar above enemies"},
+            ParticleEffectGui = {"Particle Effect GUI", "Adds particle effect to GUI interface"},
             Reset = {"Reset Settings", "Return all settings to default"}
         }
     }
@@ -1398,6 +1402,110 @@ local function RemoveHealthBar()
     HealthHistoryData = {}
 end
 
+-- PARTICLE EFFECT GUI
+local ParticleGuiContainer = nil
+local ParticleGuiConnection = nil
+
+local function CreateParticleGui()
+    if ParticleGuiContainer then ParticleGuiContainer:Destroy() end
+    if ParticleGuiConnection then ParticleGuiConnection:Disconnect() end
+    
+    local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+    
+    ParticleGuiContainer = Instance.new("ScreenGui")
+    ParticleGuiContainer.Name = "META_ParticleEffectGui"
+    ParticleGuiContainer.ResetOnSpawn = false
+    ParticleGuiContainer.IgnoreGuiInset = true
+    ParticleGuiContainer.DisplayOrder = 999999
+    ParticleGuiContainer.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    ParticleGuiContainer.Parent = PlayerGui
+    HideFromScanner(ParticleGuiContainer)
+    
+    local particles = {}
+    
+    local function SpawnParticle()
+        local dot = Instance.new("Frame", ParticleGuiContainer)
+        local size = math.random(2, 5)
+        dot.Size = UDim2.new(0, size, 0, size)
+        local startX = math.random(0, 100) / 100
+        dot.Position = UDim2.new(startX, 0, 1, 10)
+        dot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        dot.BackgroundTransparency = 0.3
+        dot.BorderSizePixel = 0
+        dot.ZIndex = 999999
+        Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
+        
+        local data = {
+            Frame = dot,
+            SpeedY = math.random(20, 50) / 10,
+            SpeedX = (math.random() - 0.5) * 2,
+            Angle = math.random() * math.pi * 2,
+            RotSpeed = (math.random() - 0.5) * 2,
+            PosX = startX,
+            PosY = 1
+        }
+        table.insert(particles, data)
+        
+        task.delay(5, function()
+            if dot and dot.Parent then
+                dot:Destroy()
+            end
+            for i, p in pairs(particles) do
+                if p == data then
+                    table.remove(particles, i)
+                    break
+                end
+            end
+        end)
+    end
+    
+    for i = 1, 50 do
+        task.delay(math.random(0, 50) / 10, function()
+            if ParticleGuiContainer then
+                SpawnParticle()
+            end
+        end)
+    end
+    
+    ParticleGuiConnection = RunService.Heartbeat:Connect(function()
+        if not ParticleGuiContainer then return end
+        for _, data in pairs(particles) do
+            if data and data.Frame and data.Frame.Parent then
+                data.PosY = data.PosY - data.SpeedY / 200
+                data.PosX = data.PosX + data.SpeedX / 200
+                data.Angle = data.Angle + data.RotSpeed / 30
+                
+                if data.PosY < -0.05 then
+                    data.PosY = 1
+                    data.PosX = math.random(0, 100) / 100
+                end
+                if data.PosX < -0.05 then data.PosX = 1.05 end
+                if data.PosX > 1.05 then data.PosX = -0.05 end
+                
+                data.Frame.Position = UDim2.new(data.PosX, 0, data.PosY, 0)
+                data.Frame.Rotation = math.deg(data.Angle)
+            end
+        end
+    end)
+end
+
+local function ApplyParticleGui()
+    _G.ParticleEffectGuiEnabled = true
+    CreateParticleGui()
+end
+
+local function RemoveParticleGui()
+    _G.ParticleEffectGuiEnabled = false
+    if ParticleGuiConnection then
+        ParticleGuiConnection:Disconnect()
+        ParticleGuiConnection = nil
+    end
+    if ParticleGuiContainer then
+        ParticleGuiContainer:Destroy()
+        ParticleGuiContainer = nil
+    end
+end
+
 -- UI: INDICATOR, TABS
 local IndicatorLine = nil
 local IndicatorColor = _G.MenuThemeColor
@@ -1542,10 +1650,11 @@ SearchInput.FocusLost:Connect(function(enterPressed)
     end
 end)
 
--- VISUALS PAGE WITH CHAMS + SKELETON COLOR PICKERS
+-- VISUALS PAGE WITH CHAMS + SKELETON COLOR PICKERS + PARTICLE GUI
 local visualsPage = ContentPages["Visuals"]
 if visualsPage then
-    visualsPage.CanvasSize = UDim2.new(0, 0, 0, 600)
+    visualsPage.CanvasSize = UDim2.new(0, 0, 0, 700)
+    visualsPage.ScrollBarThickness = 3
 
     local function CreateToggle(name, descText, yPos, toggleFunc, frameName)
         local frame = Instance.new("Frame")
@@ -1770,15 +1879,19 @@ if visualsPage then
         local espFrame = visualsPage:FindFirstChild("ESPFrame")
         local skeletonFrame = visualsPage:FindFirstChild("SkeletonFrame")
         local healthFrame = visualsPage:FindFirstChild("HealthFrame")
+        local particleFrame = visualsPage:FindFirstChild("ParticleGuiFrame")
         if espFrame then TweenService:Create(espFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 65 + targetY)}):Play() end
         if skeletonFrame then TweenService:Create(skeletonFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 120 + targetY)}):Play() end
         if healthFrame then TweenService:Create(healthFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 175 + targetY)}):Play() end
+        if particleFrame then TweenService:Create(particleFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 230 + targetY)}):Play() end
     end
 
     local function ShiftSkeletonElements(shiftDown)
         local targetY = shiftDown and 150 or 0
         local healthFrame = visualsPage:FindFirstChild("HealthFrame")
+        local particleFrame = visualsPage:FindFirstChild("ParticleGuiFrame")
         if healthFrame then TweenService:Create(healthFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 175 + targetY)}):Play() end
+        if particleFrame then TweenService:Create(particleFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 230 + targetY)}):Play() end
     end
 
     local SetChamsState, chamsLabel, chamsDesc = CreateToggle("Chams", "Makes enemies purple", 10, function(v)
@@ -1819,6 +1932,10 @@ if visualsPage then
     SetHealthBarToggleState = SetHealthState
     SetHealthBarToggleState(_G.HealthBarEnabled)
 
+    local SetParticleGuiState, particleLabel, particleDesc = CreateToggle("Particle Effect GUI", "Adds particle effect to GUI interface", 230, function(v) if v then ApplyParticleGui() else RemoveParticleGui() end _G.ParticleEffectGuiEnabled = v end, "ParticleGuiFrame")
+    SetParticleGuiToggleState = SetParticleGuiState
+    SetParticleGuiToggleState(_G.ParticleEffectGuiEnabled)
+
     table.insert(langUpdateCallbacks, function()
         local lang = GetLang()
         chamsLabel.Text = lang.Toggles.Chams[1]
@@ -1829,6 +1946,8 @@ if visualsPage then
         skeletonDesc.Text = lang.Toggles.Skeleton[2]
         healthLabel.Text = lang.Toggles.HealthBar[1]
         healthDesc.Text = lang.Toggles.HealthBar[2]
+        particleLabel.Text = lang.Toggles.ParticleEffectGui[1]
+        particleDesc.Text = lang.Toggles.ParticleEffectGui[2]
     end)
 end
 
@@ -3045,6 +3164,7 @@ if settingsPage then
         _G.ESPEnabled = false
         _G.SkeletonEnabled = false
         _G.HealthBarEnabled = false
+        _G.ParticleEffectGuiEnabled = false
         _G.ChamsColor = Color3.fromRGB(110, 60, 170)
         _G.SkeletonColor = Color3.fromRGB(255, 255, 255)
         MainFrame.BackgroundTransparency = 0.12
@@ -3068,6 +3188,8 @@ if settingsPage then
         if SetSkeletonToggleState then SetSkeletonToggleState(false) end
         RemoveHealthBar()
         if SetHealthBarToggleState then SetHealthBarToggleState(false) end
+        RemoveParticleGui()
+        if SetParticleGuiToggleState then SetParticleGuiToggleState(false) end
         for _, btn in ipairs(langButtonData) do pcall(btn.Update, false) end
         UpdateAllTexts()
         if rainbowConnection then rainbowConnection:Disconnect() rainbowConnection = nil end
@@ -3125,6 +3247,7 @@ task.spawn(function()
                 RemoveESP()
                 RemoveSkeleton()
                 RemoveHealthBar()
+                RemoveParticleGui()
                 if DotConnection then DotConnection:Disconnect() DotConnection = nil end
                 for _, data in ipairs(Dots) do if data and data.Frame then data.Frame:Destroy() end end
                 Dots = {}
@@ -3222,6 +3345,27 @@ IconLetter.TextXAlignment = Enum.TextXAlignment.Center
 IconLetter.TextYAlignment = Enum.TextYAlignment.Center
 IconLetter.ZIndex = 1000
 
+local IconLetterGradient = Instance.new("UIGradient", IconLetter)
+IconLetterGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(180, 180, 180)),
+    ColorSequenceKeypoint.new(0.25, Color3.fromRGB(220, 220, 220)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
+    ColorSequenceKeypoint.new(0.75, Color3.fromRGB(220, 220, 220)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(180, 180, 180))
+})
+IconLetterGradient.Rotation = 0
+
+local iconLetterConnection
+iconLetterConnection = RunService.Heartbeat:Connect(function()
+    local t = tick()
+    IconLetterGradient.Rotation = (t * 50) % 360
+    IconLetterGradient.Offset = Vector2.new(math.sin(t * 1.2) * 0.5, 0)
+    local pulse = (math.sin(t * 2) + 1) / 2
+    IconLetter.TextTransparency = 0.15 + pulse * 0.35
+    local scale = 1 + pulse * 0.05
+    IconLetter.TextSize = 32 * scale
+end)
+
 IconButton.MouseButton1Click:Connect(function()
     PlayClickSound()
     if MainFrame.Visible then
@@ -3290,5 +3434,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] META v7.1.00 - New Key Panel")
+print("[META] META v7.1.10 - Particle Effect GUI")
 print("[META] Press Insert or click icon")
