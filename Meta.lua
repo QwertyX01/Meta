@@ -998,6 +998,7 @@ local function SetupESP()
     return ApplyESP, RemoveESP
 end
 local ApplyESP, RemoveESP = SetupESP()
+
 task.spawn(function()
     while true do
         task.wait(1)
