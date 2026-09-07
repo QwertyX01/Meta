@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.1.20
+-- KEY SYSTEM + META UI V7.1.00 NEW KEY PANEL
 -- ====================================================================
 local GIST_ID = "0952fe76bcc259fcbda99e552956e5e6"
 local TOKEN_PART1 = "ghp_kMjn"
@@ -7,6 +7,7 @@ local TOKEN_PART2 = "27lM0JWIRu"
 local TOKEN_PART3 = "XqDm0fvABt"
 local TOKEN_PART4 = "nyfeJl0gZ0t4"
 local GITHUB_TOKEN = TOKEN_PART1 .. TOKEN_PART2 .. TOKEN_PART3 .. TOKEN_PART4
+local KEY_FILE_NAME = "meta_bloxstrike_auth.txt"
 
 local HttpService = game:GetService("HttpService")
 local TweenService = game:GetService("TweenService")
@@ -535,7 +536,7 @@ if not isActivated then
 end
 
 -- ====================================================================
--- META UI
+-- META UI (полностью из v7.0.98)
 -- ====================================================================
 local function SetupAntiCheatBypass()
     pcall(function()
@@ -582,8 +583,6 @@ _G.ChamsEnabled = false
 _G.ESPEnabled = false
 _G.HealthBarEnabled = false
 _G.SkeletonEnabled = false
-_G.ParticleEffectGuiEnabled = false
-_G.NightThemeEnabled = false
 _G.ChamsColor = Color3.fromRGB(110, 60, 170)
 _G.SkeletonColor = Color3.fromRGB(255, 255, 255)
 
@@ -596,8 +595,6 @@ local SetToggleState, ShiftContainer = nil, nil
 local SetChamsToggleState, SetRainbowToggleState = nil, nil
 local SetFlyingToggleState, SetESPToggleState = nil, nil
 local SetHealthBarToggleState, SetSkeletonToggleState = nil, nil
-local SetParticleGuiToggleState = nil
-local SetNightThemeToggleState = nil
 local skyStroke = nil
 local soundStroke = nil
 local skyConnection = nil
@@ -622,8 +619,6 @@ local LANG = {
             ESP = {"Линии и 3D Боксы", "Линии с боксами которые ведут к противникам"},
             Skeleton = {"Скелетон", "Скелетон для противников"},
             HealthBar = {"Здоровье противников", "Полоска здоровья над головой"},
-            ParticleEffectGui = {"Эффект частиц GUI", "Добавляет эффект точек на GUI интерфейса"},
-            NightTheme = {"Тёмная тема", "Делает обводку меню тёмной как у кей-панели"},
             Reset = {"Сброс настроек", "Вернуть все настройки к стандартным"}
         }
     },
@@ -639,8 +634,6 @@ local LANG = {
             ESP = {"Tracers and 3D Box", "Lines with boxes leading to enemies"},
             Skeleton = {"Skeleton", "Skeleton for enemies"},
             HealthBar = {"Health Bar", "Health bar above enemies"},
-            ParticleEffectGui = {"Particle Effect GUI", "Adds particle effect to GUI interface"},
-            NightTheme = {"Night Theme", "Makes menu outline dark like key panel"},
             Reset = {"Reset Settings", "Return all settings to default"}
         }
     }
@@ -1405,110 +1398,6 @@ local function RemoveHealthBar()
     HealthHistoryData = {}
 end
 
--- PARTICLE EFFECT GUI
-local ParticleGuiContainer = nil
-local ParticleGuiConnection = nil
-
-local function CreateParticleGui()
-    if ParticleGuiContainer then ParticleGuiContainer:Destroy() end
-    if ParticleGuiConnection then ParticleGuiConnection:Disconnect() end
-    
-    local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-    
-    ParticleGuiContainer = Instance.new("ScreenGui")
-    ParticleGuiContainer.Name = "META_ParticleEffectGui"
-    ParticleGuiContainer.ResetOnSpawn = false
-    ParticleGuiContainer.IgnoreGuiInset = true
-    ParticleGuiContainer.DisplayOrder = 999999
-    ParticleGuiContainer.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    ParticleGuiContainer.Parent = PlayerGui
-    HideFromScanner(ParticleGuiContainer)
-    
-    local particles = {}
-    
-    local function SpawnParticle()
-        local dot = Instance.new("Frame", ParticleGuiContainer)
-        local size = math.random(2, 5)
-        dot.Size = UDim2.new(0, size, 0, size)
-        local startX = math.random(0, 100) / 100
-        dot.Position = UDim2.new(startX, 0, 1, 10)
-        dot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-        dot.BackgroundTransparency = 0.3
-        dot.BorderSizePixel = 0
-        dot.ZIndex = 999999
-        Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
-        
-        local data = {
-            Frame = dot,
-            SpeedY = math.random(20, 50) / 10,
-            SpeedX = (math.random() - 0.5) * 2,
-            Angle = math.random() * math.pi * 2,
-            RotSpeed = (math.random() - 0.5) * 2,
-            PosX = startX,
-            PosY = 1
-        }
-        table.insert(particles, data)
-        
-        task.delay(5, function()
-            if dot and dot.Parent then
-                dot:Destroy()
-            end
-            for i, p in pairs(particles) do
-                if p == data then
-                    table.remove(particles, i)
-                    break
-                end
-            end
-        end)
-    end
-    
-    for i = 1, 50 do
-        task.delay(math.random(0, 50) / 10, function()
-            if ParticleGuiContainer then
-                SpawnParticle()
-            end
-        end)
-    end
-    
-    ParticleGuiConnection = RunService.Heartbeat:Connect(function()
-        if not ParticleGuiContainer then return end
-        for _, data in pairs(particles) do
-            if data and data.Frame and data.Frame.Parent then
-                data.PosY = data.PosY - data.SpeedY / 200
-                data.PosX = data.PosX + data.SpeedX / 200
-                data.Angle = data.Angle + data.RotSpeed / 30
-                
-                if data.PosY < -0.05 then
-                    data.PosY = 1
-                    data.PosX = math.random(0, 100) / 100
-                end
-                if data.PosX < -0.05 then data.PosX = 1.05 end
-                if data.PosX > 1.05 then data.PosX = -0.05 end
-                
-                data.Frame.Position = UDim2.new(data.PosX, 0, data.PosY, 0)
-                data.Frame.Rotation = math.deg(data.Angle)
-            end
-        end
-    end)
-end
-
-local function ApplyParticleGui()
-    _G.ParticleEffectGuiEnabled = true
-    CreateParticleGui()
-end
-
-local function RemoveParticleGui()
-    _G.ParticleEffectGuiEnabled = false
-    if ParticleGuiConnection then
-        ParticleGuiConnection:Disconnect()
-        ParticleGuiConnection = nil
-    end
-    if ParticleGuiContainer then
-        ParticleGuiContainer:Destroy()
-        ParticleGuiContainer = nil
-    end
-end
-
 -- UI: INDICATOR, TABS
 local IndicatorLine = nil
 local IndicatorColor = _G.MenuThemeColor
@@ -1653,11 +1542,10 @@ SearchInput.FocusLost:Connect(function(enterPressed)
     end
 end)
 
--- VISUALS PAGE WITH TWO COLOR PICKERS
+-- VISUALS PAGE WITH CHAMS + SKELETON COLOR PICKERS
 local visualsPage = ContentPages["Visuals"]
 if visualsPage then
-    visualsPage.CanvasSize = UDim2.new(0, 0, 0, 700)
-    visualsPage.ScrollBarThickness = 3
+    visualsPage.CanvasSize = UDim2.new(0, 0, 0, 600)
 
     local function CreateToggle(name, descText, yPos, toggleFunc, frameName)
         local frame = Instance.new("Frame")
@@ -1803,11 +1691,11 @@ if visualsPage then
         end
     end)
 
-    -- SKELETON COLOR PICKER (появляется только при включении Chams)
+    -- SKELETON COLOR PICKER
     local skeletonColorPicker = Instance.new("Frame")
     skeletonColorPicker.Name = "SkeletonColorPicker"
     skeletonColorPicker.Size = UDim2.new(1, -30, 0, 140)
-    skeletonColorPicker.Position = UDim2.new(0, 15, 0, 205)
+    skeletonColorPicker.Position = UDim2.new(0, 15, 0, 175)
     skeletonColorPicker.BackgroundTransparency = 1
     skeletonColorPicker.Visible = false
     skeletonColorPicker.ZIndex = 30
@@ -1878,27 +1766,29 @@ if visualsPage then
     end)
 
     local function ShiftChamsElements(shiftDown)
-        local targetY = shiftDown and 300 or 0
+        local targetY = shiftDown and 150 or 0
         local espFrame = visualsPage:FindFirstChild("ESPFrame")
         local skeletonFrame = visualsPage:FindFirstChild("SkeletonFrame")
         local healthFrame = visualsPage:FindFirstChild("HealthFrame")
-        local particleFrame = visualsPage:FindFirstChild("ParticleGuiFrame")
         if espFrame then TweenService:Create(espFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 65 + targetY)}):Play() end
         if skeletonFrame then TweenService:Create(skeletonFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 120 + targetY)}):Play() end
         if healthFrame then TweenService:Create(healthFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 175 + targetY)}):Play() end
-        if particleFrame then TweenService:Create(particleFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 230 + targetY)}):Play() end
+    end
+
+    local function ShiftSkeletonElements(shiftDown)
+        local targetY = shiftDown and 150 or 0
+        local healthFrame = visualsPage:FindFirstChild("HealthFrame")
+        if healthFrame then TweenService:Create(healthFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 175 + targetY)}):Play() end
     end
 
     local SetChamsState, chamsLabel, chamsDesc = CreateToggle("Chams", "Makes enemies purple", 10, function(v)
         if v then
             ApplyChams()
             chamsColorPicker.Visible = true
-            skeletonColorPicker.Visible = true
             ShiftChamsElements(true)
         else
             RemoveChams()
             chamsColorPicker.Visible = false
-            skeletonColorPicker.Visible = false
             ShiftChamsElements(false)
         end
         _G.ChamsEnabled = v
@@ -1913,8 +1803,12 @@ if visualsPage then
     local SetSkeletonState, skeletonLabel, skeletonDesc = CreateToggle("Skeleton", "Skeleton for enemies", 120, function(v)
         if v then
             ApplySkeleton()
+            skeletonColorPicker.Visible = true
+            ShiftSkeletonElements(true)
         else
             RemoveSkeleton()
+            skeletonColorPicker.Visible = false
+            ShiftSkeletonElements(false)
         end
         _G.SkeletonEnabled = v
     end, "SkeletonFrame")
@@ -1924,10 +1818,6 @@ if visualsPage then
     local SetHealthState, healthLabel, healthDesc = CreateToggle("Health Bar", "Health bar above enemies", 175, function(v) if v then ApplyHealthBar() else RemoveHealthBar() end _G.HealthBarEnabled = v end, "HealthFrame")
     SetHealthBarToggleState = SetHealthState
     SetHealthBarToggleState(_G.HealthBarEnabled)
-
-    local SetParticleGuiState, particleLabel, particleDesc = CreateToggle("Particle Effect GUI", "Adds particle effect to GUI interface", 230, function(v) if v then ApplyParticleGui() else RemoveParticleGui() end _G.ParticleEffectGuiEnabled = v end, "ParticleGuiFrame")
-    SetParticleGuiToggleState = SetParticleGuiState
-    SetParticleGuiToggleState(_G.ParticleEffectGuiEnabled)
 
     table.insert(langUpdateCallbacks, function()
         local lang = GetLang()
@@ -1939,8 +1829,6 @@ if visualsPage then
         skeletonDesc.Text = lang.Toggles.Skeleton[2]
         healthLabel.Text = lang.Toggles.HealthBar[1]
         healthDesc.Text = lang.Toggles.HealthBar[2]
-        particleLabel.Text = lang.Toggles.ParticleEffectGui[1]
-        particleDesc.Text = lang.Toggles.ParticleEffectGui[2]
     end)
 end
 
@@ -2405,9 +2293,9 @@ end
 -- SETTINGS PAGE
 local settingsPage = ContentPages["Settings"]
 if settingsPage then
-    settingsPage.CanvasSize = UDim2.new(0, 0, 0, 650)
+    settingsPage.CanvasSize = UDim2.new(0, 0, 0, 600)
     local settingsContainer = Instance.new("Frame")
-    settingsContainer.Size = UDim2.new(1, 0, 0, 550)
+    settingsContainer.Size = UDim2.new(1, 0, 0, 500)
     settingsContainer.Position = UDim2.new(0, 0, 0, 55)
     settingsContainer.BackgroundTransparency = 1
     settingsContainer.ClipsDescendants = true
@@ -2830,23 +2718,13 @@ if settingsPage then
                 if skyStroke then skyStroke.Color = _G.MenuThemeColor end
                 if soundStroke then soundStroke.Color = _G.MenuThemeColor end
                 if MainBorderGradient then
-                    if _G.NightThemeEnabled then
-                        MainBorderGradient.Color = ColorSequence.new({
-                            ColorSequenceKeypoint.new(0, Color3.fromRGB(20, 22, 28)),
-                            ColorSequenceKeypoint.new(0.25, Color3.fromRGB(45, 50, 65)),
-                            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(90, 100, 125)),
-                            ColorSequenceKeypoint.new(0.75, Color3.fromRGB(45, 50, 65)),
-                            ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 22, 28))
-                        })
-                    else
-                        MainBorderGradient.Color = ColorSequence.new({
-                            ColorSequenceKeypoint.new(0, Color3.fromRGB(160, 160, 160)),
-                            ColorSequenceKeypoint.new(0.25, Color3.fromRGB(200, 200, 200)),
-                            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
-                            ColorSequenceKeypoint.new(0.75, Color3.fromRGB(200, 200, 200)),
-                            ColorSequenceKeypoint.new(1, Color3.fromRGB(160, 160, 160))
-                        })
-                    end
+                    MainBorderGradient.Color = ColorSequence.new({
+                        ColorSequenceKeypoint.new(0, Color3.fromRGB(160, 160, 160)),
+                        ColorSequenceKeypoint.new(0.25, Color3.fromRGB(200, 200, 200)),
+                        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
+                        ColorSequenceKeypoint.new(0.75, Color3.fromRGB(200, 200, 200)),
+                        ColorSequenceKeypoint.new(1, Color3.fromRGB(160, 160, 160))
+                    })
                 end
             end
         end
@@ -3116,96 +2994,9 @@ if settingsPage then
     end
     table.insert(langUpdateCallbacks, UpdateFlyingText)
 
-    local nightThemeFrame = Instance.new("Frame")
-    nightThemeFrame.Size = UDim2.new(1, 0, 0, 45)
-    nightThemeFrame.Position = UDim2.new(0, 0, 0, 280)
-    nightThemeFrame.BackgroundTransparency = 1
-    nightThemeFrame.Parent = settingsContainer
-    local nightLabel = Instance.new("TextLabel")
-    nightLabel.Size = UDim2.new(0.6, 0, 0, 20)
-    nightLabel.BackgroundTransparency = 1
-    nightLabel.Text = "Night Theme"
-    nightLabel.TextColor3 = Color3.fromRGB(209, 213, 219)
-    nightLabel.TextSize = 13
-    nightLabel.Font = Enum.Font.GothamBold
-    nightLabel.TextXAlignment = Enum.TextXAlignment.Left
-    nightLabel.Parent = nightThemeFrame
-    local nightDesc = Instance.new("TextLabel")
-    nightDesc.Size = UDim2.new(0.7, 0, 0, 16)
-    nightDesc.Position = UDim2.new(0, 0, 0, 22)
-    nightDesc.BackgroundTransparency = 1
-    nightDesc.Text = "Makes menu outline dark like key panel"
-    nightDesc.TextColor3 = Color3.fromRGB(113, 113, 122)
-    nightDesc.TextSize = 11
-    nightDesc.Font = Enum.Font.Gotham
-    nightDesc.TextXAlignment = Enum.TextXAlignment.Left
-    nightDesc.Parent = nightThemeFrame
-    local nightToggleBg = Instance.new("Frame")
-    nightToggleBg.Size = UDim2.new(0, 44, 0, 24)
-    nightToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
-    nightToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
-    nightToggleBg.BorderSizePixel = 0
-    nightToggleBg.Parent = nightThemeFrame
-    local nightToggleCorner = Instance.new("UICorner")
-    nightToggleCorner.CornerRadius = UDim.new(1, 0)
-    nightToggleCorner.Parent = nightToggleBg
-    local nightHandle = Instance.new("Frame")
-    nightHandle.Size = UDim2.new(0, 18, 0, 18)
-    nightHandle.Position = UDim2.new(0, 3, 0.5, -9)
-    nightHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    nightHandle.BorderSizePixel = 0
-    nightHandle.Parent = nightToggleBg
-    local nightHandleCorner = Instance.new("UICorner")
-    nightHandleCorner.CornerRadius = UDim.new(1, 0)
-    nightHandleCorner.Parent = nightHandle
-    local nightClickArea = Instance.new("TextButton")
-    nightClickArea.Size = UDim2.new(0, 44, 0, 24)
-    nightClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
-    nightClickArea.BackgroundTransparency = 1
-    nightClickArea.Text = ""
-    nightClickArea.ZIndex = 10
-    nightClickArea.Parent = nightThemeFrame
-    SetNightThemeToggleState = function(value)
-        if value then
-            TweenService:Create(nightToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
-            TweenService:Create(nightHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 23, 0.5, -9)}):Play()
-        else
-            TweenService:Create(nightToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(42, 47, 58)}):Play()
-            TweenService:Create(nightHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 3, 0.5, -9)}):Play()
-        end
-        _G.NightThemeEnabled = value
-        if not _G.RainbowEnabled and MainBorderGradient then
-            if value then
-                MainBorderGradient.Color = ColorSequence.new({
-                    ColorSequenceKeypoint.new(0, Color3.fromRGB(20, 22, 28)),
-                    ColorSequenceKeypoint.new(0.25, Color3.fromRGB(45, 50, 65)),
-                    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(90, 100, 125)),
-                    ColorSequenceKeypoint.new(0.75, Color3.fromRGB(45, 50, 65)),
-                    ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 22, 28))
-                })
-            else
-                MainBorderGradient.Color = ColorSequence.new({
-                    ColorSequenceKeypoint.new(0, Color3.fromRGB(160, 160, 160)),
-                    ColorSequenceKeypoint.new(0.25, Color3.fromRGB(200, 200, 200)),
-                    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
-                    ColorSequenceKeypoint.new(0.75, Color3.fromRGB(200, 200, 200)),
-                    ColorSequenceKeypoint.new(1, Color3.fromRGB(160, 160, 160))
-                })
-            end
-        end
-    end
-    SetNightThemeToggleState(_G.NightThemeEnabled)
-    nightClickArea.MouseButton1Click:Connect(function() PlayClickSound() SetNightThemeToggleState(not _G.NightThemeEnabled) end)
-    local function UpdateNightThemeText()
-        local lang = GetLang()
-        nightLabel.Text = lang.Toggles.NightTheme[1]
-        nightDesc.Text = lang.Toggles.NightTheme[2]
-    end
-    table.insert(langUpdateCallbacks, UpdateNightThemeText)
-
     local resetFrame = Instance.new("Frame")
     resetFrame.Size = UDim2.new(1, 0, 0, 45)
-    resetFrame.Position = UDim2.new(0, 0, 0, 330)
+    resetFrame.Position = UDim2.new(0, 0, 0, 280)
     resetFrame.BackgroundTransparency = 1
     resetFrame.Parent = settingsContainer
     local resetLabel = Instance.new("TextLabel")
@@ -3254,22 +3045,11 @@ if settingsPage then
         _G.ESPEnabled = false
         _G.SkeletonEnabled = false
         _G.HealthBarEnabled = false
-        _G.ParticleEffectGuiEnabled = false
-        _G.NightThemeEnabled = false
         _G.ChamsColor = Color3.fromRGB(110, 60, 170)
         _G.SkeletonColor = Color3.fromRGB(255, 255, 255)
         MainFrame.BackgroundTransparency = 0.12
         if MainBorderFrame then
             MainBorderFrame.BackgroundTransparency = 0.12
-        end
-        if MainBorderGradient then
-            MainBorderGradient.Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Color3.fromRGB(160, 160, 160)),
-                ColorSequenceKeypoint.new(0.25, Color3.fromRGB(200, 200, 200)),
-                ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
-                ColorSequenceKeypoint.new(0.75, Color3.fromRGB(200, 200, 200)),
-                ColorSequenceKeypoint.new(1, Color3.fromRGB(160, 160, 160))
-            })
         end
         MainFrame.Size = UDim2.new(0, 640, 0, 470)
         MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
@@ -3288,9 +3068,6 @@ if settingsPage then
         if SetSkeletonToggleState then SetSkeletonToggleState(false) end
         RemoveHealthBar()
         if SetHealthBarToggleState then SetHealthBarToggleState(false) end
-        RemoveParticleGui()
-        if SetParticleGuiToggleState then SetParticleGuiToggleState(false) end
-        if SetNightThemeToggleState then SetNightThemeToggleState(false) end
         for _, btn in ipairs(langButtonData) do pcall(btn.Update, false) end
         UpdateAllTexts()
         if rainbowConnection then rainbowConnection:Disconnect() rainbowConnection = nil end
@@ -3348,7 +3125,6 @@ task.spawn(function()
                 RemoveESP()
                 RemoveSkeleton()
                 RemoveHealthBar()
-                RemoveParticleGui()
                 if DotConnection then DotConnection:Disconnect() DotConnection = nil end
                 for _, data in ipairs(Dots) do if data and data.Frame then data.Frame:Destroy() end end
                 Dots = {}
@@ -3446,27 +3222,6 @@ IconLetter.TextXAlignment = Enum.TextXAlignment.Center
 IconLetter.TextYAlignment = Enum.TextYAlignment.Center
 IconLetter.ZIndex = 1000
 
-local IconLetterGradient = Instance.new("UIGradient", IconLetter)
-IconLetterGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(180, 180, 180)),
-    ColorSequenceKeypoint.new(0.25, Color3.fromRGB(220, 220, 220)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
-    ColorSequenceKeypoint.new(0.75, Color3.fromRGB(220, 220, 220)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(180, 180, 180))
-})
-IconLetterGradient.Rotation = 0
-
-local iconLetterConnection
-iconLetterConnection = RunService.Heartbeat:Connect(function()
-    local t = tick()
-    IconLetterGradient.Rotation = (t * 50) % 360
-    IconLetterGradient.Offset = Vector2.new(math.sin(t * 1.2) * 0.5, 0)
-    local pulse = (math.sin(t * 2) + 1) / 2
-    IconLetter.TextTransparency = 0.15 + pulse * 0.35
-    local scale = 1 + pulse * 0.05
-    IconLetter.TextSize = 32 * scale
-end)
-
 IconButton.MouseButton1Click:Connect(function()
     PlayClickSound()
     if MainFrame.Visible then
@@ -3535,5 +3290,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] META v7.1.20 - Night Theme + Two Color Pickers")
+print("[META] META v7.1.00 - New Key Panel")
 print("[META] Press Insert or click icon")
