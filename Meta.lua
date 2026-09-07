@@ -144,9 +144,22 @@ if not isActivated then
     KeyScreenGui.ResetOnSpawn = false
     KeyScreenGui.IgnoreGuiInset = true
 
-    local BorderFrame = Instance.new("Frame", KeyScreenGui)
-    BorderFrame.Size = UDim2.new(0, 492, 0, 432)
-    BorderFrame.Position = UDim2.new(0.5, -246, -0.5, -216)
+    -- Основная панель 460x470
+    local KeyFrame = Instance.new("Frame", KeyScreenGui)
+    KeyFrame.Size = UDim2.new(0, 460, 0, 470)
+    KeyFrame.Position = UDim2.new(0.5, -230, -0.5, -235)
+    KeyFrame.BackgroundColor3 = Color3.fromRGB(17, 19, 24)
+    KeyFrame.BackgroundTransparency = 0
+    KeyFrame.BorderSizePixel = 0
+    KeyFrame.Active = true
+    KeyFrame.Draggable = true
+    KeyFrame.ZIndex = 1
+    Instance.new("UICorner", KeyFrame).CornerRadius = UDim.new(0, 12)
+
+    -- Внешняя рамка с градиентом (обводка) — дочерний элемент KeyFrame
+    local BorderFrame = Instance.new("Frame", KeyFrame)
+    BorderFrame.Size = UDim2.new(1, 12, 1, 12)
+    BorderFrame.Position = UDim2.new(0, -6, 0, -6)
     BorderFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     BorderFrame.BorderSizePixel = 0
     BorderFrame.BackgroundTransparency = 0
@@ -169,16 +182,6 @@ if not isActivated then
         BorderGradient.Rotation = (t * 80) % 360
         BorderGradient.Offset = Vector2.new(math.sin(t * 1.2) * 0.5, math.cos(t * 0.9) * 0.3)
     end)
-
-    local KeyFrame = Instance.new("Frame", KeyScreenGui)
-    KeyFrame.Size = UDim2.new(0, 480, 0, 420)
-    KeyFrame.Position = UDim2.new(0.5, -240, -0.5, -210)
-    KeyFrame.BackgroundColor3 = Color3.fromRGB(17, 19, 24)
-    KeyFrame.BackgroundTransparency = 0
-    KeyFrame.BorderSizePixel = 0
-    KeyFrame.Active = true
-    KeyFrame.ZIndex = 2
-    Instance.new("UICorner", KeyFrame).CornerRadius = UDim.new(0, 12)
 
     local StatusDot = Instance.new("Frame", KeyFrame)
     StatusDot.Size = UDim2.new(0, 14, 0, 14)
@@ -335,33 +338,50 @@ if not isActivated then
         PlaceholderGradient.Rotation = math.sin(t * 0.6) * 10
     end)
 
-    local BottomLine = Instance.new("Frame", KeyFrame)
-    BottomLine.Size = UDim2.new(1, -50, 0, 1)
-    BottomLine.Position = UDim2.new(0, 25, 0, 360)
-    BottomLine.BackgroundColor3 = Color3.fromRGB(60, 65, 75)
-    BottomLine.BorderSizePixel = 0
-    BottomLine.ZIndex = 5
+    -- Кнопка ENTER
+    local EnterButton = Instance.new("Frame", KeyFrame)
+    EnterButton.Size = UDim2.new(1, -80, 0, 45)
+    EnterButton.Position = UDim2.new(0, 40, 0, 280)
+    EnterButton.BackgroundColor3 = Color3.fromRGB(40, 200, 90)
+    EnterButton.BorderSizePixel = 0
+    EnterButton.ZIndex = 5
+    Instance.new("UICorner", EnterButton).CornerRadius = UDim.new(0, 10)
 
-    local TiktokLink = Instance.new("TextButton", KeyFrame)
-    TiktokLink.Size = UDim2.new(1, -60, 0, 30)
-    TiktokLink.Position = UDim2.new(0, 30, 0, 370)
-    TiktokLink.BackgroundTransparency = 1
-    TiktokLink.Text = "Tiktok: tiktok.com/@qwertyx015"
-    TiktokLink.TextColor3 = Color3.fromRGB(120, 180, 255)
-    TiktokLink.TextSize = 12
-    TiktokLink.Font = Enum.Font.Gotham
-    TiktokLink.TextXAlignment = Enum.TextXAlignment.Center
-    TiktokLink.ZIndex = 10
+    local EnterGradient = Instance.new("UIGradient", EnterButton)
+    EnterGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 160, 70)),
+        ColorSequenceKeypoint.new(0.25, Color3.fromRGB(50, 210, 100)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(80, 240, 130)),
+        ColorSequenceKeypoint.new(0.75, Color3.fromRGB(50, 210, 100)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 160, 70))
+    })
+    EnterGradient.Rotation = 0
 
-    TiktokLink.MouseButton1Click:Connect(function()
-        setclipboard("https://tiktok.com/@qwertyx015")
-        TiktokLink.Text = "Copied!"
-        task.wait(1)
-        TiktokLink.Text = "Tiktok: tiktok.com/@qwertyx015"
+    local enterGradientConnection
+    enterGradientConnection = RunService.Heartbeat:Connect(function()
+        local t = tick()
+        EnterGradient.Offset = Vector2.new(math.sin(t * 1.5) * 0.8, 0)
+        EnterGradient.Rotation = math.sin(t * 0.6) * 10
     end)
 
-    TextBox.FocusLost:Connect(function(enterPressed)
-        if not enterPressed then return end
+    local EnterText = Instance.new("TextLabel", EnterButton)
+    EnterText.Size = UDim2.new(1, 0, 1, 0)
+    EnterText.BackgroundTransparency = 1
+    EnterText.Text = "ENTER"
+    EnterText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    EnterText.TextSize = 18
+    EnterText.Font = Enum.Font.GothamBlack
+    EnterText.TextXAlignment = Enum.TextXAlignment.Center
+    EnterText.TextYAlignment = Enum.TextYAlignment.Center
+    EnterText.ZIndex = 6
+
+    local EnterClick = Instance.new("TextButton", EnterButton)
+    EnterClick.Size = UDim2.new(1, 0, 1, 0)
+    EnterClick.BackgroundTransparency = 1
+    EnterClick.Text = ""
+    EnterClick.ZIndex = 10
+
+    local function TryActivateKey()
         local text = TextBox.Text
         if text == "" then TextBox.PlaceholderText = "Field is empty!" return end
         TextBox.Text = ""
@@ -462,9 +482,9 @@ if not isActivated then
             SetDotGreen()
             if borderAnimConnection then borderAnimConnection:Disconnect() end
             if placeholderConnection then placeholderConnection:Disconnect() end
+            if enterGradientConnection then enterGradientConnection:Disconnect() end
             PlaySuccessSound()
-            TweenService:Create(BorderFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Position = UDim2.new(0.5, -246, 0.5, -460), BackgroundTransparency = 1}):Play()
-            TweenService:Create(KeyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Position = UDim2.new(0.5, -240, 0.5, -450)}):Play()
+            TweenService:Create(KeyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Position = UDim2.new(0.5, -230, 0.5, -500)}):Play()
             TweenService:Create(KeyFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
             for _, child in pairs(KeyFrame:GetDescendants()) do
                 if child:IsA("TextLabel") or child:IsA("TextBox") or child:IsA("Frame") or child:IsA("TextButton") then
@@ -474,10 +494,45 @@ if not isActivated then
             task.wait(0.5)
             KeyScreenGui:Destroy()
         end
+    end
+
+    EnterClick.MouseButton1Click:Connect(function()
+        PlayClickSound()
+        TryActivateKey()
     end)
 
-    TweenService:Create(BorderFrame, TweenInfo.new(0.7, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -246, 0.5, -216)}):Play()
-    TweenService:Create(KeyFrame, TweenInfo.new(0.7, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -240, 0.5, -210)}):Play()
+    TextBox.FocusLost:Connect(function(enterPressed)
+        if enterPressed then
+            TryActivateKey()
+        end
+    end)
+
+    local BottomLine = Instance.new("Frame", KeyFrame)
+    BottomLine.Size = UDim2.new(1, -50, 0, 1)
+    BottomLine.Position = UDim2.new(0, 25, 0, 400)
+    BottomLine.BackgroundColor3 = Color3.fromRGB(60, 65, 75)
+    BottomLine.BorderSizePixel = 0
+    BottomLine.ZIndex = 5
+
+    local TiktokLink = Instance.new("TextButton", KeyFrame)
+    TiktokLink.Size = UDim2.new(1, -60, 0, 30)
+    TiktokLink.Position = UDim2.new(0, 30, 0, 410)
+    TiktokLink.BackgroundTransparency = 1
+    TiktokLink.Text = "Tiktok: tiktok.com/@qwertyx015"
+    TiktokLink.TextColor3 = Color3.fromRGB(120, 180, 255)
+    TiktokLink.TextSize = 12
+    TiktokLink.Font = Enum.Font.Gotham
+    TiktokLink.TextXAlignment = Enum.TextXAlignment.Center
+    TiktokLink.ZIndex = 10
+
+    TiktokLink.MouseButton1Click:Connect(function()
+        setclipboard("https://tiktok.com/@qwertyx015")
+        TiktokLink.Text = "Copied!"
+        task.wait(1)
+        TiktokLink.Text = "Tiktok: tiktok.com/@qwertyx015"
+    end)
+
+    TweenService:Create(KeyFrame, TweenInfo.new(0.7, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -230, 0.5, -235)}):Play()
 
     while not isActivated do task.wait(0.5) end
     KeyScreenGui:Destroy()
