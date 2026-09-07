@@ -491,19 +491,13 @@ if not isActivated then
             if placeholderConnection then placeholderConnection:Disconnect() end
             if enterGradientConnection then enterGradientConnection:Disconnect() end
             PlaySuccessSound()
-            
-            local fadeTween = TweenService:Create(KeyFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1})
-            local moveTween = TweenService:Create(KeyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Position = UDim2.new(0.5, -230, 0.5, -500)})
-            
+            TweenService:Create(KeyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Position = UDim2.new(0.5, -230, 0.5, -500)}):Play()
+            TweenService:Create(KeyFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
             for _, child in pairs(KeyFrame:GetDescendants()) do
                 if child:IsA("TextLabel") or child:IsA("TextBox") or child:IsA("Frame") or child:IsA("TextButton") then
                     TweenService:Create(child, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {TextTransparency = 1, BackgroundTransparency = 1}):Play()
                 end
             end
-            
-            fadeTween:Play()
-            moveTween:Play()
-            
             task.wait(0.5)
             KeyScreenGui:Destroy()
         end
@@ -2150,8 +2144,7 @@ if skyPage then
         end
         clickBtn.MouseButton1Click:Connect(function()
             PlayClickSound()
-            for _, otherBtn in pairs(modeButtons) do
-                if otherBtn ~= btnFrame then
+            for _, otherBtn in pairs(modeButtons) do                if otherBtn ~= btnFrame then
                     otherBtn:SetAttribute("Active", false)
                     TweenService:Create(otherBtn.UIScale, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Scale = 1}):Play()
                     TweenService:Create(otherBtn, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(26, 30, 38), BackgroundTransparency = 0.4}):Play()
