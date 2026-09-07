@@ -20,10 +20,6 @@ local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
-local http = http_request or request or syn.request or http.request
-if not http then
-    return print("HTTP не поддерживается")
-end
 local function getGistData()
     local res = http({Url = "https://api.github.com/gists/" .. GIST_ID, Method = "GET"})
     if res.StatusCode == 200 then
