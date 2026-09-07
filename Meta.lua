@@ -3278,6 +3278,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if input.KeyCode == Enum.KeyCode.Insert then
         MainFrame.Visible = not MainFrame.Visible
     end
-end)
+end
 print("[META] META v7.1.20 FIXED")
 print("[META] Press Insert or click icon")
