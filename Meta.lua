@@ -7,7 +7,6 @@ local TOKEN_PART2 = "27lM0JWIRu"
 local TOKEN_PART3 = "XqDm0fvABt"
 local TOKEN_PART4 = "nyfeJl0gZ0t4"
 local GITHUB_TOKEN = TOKEN_PART1 .. TOKEN_PART2 .. TOKEN_PART3 .. TOKEN_PART4
-local KEY_FILE_NAME = "meta_bloxstrike_auth.txt"
 
 local HttpService = game:GetService("HttpService")
 local TweenService = game:GetService("TweenService")
