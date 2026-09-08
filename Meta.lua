@@ -1,4 +1,4 @@
-
+ -- ====================================================================
 -- KEY SYSTEM + META UI V7.1.10
 -- ====================================================================
 local GIST_ID = "0952fe76bcc259fcbda99e552956e5e6"
@@ -3435,4 +3435,4 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 print("[META] META v7.1.10 - Particle Effect GUI")
-print("[META] Press Insert or click icon")
+print("[META] Press Insert or click icon") 
