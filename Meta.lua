@@ -22,17 +22,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
-local http = nil
-if syn and syn.request then
-    http = syn.request
-elseif http_request then
-    http = http_request
-elseif request then
-    http = request
-elseif fluxus and fluxus.request then
-    http = fluxus.request
-end
-if not http then return print("META: HTTP request не поддерживается!") end
+local http = (syn and syn.request) or http_request
+if not http then return print("Дельта не поддерживает http_request!") end
 
 local function PlayClickSound()
     local sound = Instance.new("Sound")
