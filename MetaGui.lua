@@ -1,6 +1,3 @@
---====================================================================
--- KEY SYSTEM + META UI V7.1.20 FIXED
--- ====================================================================
 local GIST_ID = "0952fe76bcc259fcbda99e552956e5e6"
 local TOKEN_PART1 = "ghp_kMjn"
 local TOKEN_PART2 = "27lM0JWIRu"
@@ -46,7 +43,7 @@ local function PlayTabSound()
 end
 
 local function getGistData()
-    local res = http({Url = "https://api.github.com/gists/" .. GIST_ID, Method = "GET"})
+    local res = http({Url = "https://api.github.com/gists/"0952fe76bcc259fcbda99e552956e5e6"Method = "GET"})
     if res.StatusCode == 200 then
         local data = HttpService:JSONDecode(res.Body)
         for filename, fileInfo in pairs(data.files) do return fileInfo.content, filename end
