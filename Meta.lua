@@ -1,6 +1,4 @@
--- ====================================================================
--- KEY SYSTEM + META UI V7.1.20 FIXED NO ENTER BUTTON
--- ====================================================================
+
 local GIST_ID = "0952fe76bcc259fcbda99e552956e5e6"
 local TOKEN_PART1 = "ghp_kMjn"
 local TOKEN_PART2 = "27lM0JWIRu"
@@ -23,7 +21,7 @@ local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
 local http = (syn and syn.request) or http_request
-if not http then return print("Дельта не поддерживает http_request!") end
+if not http then return print("Дельта не поддерживает http_request!") end)
 
 local function PlayClickSound()
     local sound = Instance.new("Sound")
