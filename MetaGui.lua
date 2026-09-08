@@ -20,7 +20,8 @@ local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
-local http = (syn and syn.request) or (http and http.request) or http_request
+local http = (syn and syn.request) or http_request
+if not http then return print("Дельта не поддерживает http_request!") end
 local function getGistData()
     local res = http({Url = "https://api.github.com/gists/" .. GIST_ID, Method = "GET"})
     if res.StatusCode == 200 then
@@ -318,12 +319,9 @@ if not isActivated then
     EnterText.TextXAlignment = Enum.TextXAlignment.Center
     EnterText.TextYAlignment = Enum.TextYAlignment.Center
     EnterText.ZIndex = 6
-    local EnterClick = Instance.new("TextButton", EnterButton)
-    EnterClick.Size = UDim2.new(1, 0, 1, 0)
-    EnterClick.BackgroundTransparency = 1
-    EnterClick.Text = ""
-    EnterClick.ZIndex = 10
-    local function TryActivateKey()
+    EnterClick.MouseButton1Click:Connect(function()
+    TryActivateKey()
+end)
         local text = TextBox.Text
         if text == "" then TextBox.PlaceholderText = "Field is empty!" return end
         TextBox.Text = ""
