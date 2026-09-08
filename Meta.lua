@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.1.20 FIXED
+-- KEY SYSTEM + META UI V7.1.20 FIXED NO ENTER BUTTON
 -- ====================================================================
 local GIST_ID = "0952fe76bcc259fcbda99e552956e5e6"
 local TOKEN_PART1 = "ghp_kMjn"
@@ -22,8 +22,17 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
-local http = (syn and syn.request) or (http and http.request) or http_request
-if not http then return print("Дельта не поддерживает http_request!") end
+local http = nil
+if syn and syn.request then
+    http = syn.request
+elseif http_request then
+    http = http_request
+elseif request then
+    http = request
+elseif fluxus and fluxus.request then
+    http = fluxus.request
+end
+if not http then return print("META: HTTP request не поддерживается!") end
 
 local function PlayClickSound()
     local sound = Instance.new("Sound")
@@ -355,48 +364,6 @@ if not isActivated then
         PlaceholderGradient.Rotation = math.sin(t * 0.6) * 10
     end)
 
-    local EnterButton = Instance.new("Frame", KeyFrame)
-    EnterButton.Size = UDim2.new(1, -80, 0, 45)
-    EnterButton.Position = UDim2.new(0, 40, 0, 280)
-    EnterButton.BackgroundColor3 = Color3.fromRGB(40, 200, 90)
-    EnterButton.BorderSizePixel = 0
-    EnterButton.ZIndex = 5
-    Instance.new("UICorner", EnterButton).CornerRadius = UDim.new(0, 10)
-
-    local EnterGradient = Instance.new("UIGradient", EnterButton)
-    EnterGradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 160, 70)),
-        ColorSequenceKeypoint.new(0.25, Color3.fromRGB(50, 210, 100)),
-        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(80, 240, 130)),
-        ColorSequenceKeypoint.new(0.75, Color3.fromRGB(50, 210, 100)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 160, 70))
-    })
-    EnterGradient.Rotation = 0
-
-    local enterGradientConnection
-    enterGradientConnection = RunService.Heartbeat:Connect(function()
-        local t = tick()
-        EnterGradient.Offset = Vector2.new(math.sin(t * 1.5) * 0.8, 0)
-        EnterGradient.Rotation = math.sin(t * 0.6) * 10
-    end)
-
-    local EnterText = Instance.new("TextLabel", EnterButton)
-    EnterText.Size = UDim2.new(1, 0, 1, 0)
-    EnterText.BackgroundTransparency = 1
-    EnterText.Text = "ENTER"
-    EnterText.TextColor3 = Color3.fromRGB(255, 255, 255)
-    EnterText.TextSize = 18
-    EnterText.Font = Enum.Font.GothamBlack
-    EnterText.TextXAlignment = Enum.TextXAlignment.Center
-    EnterText.TextYAlignment = Enum.TextYAlignment.Center
-    EnterText.ZIndex = 6
-
-    local EnterClick = Instance.new("TextButton", EnterButton)
-    EnterClick.Size = UDim2.new(1, 0, 1, 0)
-    EnterClick.BackgroundTransparency = 1
-    EnterClick.Text = ""
-    EnterClick.ZIndex = 10
-
     local function TryActivateKey()
         local text = TextBox.Text
         if text == "" then TextBox.PlaceholderText = "Field is empty!" return end
@@ -498,7 +465,6 @@ if not isActivated then
             SetDotGreen()
             if borderAnimConnection then borderAnimConnection:Disconnect() end
             if placeholderConnection then placeholderConnection:Disconnect() end
-            if enterGradientConnection then enterGradientConnection:Disconnect() end
             PlaySuccessSound()
             TweenService:Create(KeyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Position = UDim2.new(0.5, -230, 0.5, -500)}):Play()
             TweenService:Create(KeyFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
@@ -511,11 +477,6 @@ if not isActivated then
             KeyScreenGui:Destroy()
         end
     end
-
-    EnterClick.MouseButton1Click:Connect(function()
-        PlayClickSound()
-        TryActivateKey()
-    end)
 
     TextBox.FocusLost:Connect(function(enterPressed)
         if enterPressed then
@@ -3496,5 +3457,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         MainFrame.Visible = not MainFrame.Visible
     end
 end)
-print("[META] META v7.1.20 FIXED")
+
+
+print("[META] META v7.1.20 FIXED NO ENTER BUTTON")
 print("[META] Press Insert or click icon")
