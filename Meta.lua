@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.1.10
+-- KEY SYSTEM + META UI V7.1.20 FIXED
 -- ====================================================================
 local GIST_ID = "0952fe76bcc259fcbda99e552956e5e6"
 local TOKEN_PART1 = "ghp_kMjn"
@@ -24,6 +24,26 @@ local LocalPlayer = Players.LocalPlayer
 
 local http = (syn and syn.request) or (http and http.request) or http_request
 if not http then return print("Дельта не поддерживает http_request!") end
+
+local function PlayClickSound()
+    local sound = Instance.new("Sound")
+    sound.Name = "UISound"
+    sound.SoundId = "rbxassetid://88442833509532"
+    sound.Volume = 0.3
+    sound.Parent = SoundService
+    sound:Play()
+    task.delay(sound.TimeLength + 0.1, function() sound:Destroy() end)
+end
+
+local function PlayTabSound()
+    local sound = Instance.new("Sound")
+    sound.Name = "UISound"
+    sound.SoundId = "rbxassetid://88442833509532"
+    sound.Volume = 0.5
+    sound.Parent = SoundService
+    sound:Play()
+    task.delay(sound.TimeLength + 0.1, function() sound:Destroy() end)
+end
 
 local function getGistData()
     local res = http({Url = "https://api.github.com/gists/" .. GIST_ID, Method = "GET"})
@@ -174,8 +194,7 @@ if not isActivated then
     })
     BorderGradient.Rotation = 0
 
-    local borderAnimConnection
-    borderAnimConnection = RunService.Heartbeat:Connect(function()
+    local borderAnimConnection = RunService.Heartbeat:Connect(function()
         local t = tick()
         BorderGradient.Rotation = (t * 80) % 360
         BorderGradient.Offset = Vector2.new(math.sin(t * 1.2) * 0.5, math.cos(t * 0.9) * 0.3)
@@ -584,6 +603,7 @@ _G.ESPEnabled = false
 _G.HealthBarEnabled = false
 _G.SkeletonEnabled = false
 _G.ParticleEffectGuiEnabled = false
+_G.NightThemeEnabled = false
 _G.ChamsColor = Color3.fromRGB(110, 60, 170)
 _G.SkeletonColor = Color3.fromRGB(255, 255, 255)
 
@@ -597,6 +617,7 @@ local SetChamsToggleState, SetRainbowToggleState = nil, nil
 local SetFlyingToggleState, SetESPToggleState = nil, nil
 local SetHealthBarToggleState, SetSkeletonToggleState = nil, nil
 local SetParticleGuiToggleState = nil
+local SetNightThemeToggleState = nil
 local skyStroke = nil
 local soundStroke = nil
 local skyConnection = nil
@@ -622,6 +643,7 @@ local LANG = {
             Skeleton = {"Скелетон", "Скелетон для противников"},
             HealthBar = {"Здоровье противников", "Полоска здоровья над головой"},
             ParticleEffectGui = {"Эффект частиц GUI", "Добавляет эффект точек на GUI интерфейса"},
+            NightTheme = {"Тёмная тема", "Делает обводку меню тёмной как у кей-панели"},
             Reset = {"Сброс настроек", "Вернуть все настройки к стандартным"}
         }
     },
@@ -638,32 +660,13 @@ local LANG = {
             Skeleton = {"Skeleton", "Skeleton for enemies"},
             HealthBar = {"Health Bar", "Health bar above enemies"},
             ParticleEffectGui = {"Particle Effect GUI", "Adds particle effect to GUI interface"},
+            NightTheme = {"Night Theme", "Makes menu outline dark like key panel"},
             Reset = {"Reset Settings", "Return all settings to default"}
         }
     }
 }
 
 local function GetLang() return _G.CurrentLang == "RU" and LANG.RU or LANG.EN end
-
-local function PlayTabSound()
-    local sound = Instance.new("Sound")
-    sound.Name = "UISound"
-    sound.SoundId = "rbxassetid://88442833509532"
-    sound.Volume = 0.5
-    sound.Parent = SoundService
-    sound:Play()
-    task.delay(sound.TimeLength + 0.1, function() sound:Destroy() end)
-end
-
-local function PlayClickSound()
-    local sound = Instance.new("Sound")
-    sound.Name = "UISound"
-    sound.SoundId = "rbxassetid://88442833509532"
-    sound.Volume = 0.3
-    sound.Parent = SoundService
-    sound:Play()
-    task.delay(sound.TimeLength + 0.1, function() sound:Destroy() end)
-end
 
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "RobloxGui"
@@ -861,7 +864,6 @@ local function IsEnemy(p)
     return false
 end
 
--- CHAMS
 local ChamsConnections = {}
 local function PaintCharacter(character, p)
     if not character or not p then return end
@@ -916,7 +918,6 @@ local function RemoveChams()
     if _G.UnloadChams then _G.UnloadChams() end
 end
 
--- ESP
 local ESPConnections = {}
 local function SetupESP()
     local function NewLine()
@@ -1002,7 +1003,6 @@ task.spawn(function()
     end
 end)
 
--- SKELETON ESP
 local SkeletonLines = {}
 local SkeletonEnemiesList = {}
 local SkeletonCacheTime = 0
@@ -1196,7 +1196,6 @@ local function RemoveSkeleton()
     SkeletonEnemiesList = {}
 end
 
--- HEALTH BAR ESP
 local HealthBars = {}
 local HealthEnemiesList = {}
 local HealthCacheTime = 0
@@ -1402,7 +1401,6 @@ local function RemoveHealthBar()
     HealthHistoryData = {}
 end
 
--- PARTICLE EFFECT GUI
 local ParticleGuiContainer = nil
 local ParticleGuiConnection = nil
 
@@ -1506,7 +1504,6 @@ local function RemoveParticleGui()
     end
 end
 
--- UI: INDICATOR, TABS
 local IndicatorLine = nil
 local IndicatorColor = _G.MenuThemeColor
 
@@ -1650,7 +1647,6 @@ SearchInput.FocusLost:Connect(function(enterPressed)
     end
 end)
 
--- VISUALS PAGE WITH CHAMS + SKELETON COLOR PICKERS + PARTICLE GUI
 local visualsPage = ContentPages["Visuals"]
 if visualsPage then
     visualsPage.CanvasSize = UDim2.new(0, 0, 0, 700)
@@ -1723,7 +1719,6 @@ if visualsPage then
         return SetState, label, desc, frame
     end
 
-    -- CHAMS COLOR PICKER
     local chamsColorPicker = Instance.new("Frame")
     chamsColorPicker.Name = "ChamsColorPicker"
     chamsColorPicker.Size = UDim2.new(1, -30, 0, 140)
@@ -1800,11 +1795,10 @@ if visualsPage then
         end
     end)
 
-    -- SKELETON COLOR PICKER
     local skeletonColorPicker = Instance.new("Frame")
     skeletonColorPicker.Name = "SkeletonColorPicker"
     skeletonColorPicker.Size = UDim2.new(1, -30, 0, 140)
-    skeletonColorPicker.Position = UDim2.new(0, 15, 0, 175)
+    skeletonColorPicker.Position = UDim2.new(0, 15, 0, 205)
     skeletonColorPicker.BackgroundTransparency = 1
     skeletonColorPicker.Visible = false
     skeletonColorPicker.ZIndex = 30
@@ -1875,7 +1869,7 @@ if visualsPage then
     end)
 
     local function ShiftChamsElements(shiftDown)
-        local targetY = shiftDown and 150 or 0
+        local targetY = shiftDown and 300 or 0
         local espFrame = visualsPage:FindFirstChild("ESPFrame")
         local skeletonFrame = visualsPage:FindFirstChild("SkeletonFrame")
         local healthFrame = visualsPage:FindFirstChild("HealthFrame")
@@ -1886,22 +1880,16 @@ if visualsPage then
         if particleFrame then TweenService:Create(particleFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 230 + targetY)}):Play() end
     end
 
-    local function ShiftSkeletonElements(shiftDown)
-        local targetY = shiftDown and 150 or 0
-        local healthFrame = visualsPage:FindFirstChild("HealthFrame")
-        local particleFrame = visualsPage:FindFirstChild("ParticleGuiFrame")
-        if healthFrame then TweenService:Create(healthFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 175 + targetY)}):Play() end
-        if particleFrame then TweenService:Create(particleFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 230 + targetY)}):Play() end
-    end
-
     local SetChamsState, chamsLabel, chamsDesc = CreateToggle("Chams", "Makes enemies purple", 10, function(v)
         if v then
             ApplyChams()
             chamsColorPicker.Visible = true
+            skeletonColorPicker.Visible = true
             ShiftChamsElements(true)
         else
             RemoveChams()
             chamsColorPicker.Visible = false
+            skeletonColorPicker.Visible = false
             ShiftChamsElements(false)
         end
         _G.ChamsEnabled = v
@@ -1916,12 +1904,8 @@ if visualsPage then
     local SetSkeletonState, skeletonLabel, skeletonDesc = CreateToggle("Skeleton", "Skeleton for enemies", 120, function(v)
         if v then
             ApplySkeleton()
-            skeletonColorPicker.Visible = true
-            ShiftSkeletonElements(true)
         else
             RemoveSkeleton()
-            skeletonColorPicker.Visible = false
-            ShiftSkeletonElements(false)
         end
         _G.SkeletonEnabled = v
     end, "SkeletonFrame")
@@ -1951,7 +1935,6 @@ if visualsPage then
     end)
 end
 
--- SKY PAGE
 local skyPage = ContentPages["Sky"]
 if skyPage then
     skyPage.CanvasSize = UDim2.new(0, 0, 0, 0)
@@ -2195,7 +2178,6 @@ if skyPage then
     end)
 end
 
--- SOUND PAGE
 local soundPage = ContentPages["Sound"]
 if soundPage then
     soundPage.CanvasSize = UDim2.new(0, 0, 0, 0)
@@ -2409,12 +2391,11 @@ if soundPage then
     end)
 end
 
--- SETTINGS PAGE
 local settingsPage = ContentPages["Settings"]
 if settingsPage then
-    settingsPage.CanvasSize = UDim2.new(0, 0, 0, 600)
+    settingsPage.CanvasSize = UDim2.new(0, 0, 0, 650)
     local settingsContainer = Instance.new("Frame")
-    settingsContainer.Size = UDim2.new(1, 0, 0, 500)
+    settingsContainer.Size = UDim2.new(1, 0, 0, 550)
     settingsContainer.Position = UDim2.new(0, 0, 0, 55)
     settingsContainer.BackgroundTransparency = 1
     settingsContainer.ClipsDescendants = true
@@ -2837,13 +2818,23 @@ if settingsPage then
                 if skyStroke then skyStroke.Color = _G.MenuThemeColor end
                 if soundStroke then soundStroke.Color = _G.MenuThemeColor end
                 if MainBorderGradient then
-                    MainBorderGradient.Color = ColorSequence.new({
-                        ColorSequenceKeypoint.new(0, Color3.fromRGB(160, 160, 160)),
-                        ColorSequenceKeypoint.new(0.25, Color3.fromRGB(200, 200, 200)),
-                        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
-                        ColorSequenceKeypoint.new(0.75, Color3.fromRGB(200, 200, 200)),
-                        ColorSequenceKeypoint.new(1, Color3.fromRGB(160, 160, 160))
-                    })
+                    if _G.NightThemeEnabled then
+                        MainBorderGradient.Color = ColorSequence.new({
+                            ColorSequenceKeypoint.new(0, Color3.fromRGB(20, 22, 28)),
+                            ColorSequenceKeypoint.new(0.25, Color3.fromRGB(45, 50, 65)),
+                            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(90, 100, 125)),
+                            ColorSequenceKeypoint.new(0.75, Color3.fromRGB(45, 50, 65)),
+                            ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 22, 28))
+                        })
+                    else
+                        MainBorderGradient.Color = ColorSequence.new({
+                            ColorSequenceKeypoint.new(0, Color3.fromRGB(160, 160, 160)),
+                            ColorSequenceKeypoint.new(0.25, Color3.fromRGB(200, 200, 200)),
+                            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
+                            ColorSequenceKeypoint.new(0.75, Color3.fromRGB(200, 200, 200)),
+                            ColorSequenceKeypoint.new(1, Color3.fromRGB(160, 160, 160))
+                        })
+                    end
                 end
             end
         end
@@ -3113,9 +3104,96 @@ if settingsPage then
     end
     table.insert(langUpdateCallbacks, UpdateFlyingText)
 
+    local nightThemeFrame = Instance.new("Frame")
+    nightThemeFrame.Size = UDim2.new(1, 0, 0, 45)
+    nightThemeFrame.Position = UDim2.new(0, 0, 0, 280)
+    nightThemeFrame.BackgroundTransparency = 1
+    nightThemeFrame.Parent = settingsContainer
+    local nightLabel = Instance.new("TextLabel")
+    nightLabel.Size = UDim2.new(0.6, 0, 0, 20)
+    nightLabel.BackgroundTransparency = 1
+    nightLabel.Text = "Night Theme"
+    nightLabel.TextColor3 = Color3.fromRGB(209, 213, 219)
+    nightLabel.TextSize = 13
+    nightLabel.Font = Enum.Font.GothamBold
+    nightLabel.TextXAlignment = Enum.TextXAlignment.Left
+    nightLabel.Parent = nightThemeFrame
+    local nightDesc = Instance.new("TextLabel")
+    nightDesc.Size = UDim2.new(0.7, 0, 0, 16)
+    nightDesc.Position = UDim2.new(0, 0, 0, 22)
+    nightDesc.BackgroundTransparency = 1
+    nightDesc.Text = "Makes menu outline dark like key panel"
+    nightDesc.TextColor3 = Color3.fromRGB(113, 113, 122)
+    nightDesc.TextSize = 11
+    nightDesc.Font = Enum.Font.Gotham
+    nightDesc.TextXAlignment = Enum.TextXAlignment.Left
+    nightDesc.Parent = nightThemeFrame
+    local nightToggleBg = Instance.new("Frame")
+    nightToggleBg.Size = UDim2.new(0, 44, 0, 24)
+    nightToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
+    nightToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
+    nightToggleBg.BorderSizePixel = 0
+    nightToggleBg.Parent = nightThemeFrame
+    local nightToggleCorner = Instance.new("UICorner")
+    nightToggleCorner.CornerRadius = UDim.new(1, 0)
+    nightToggleCorner.Parent = nightToggleBg
+    local nightHandle = Instance.new("Frame")
+    nightHandle.Size = UDim2.new(0, 18, 0, 18)
+    nightHandle.Position = UDim2.new(0, 3, 0.5, -9)
+    nightHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    nightHandle.BorderSizePixel = 0
+    nightHandle.Parent = nightToggleBg
+    local nightHandleCorner = Instance.new("UICorner")
+    nightHandleCorner.CornerRadius = UDim.new(1, 0)
+    nightHandleCorner.Parent = nightHandle
+    local nightClickArea = Instance.new("TextButton")
+    nightClickArea.Size = UDim2.new(0, 44, 0, 24)
+    nightClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
+    nightClickArea.BackgroundTransparency = 1
+    nightClickArea.Text = ""
+    nightClickArea.ZIndex = 10
+    nightClickArea.Parent = nightThemeFrame
+    SetNightThemeToggleState = function(value)
+        if value then
+            TweenService:Create(nightToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
+            TweenService:Create(nightHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 23, 0.5, -9)}):Play()
+        else
+            TweenService:Create(nightToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(42, 47, 58)}):Play()
+            TweenService:Create(nightHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 3, 0.5, -9)}):Play()
+        end
+        _G.NightThemeEnabled = value
+        if not _G.RainbowEnabled and MainBorderGradient then
+            if value then
+                MainBorderGradient.Color = ColorSequence.new({
+                    ColorSequenceKeypoint.new(0, Color3.fromRGB(20, 22, 28)),
+                    ColorSequenceKeypoint.new(0.25, Color3.fromRGB(45, 50, 65)),
+                    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(90, 100, 125)),
+                    ColorSequenceKeypoint.new(0.75, Color3.fromRGB(45, 50, 65)),
+                    ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 22, 28))
+                })
+            else
+                MainBorderGradient.Color = ColorSequence.new({
+                    ColorSequenceKeypoint.new(0, Color3.fromRGB(160, 160, 160)),
+                    ColorSequenceKeypoint.new(0.25, Color3.fromRGB(200, 200, 200)),
+                    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
+                    ColorSequenceKeypoint.new(0.75, Color3.fromRGB(200, 200, 200)),
+                    ColorSequenceKeypoint.new(1, Color3.fromRGB(160, 160, 160))
+                })
+            end
+        end
+    end
+    SetNightThemeToggleState(_G.NightThemeEnabled)
+    nightClickArea.MouseButton1Click:Connect(function() PlayClickSound() SetNightThemeToggleState(not _G.NightThemeEnabled) end)
+    local function UpdateNightThemeText()
+        local lang = GetLang()
+        nightLabel.Text = lang.Toggles.NightTheme[1]
+        nightDesc.Text = lang.Toggles.NightTheme[2]
+    end
+    table.insert(langUpdateCallbacks, UpdateNightThemeText)
+
     local resetFrame = Instance.new("Frame")
     resetFrame.Size = UDim2.new(1, 0, 0, 45)
-    resetFrame.Position = UDim2.new(0, 0, 0, 280)
+    resetFrame.Position = UDim2.new(0, 0, 0, 330)
     resetFrame.BackgroundTransparency = 1
     resetFrame.Parent = settingsContainer
     local resetLabel = Instance.new("TextLabel")
@@ -3165,11 +3243,19 @@ if settingsPage then
         _G.SkeletonEnabled = false
         _G.HealthBarEnabled = false
         _G.ParticleEffectGuiEnabled = false
+        _G.NightThemeEnabled = false
         _G.ChamsColor = Color3.fromRGB(110, 60, 170)
         _G.SkeletonColor = Color3.fromRGB(255, 255, 255)
         MainFrame.BackgroundTransparency = 0.12
-        if MainBorderFrame then
-            MainBorderFrame.BackgroundTransparency = 0.12
+        if MainBorderFrame then MainBorderFrame.BackgroundTransparency = 0.12 end
+        if MainBorderGradient then
+            MainBorderGradient.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(160, 160, 160)),
+                ColorSequenceKeypoint.new(0.25, Color3.fromRGB(200, 200, 200)),
+                ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
+                ColorSequenceKeypoint.new(0.75, Color3.fromRGB(200, 200, 200)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(160, 160, 160))
+            })
         end
         MainFrame.Size = UDim2.new(0, 640, 0, 470)
         MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
@@ -3190,6 +3276,7 @@ if settingsPage then
         if SetHealthBarToggleState then SetHealthBarToggleState(false) end
         RemoveParticleGui()
         if SetParticleGuiToggleState then SetParticleGuiToggleState(false) end
+        if SetNightThemeToggleState then SetNightThemeToggleState(false) end
         for _, btn in ipairs(langButtonData) do pcall(btn.Update, false) end
         UpdateAllTexts()
         if rainbowConnection then rainbowConnection:Disconnect() rainbowConnection = nil end
@@ -3227,7 +3314,6 @@ if settingsPage then
     table.insert(langUpdateCallbacks, UpdateResetText)
 end
 
--- KEY EXPIRE CHECK
 task.spawn(function()
     if keyExpireTime then
         while true do
@@ -3282,16 +3368,6 @@ task.spawn(function()
                 ExpireTitle.Font = Enum.Font.GothamBold
                 ExpireTitle.TextXAlignment = Enum.TextXAlignment.Left
                 ExpireTitle.Parent = ExpireFrame
-                local ExpireBeta = Instance.new("TextLabel")
-                ExpireBeta.Size = UDim2.new(0, 40, 0, 15)
-                ExpireBeta.Position = UDim2.new(0, 50, 0, 11)
-                ExpireBeta.BackgroundTransparency = 1
-                ExpireBeta.Text = "beta"
-                ExpireBeta.TextColor3 = Color3.fromRGB(120, 120, 120)
-                ExpireBeta.TextSize = 10
-                ExpireBeta.Font = Enum.Font.Gotham
-                ExpireBeta.TextXAlignment = Enum.TextXAlignment.Left
-                ExpireBeta.Parent = ExpireFrame
                 local ExpireDesc = Instance.new("TextLabel")
                 ExpireDesc.Size = UDim2.new(1, -25, 0, 35)
                 ExpireDesc.Position = UDim2.new(0, 12, 0, 32)
@@ -3313,7 +3389,6 @@ task.spawn(function()
     end
 end)
 
--- ICON BUTTON
 local IconButton = Instance.new("ImageButton")
 IconButton.Name = "MetaIcon"
 IconButton.Size = UDim2.new(0, 55, 0, 55)
@@ -3344,7 +3419,6 @@ IconLetter.Font = Enum.Font.GothamBold
 IconLetter.TextXAlignment = Enum.TextXAlignment.Center
 IconLetter.TextYAlignment = Enum.TextYAlignment.Center
 IconLetter.ZIndex = 1000
-
 local IconLetterGradient = Instance.new("UIGradient", IconLetter)
 IconLetterGradient.Color = ColorSequence.new({
     ColorSequenceKeypoint.new(0, Color3.fromRGB(180, 180, 180)),
@@ -3354,9 +3428,7 @@ IconLetterGradient.Color = ColorSequence.new({
     ColorSequenceKeypoint.new(1, Color3.fromRGB(180, 180, 180))
 })
 IconLetterGradient.Rotation = 0
-
-local iconLetterConnection
-iconLetterConnection = RunService.Heartbeat:Connect(function()
+local iconLetterConnection = RunService.Heartbeat:Connect(function()
     local t = tick()
     IconLetterGradient.Rotation = (t * 50) % 360
     IconLetterGradient.Offset = Vector2.new(math.sin(t * 1.2) * 0.5, 0)
@@ -3365,7 +3437,6 @@ iconLetterConnection = RunService.Heartbeat:Connect(function()
     local scale = 1 + pulse * 0.05
     IconLetter.TextSize = 32 * scale
 end)
-
 IconButton.MouseButton1Click:Connect(function()
     PlayClickSound()
     if MainFrame.Visible then
@@ -3379,9 +3450,7 @@ IconButton.MouseButton1Click:Connect(function()
         MainScale.Scale = 1
         MainFrame.Rotation = 0
         MainFrame.BackgroundTransparency = _G.MenuOpacity / 100
-        if MainBorderFrame then
-            MainBorderFrame.BackgroundTransparency = _G.MenuOpacity / 100
-        end
+        if MainBorderFrame then MainBorderFrame.BackgroundTransparency = _G.MenuOpacity / 100 end
     else
         MainFrame.Visible = true
         MainScale.Scale = 0.1
@@ -3399,12 +3468,9 @@ IconButton.MouseButton1Click:Connect(function()
         task.wait(0.05)
         TweenService:Create(MainScale, TweenInfo.new(0.1, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
         MainFrame.Rotation = 0
-        if MainBorderFrame then
-            MainBorderFrame.BackgroundTransparency = _G.MenuOpacity / 100
-        end
+        if MainBorderFrame then MainBorderFrame.BackgroundTransparency = _G.MenuOpacity / 100 end
     end
 end)
-
 if isActivated then
     MainFrame.Visible = true
     MainScale.Scale = 0.1
@@ -3416,11 +3482,8 @@ if isActivated then
     task.wait(0.5)
     TweenService:Create(MainScale, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
     TweenService:Create(MainFrame, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Rotation = 0, BackgroundTransparency = _G.MenuOpacity / 100}):Play()
-    if MainBorderFrame then
-        MainBorderFrame.BackgroundTransparency = _G.MenuOpacity / 100
-    end
+    if MainBorderFrame then MainBorderFrame.BackgroundTransparency = _G.MenuOpacity / 100 end
 end
-
 UpdateAllTexts()
 if TabButtons[1] then
     TabButtons[1].BackgroundColor3 = Color3.fromRGB(35, 40, 50)
@@ -3433,6 +3496,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         MainFrame.Visible = not MainFrame.Visible
     end
 end)
-
-print("[META] META v7.1.10 - Particle Effect GUI")
+print("[META] META v7.1.20 FIXED")
 print("[META] Press Insert or click icon")
