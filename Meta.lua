@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.1.10 + NIGHT MODE (FULL)
+-- KEY SYSTEM + META UI V7.1.10 + NIGHT MODE (FULL FIXED)
 -- ====================================================================
 local GIST_ID = "0952fe76bcc259fcbda99e552956e5e6"
 local TOKEN_PART1 = "ghp_kMjn"
@@ -22,16 +22,18 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
--- ТВОЙ РАБОЧИЙ HTTP ЗАПРОС
+-- ====================================================================
+-- УНИВЕРСАЛЬНЫЙ HTTP (РАБОТАЕТ ВЕЗДЕ)
+-- ====================================================================
 local http = (syn and syn.request) or (http and http.request) or http_request
-if not http then return print("Дельта не поддерживает http_request!") end
+if not http then return print("Экзекьютор не поддерживает http_request!") end
 
 -- ====================================================================
--- KEY SYSTEM (ПОЛНОСТЬЮ ТВОЙ РАБОЧИЙ КОД)
+-- KEY SYSTEM
 -- ====================================================================
 local function getGistData()
     local res = http({Url = "https://api.github.com/gists/" .. GIST_ID, Method = "GET"})
-    if res.StatusCode == 200 then
+    if res and res.StatusCode == 200 then
         local data = HttpService:JSONDecode(res.Body)
         for filename, fileInfo in pairs(data.files) do return fileInfo.content, filename end
     end
@@ -68,9 +70,7 @@ local function updateGist(filename, oldContent, enteredKey, expireTimestamp, use
         Headers = {["Authorization"] = "token " .. GITHUB_TOKEN, ["Content-Type"] = "application/json"},
         Body = HttpService:JSONEncode({files = {[filename] = {content = updatedContent}}})
     })
-
-    print("[META UPDATE] Status:", res.StatusCode)
-    print("[META UPDATE] Body:", res.Body)
+    if res then print("[META UPDATE] Status:", res.StatusCode) end
 end
 
 local function CheckExpiredKeys(filename, dbText)
@@ -106,7 +106,6 @@ end
 
 local isActivated = false
 local autoLoginSuccess = false
-local cachedDbText = nil
 local keyExpireTime = nil
 
 if readfile then
@@ -115,10 +114,10 @@ if readfile then
         local success, clientData = pcall(function() return HttpService:JSONDecode(content) end)
         if success and clientData.key and clientData.expires and clientData.userId then
             if clientData.userId == LocalPlayer.UserId then
-                cachedDbText = getGistData()
-                if cachedDbText then
+                local dbText = getGistData()
+                if dbText then
                     local isKeyStillValid = false
-                    for line in string.gmatch(cachedDbText, "[^\r\n]+") do
+                    for line in string.gmatch(dbText, "[^\r\n]+") do
                         local key = string.match(line, "([^:]+):")
                         if key == clientData.key then
                             isKeyStillValid = true
@@ -142,7 +141,6 @@ if not autoLoginSuccess then
     if writefile then writefile(KEY_FILE_NAME, "") end
 end
 
--- KEY PANEL UI
 if not isActivated then
     local KeyScreenGui = Instance.new("ScreenGui", CoreGui)
     KeyScreenGui.Name = "MetaCompactKeySystem"
@@ -179,8 +177,7 @@ if not isActivated then
     })
     BorderGradient.Rotation = 0
 
-    local borderAnimConnection
-    borderAnimConnection = RunService.Heartbeat:Connect(function()
+    local borderAnimConnection = RunService.Heartbeat:Connect(function()
         local t = tick()
         BorderGradient.Rotation = (t * 80) % 360
         BorderGradient.Offset = Vector2.new(math.sin(t * 1.2) * 0.5, math.cos(t * 0.9) * 0.3)
@@ -269,6 +266,17 @@ if not isActivated then
         successSound.Ended:Connect(function() successSound:Destroy() end)
     end
 
+    -- ===== ИСПРАВЛЕНО: ФУНКЦИЯ ДЛЯ КЛИКОВ В КЛЮЧЕВОЙ СИСТЕМЕ =====
+    local function PlayClickSound()
+        local sound = Instance.new("Sound")
+        sound.Name = "UISound"
+        sound.SoundId = "rbxassetid://88442833509532"
+        sound.Volume = 0.3
+        sound.Parent = SoundService
+        sound:Play()
+        task.delay(sound.TimeLength + 0.1, function() sound:Destroy() end)
+    end
+
     SetDotRed()
 
     local KeyTitle = Instance.new("TextLabel", KeyFrame)
@@ -330,8 +338,7 @@ if not isActivated then
     })
     PlaceholderGradient.Rotation = 0
 
-    local placeholderConnection
-    placeholderConnection = RunService.Heartbeat:Connect(function()
+    local placeholderConnection = RunService.Heartbeat:Connect(function()
         local t = tick()
         PlaceholderGradient.Offset = Vector2.new(math.sin(t * 1.5) * 0.8, 0)
         PlaceholderGradient.Rotation = math.sin(t * 0.6) * 10
@@ -355,8 +362,7 @@ if not isActivated then
     })
     EnterGradient.Rotation = 0
 
-    local enterGradientConnection
-    enterGradientConnection = RunService.Heartbeat:Connect(function()
+    local enterGradientConnection = RunService.Heartbeat:Connect(function()
         local t = tick()
         EnterGradient.Offset = Vector2.new(math.sin(t * 1.5) * 0.8, 0)
         EnterGradient.Rotation = math.sin(t * 0.6) * 10
@@ -535,7 +541,7 @@ if not isActivated then
 end
 
 -- ====================================================================
--- META UI (ТВОЙ ПОЛНЫЙ РАБОЧИЙ КОД)
+-- META UI
 -- ====================================================================
 local function SetupAntiCheatBypass()
     pcall(function()
@@ -867,7 +873,7 @@ local function IsEnemy(p)
 end
 
 -- ====================================================================
--- CHAMS (ТВОЙ РАБОЧИЙ КОД)
+-- CHAMS
 -- ====================================================================
 local ChamsConnections = {}
 local function PaintCharacter(character, p)
@@ -924,7 +930,7 @@ local function RemoveChams()
 end
 
 -- ====================================================================
--- ESP (ТВОЙ РАБОЧИЙ КОД)
+-- ESP
 -- ====================================================================
 local ESPConnections = {}
 local function SetupESP()
@@ -1012,7 +1018,7 @@ task.spawn(function()
 end)
 
 -- ====================================================================
--- SKELETON (ТВОЙ РАБОЧИЙ КОД)
+-- SKELETON
 -- ====================================================================
 local SkeletonLines = {}
 local SkeletonEnemiesList = {}
@@ -1208,7 +1214,7 @@ local function RemoveSkeleton()
 end
 
 -- ====================================================================
--- HEALTH BAR (ТВОЙ РАБОЧИЙ КОД)
+-- HEALTH BAR
 -- ====================================================================
 local HealthBars = {}
 local HealthEnemiesList = {}
@@ -1416,7 +1422,7 @@ local function RemoveHealthBar()
 end
 
 -- ====================================================================
--- PARTICLE EFFECT GUI (ТВОЙ РАБОЧИЙ КОД)
+-- PARTICLE EFFECT GUI
 -- ====================================================================
 local ParticleGuiContainer = nil
 local ParticleGuiConnection = nil
@@ -1522,7 +1528,7 @@ local function RemoveParticleGui()
 end
 
 -- ====================================================================
--- UI: INDICATOR, TABS (ТВОЙ РАБОЧИЙ КОД)
+-- UI: INDICATOR, TABS
 -- ====================================================================
 local IndicatorLine = nil
 local IndicatorColor = _G.MenuThemeColor
@@ -1613,9 +1619,6 @@ local function UpdateAllTexts()
     for _, cb in ipairs(langUpdateCallbacks) do pcall(cb) end
 end
 
--- ====================================================================
--- СОЗДАНИЕ ВКЛАДОК (ТВОЙ РАБОЧИЙ КОД)
--- ====================================================================
 for i, name in ipairs(TabNames) do
     local btn = Instance.new("TextButton")
     btn.Name = "Tab" .. i
@@ -1671,7 +1674,7 @@ SearchInput.FocusLost:Connect(function(enterPressed)
 end)
 
 -- ====================================================================
--- VISUALS PAGE (ТВОЙ РАБОЧИЙ КОД)
+-- VISUALS PAGE
 -- ====================================================================
 local visualsPage = ContentPages["Visuals"]
 if visualsPage then
@@ -1826,7 +1829,7 @@ if visualsPage then
     local skeletonColorPicker = Instance.new("Frame")
     skeletonColorPicker.Name = "SkeletonColorPicker"
     skeletonColorPicker.Size = UDim2.new(1, -30, 0, 140)
-    skeletonColorPicker.Position = UDim2.new(0, 15, 0, 175)
+    skeletonColorPicker.Position = UDim2.new(0, 15, 0, 205)
     skeletonColorPicker.BackgroundTransparency = 1
     skeletonColorPicker.Visible = false
     skeletonColorPicker.ZIndex = 30
@@ -1897,21 +1900,13 @@ if visualsPage then
     end)
 
     local function ShiftChamsElements(shiftDown)
-        local targetY = shiftDown and 150 or 0
+        local targetY = shiftDown and 300 or 0
         local espFrame = visualsPage:FindFirstChild("ESPFrame")
         local skeletonFrame = visualsPage:FindFirstChild("SkeletonFrame")
         local healthFrame = visualsPage:FindFirstChild("HealthFrame")
         local particleFrame = visualsPage:FindFirstChild("ParticleGuiFrame")
         if espFrame then TweenService:Create(espFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 65 + targetY)}):Play() end
         if skeletonFrame then TweenService:Create(skeletonFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 120 + targetY)}):Play() end
-        if healthFrame then TweenService:Create(healthFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 175 + targetY)}):Play() end
-        if particleFrame then TweenService:Create(particleFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 230 + targetY)}):Play() end
-    end
-
-    local function ShiftSkeletonElements(shiftDown)
-        local targetY = shiftDown and 150 or 0
-        local healthFrame = visualsPage:FindFirstChild("HealthFrame")
-        local particleFrame = visualsPage:FindFirstChild("ParticleGuiFrame")
         if healthFrame then TweenService:Create(healthFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 175 + targetY)}):Play() end
         if particleFrame then TweenService:Create(particleFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 230 + targetY)}):Play() end
     end
@@ -1938,12 +1933,8 @@ if visualsPage then
     local SetSkeletonState, skeletonLabel, skeletonDesc = CreateToggle("Skeleton", "Skeleton for enemies", 120, function(v)
         if v then
             ApplySkeleton()
-            skeletonColorPicker.Visible = true
-            ShiftSkeletonElements(true)
         else
             RemoveSkeleton()
-            skeletonColorPicker.Visible = false
-            ShiftSkeletonElements(false)
         end
         _G.SkeletonEnabled = v
     end, "SkeletonFrame")
@@ -1974,7 +1965,7 @@ if visualsPage then
 end
 
 -- ====================================================================
--- SKY PAGE (ТВОЙ РАБОЧИЙ КОД)
+-- SKY PAGE
 -- ====================================================================
 local skyPage = ContentPages["Sky"]
 if skyPage then
@@ -2220,7 +2211,7 @@ if skyPage then
 end
 
 -- ====================================================================
--- SOUND PAGE (ТВОЙ РАБОЧИЙ КОД)
+-- SOUND PAGE
 -- ====================================================================
 local soundPage = ContentPages["Sound"]
 if soundPage then
@@ -2436,7 +2427,7 @@ if soundPage then
 end
 
 -- ====================================================================
--- SETTINGS PAGE (ТВОЙ РАБОЧИЙ КОД + NIGHT MODE)
+-- SETTINGS PAGE + NIGHT MODE
 -- ====================================================================
 local settingsPage = ContentPages["Settings"]
 if settingsPage then
@@ -3153,7 +3144,7 @@ if settingsPage then
     table.insert(langUpdateCallbacks, UpdateFlyingText)
 
     -- ====================================================================
-    -- NIGHT MODE (ГЛАВНАЯ ФИЧА)
+    -- NIGHT MODE
     -- ====================================================================
     local nightFrame = Instance.new("Frame")
     nightFrame.Size = UDim2.new(1, 0, 0, 45)
@@ -3436,7 +3427,7 @@ if settingsPage then
 end
 
 -- ====================================================================
--- KEY EXPIRE CHECK (ТВОЙ РАБОЧИЙ КОД)
+-- KEY EXPIRE CHECK
 -- ====================================================================
 task.spawn(function()
     if keyExpireTime then
@@ -3514,7 +3505,7 @@ task.spawn(function()
 end)
 
 -- ====================================================================
--- ICON BUTTON (ТВОЙ РАБОЧИЙ КОД)
+-- ICON BUTTON
 -- ====================================================================
 local IconButton = Instance.new("ImageButton")
 IconButton.Name = "MetaIcon"
@@ -3557,8 +3548,7 @@ IconLetterGradient.Color = ColorSequence.new({
 })
 IconLetterGradient.Rotation = 0
 
-local iconLetterConnection
-iconLetterConnection = RunService.Heartbeat:Connect(function()
+local iconLetterConnection = RunService.Heartbeat:Connect(function()
     local t = tick()
     IconLetterGradient.Rotation = (t * 50) % 360
     IconLetterGradient.Offset = Vector2.new(math.sin(t * 1.2) * 0.5, 0)
@@ -3636,5 +3626,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] META v7.1.10 + Night Mode")
+print("[META] META v7.1.10 + Night Mode (FULL FIXED)")
 print("[META] Press Insert or click icon")
