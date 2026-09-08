@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.1.11
+-- KEY SYSTEM + META UI V7.1.12
 -- ====================================================================
 local GIST_ID = "0952fe76bcc259fcbda99e552956e5e6"
 local TOKEN_PART1 = "ghp_kMjn"
@@ -268,6 +268,35 @@ if not isActivated then
         end)
     end
 
+    local function ShakeKeyFrame()
+        local originalPos = KeyFrame.Position
+        local shakeAmount = 8
+        local shakeDuration = 0.4
+        local startTime = tick()
+        
+        local shakeConnection
+        shakeConnection = RunService.Heartbeat:Connect(function()
+            local elapsed = tick() - startTime
+            if elapsed >= shakeDuration then
+                TweenService:Create(KeyFrame, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = originalPos}):Play()
+                shakeConnection:Disconnect()
+                return
+            end
+            
+            local progress = elapsed / shakeDuration
+            local intensity = shakeAmount * (1 - progress)
+            local offsetX = math.random(-intensity, intensity)
+            local offsetY = math.random(-intensity, intensity)
+            
+            KeyFrame.Position = UDim2.new(
+                originalPos.X.Scale,
+                originalPos.X.Offset + offsetX,
+                originalPos.Y.Scale,
+                originalPos.Y.Offset + offsetY
+            )
+        end)
+    end
+
     SetDotRed()
 
     local KeyTitle = Instance.new("TextLabel", KeyFrame)
@@ -380,7 +409,11 @@ if not isActivated then
 
     local function TryActivateKey()
         local text = TextBox.Text
-        if text == "" then TextBox.PlaceholderText = "Field is empty!" return end
+        if text == "" then 
+            TextBox.PlaceholderText = "Field is empty!"
+            ShakeKeyFrame()
+            return 
+        end
         TextBox.Text = ""
         TextBox.PlaceholderText = "Checking key..."
         TextBox.PlaceholderColor3 = Color3.fromRGB(255, 255, 255)
@@ -392,6 +425,7 @@ if not isActivated then
             TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
             SetDotRed()
             PlayErrorSound()
+            ShakeKeyFrame()
             return
         end
 
@@ -410,6 +444,7 @@ if not isActivated then
                         TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
                         SetDotRed()
                         PlayErrorSound()
+                        ShakeKeyFrame()
                         return
                     end
                     local expireTime = os.time() + duration
@@ -430,6 +465,7 @@ if not isActivated then
                         TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
                         SetDotRed()
                         PlayErrorSound()
+                        ShakeKeyFrame()
                         return
                     end
                     if usedUserId ~= LocalPlayer.Name then
@@ -437,6 +473,7 @@ if not isActivated then
                         TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
                         SetDotRed()
                         PlayErrorSound()
+                        ShakeKeyFrame()
                         return
                     end
                     if readfile then
@@ -454,12 +491,14 @@ if not isActivated then
                     TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
                     SetDotRed()
                     PlayErrorSound()
+                    ShakeKeyFrame()
                     return
                 elseif p1 == "expired" then
                     TextBox.PlaceholderText = "Key expired!"
                     TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
                     SetDotRed()
                     PlayErrorSound()
+                    ShakeKeyFrame()
                     return
                 end
             end
@@ -470,6 +509,7 @@ if not isActivated then
             TextBox.PlaceholderColor3 = Color3.fromRGB(255, 50, 50)
             SetDotRed()
             PlayErrorSound()
+            ShakeKeyFrame()
             return
         end
 
@@ -586,6 +626,7 @@ _G.SkeletonEnabled = false
 _G.ParticleEffectGuiEnabled = false
 _G.ChamsColor = Color3.fromRGB(110, 60, 170)
 _G.SkeletonColor = Color3.fromRGB(255, 255, 255)
+_G.FpsBoostEnabled = false
 
 local Dots = {}
 local DotConnection = nil
@@ -597,6 +638,7 @@ local SetChamsToggleState, SetRainbowToggleState = nil, nil
 local SetFlyingToggleState, SetESPToggleState = nil, nil
 local SetHealthBarToggleState, SetSkeletonToggleState = nil, nil
 local SetParticleGuiToggleState = nil
+local SetFpsBoostState = nil
 local skyStroke = nil
 local soundStroke = nil
 local skyConnection = nil
@@ -622,6 +664,7 @@ local LANG = {
             Skeleton = {"Скелетон", "Скелетон для противников"},
             HealthBar = {"Здоровье противников", "Полоска здоровья над головой"},
             ParticleEffectGui = {"Эффект частиц GUI", "Добавляет эффект точек на GUI интерфейса"},
+            FpsBoost = {"FPS Boost", "Делает карту безлаганной"},
             Reset = {"Сброс настроек", "Вернуть все настройки к стандартным"}
         }
     },
@@ -638,6 +681,7 @@ local LANG = {
             Skeleton = {"Skeleton", "Skeleton for enemies"},
             HealthBar = {"Health Bar", "Health bar above enemies"},
             ParticleEffectGui = {"Particle Effect GUI", "Adds particle effect to GUI interface"},
+            FpsBoost = {"FPS Boost (recommended for weak devices)", "Makes the map lag-free"},
             Reset = {"Reset Settings", "Return all settings to default"}
         }
     }
@@ -1650,10 +1694,10 @@ SearchInput.FocusLost:Connect(function(enterPressed)
     end
 end)
 
--- VISUALS PAGE WITH CHAMS COLOR PICKERS (2 CIRCLES)
+-- VISUALS PAGE WITH CHAMS COLOR PICKERS (2 CIRCLES) + FPS BOOST
 local visualsPage = ContentPages["Visuals"]
 if visualsPage then
-    visualsPage.CanvasSize = UDim2.new(0, 0, 0, 700)
+    visualsPage.CanvasSize = UDim2.new(0, 0, 0, 800)
     visualsPage.ScrollBarThickness = 3
 
     local function CreateToggle(name, descText, yPos, toggleFunc, frameName)
@@ -1911,15 +1955,17 @@ if visualsPage then
     end)
 
     local function ShiftChamsElements(shiftDown)
-        local targetY = shiftDown and 300 or 0
+        local targetY = shiftDown and 150 or 0
         local espFrame = visualsPage:FindFirstChild("ESPFrame")
         local skeletonFrame = visualsPage:FindFirstChild("SkeletonFrame")
         local healthFrame = visualsPage:FindFirstChild("HealthFrame")
+        local fpsBoostFrame = visualsPage:FindFirstChild("FPSBoostFrame")
         local particleFrame = visualsPage:FindFirstChild("ParticleGuiFrame")
         if espFrame then TweenService:Create(espFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 65 + targetY)}):Play() end
         if skeletonFrame then TweenService:Create(skeletonFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 120 + targetY)}):Play() end
         if healthFrame then TweenService:Create(healthFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 175 + targetY)}):Play() end
-        if particleFrame then TweenService:Create(particleFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 230 + targetY)}):Play() end
+        if fpsBoostFrame then TweenService:Create(fpsBoostFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 230 + targetY)}):Play() end
+        if particleFrame then TweenService:Create(particleFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 0, 0, 285 + targetY)}):Play() end
     end
 
     local SetChamsState, chamsLabel, chamsDesc = CreateToggle("Chams", "Makes enemies purple", 10, function(v)
@@ -1958,7 +2004,30 @@ if visualsPage then
     SetHealthBarToggleState = SetHealthState
     SetHealthBarToggleState(_G.HealthBarEnabled)
 
-    local SetParticleGuiState, particleLabel, particleDesc = CreateToggle("Particle Effect GUI", "Adds particle effect to GUI interface", 230, function(v) if v then ApplyParticleGui() else RemoveParticleGui() end _G.ParticleEffectGuiEnabled = v end, "ParticleGuiFrame")
+    local SetFpsBoostState, fpsBoostLabel, fpsBoostDesc = CreateToggle("FPS Boost (recommended for weak devices)", "Makes the map lag-free", 230, function(v)
+        if v then
+            for _, obj in ipairs(game:GetDescendants()) do
+                if obj:IsA("Texture") or obj:IsA("Decal") then
+                    obj:Destroy()
+                elseif obj:IsA("ParticleEmitter") then
+                    obj:Destroy()
+                elseif obj:IsA("Trail") then
+                    obj:Destroy()
+                elseif obj:IsA("Smoke") or obj:IsA("Fire") then
+                    obj:Destroy()
+                elseif obj:IsA("BasePart") then
+                    obj.CastShadow = false
+                    obj.Material = Enum.Material.Plastic
+                elseif obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight") then
+                    obj.Shadows = false
+                end
+            end
+            print("[META] FPS Boost applied")
+        end
+        _G.FpsBoostEnabled = v
+    end, "FPSBoostFrame")
+
+    local SetParticleGuiState, particleLabel, particleDesc = CreateToggle("Particle Effect GUI", "Adds particle effect to GUI interface", 285, function(v) if v then ApplyParticleGui() else RemoveParticleGui() end _G.ParticleEffectGuiEnabled = v end, "ParticleGuiFrame")
     SetParticleGuiToggleState = SetParticleGuiState
     SetParticleGuiToggleState(_G.ParticleEffectGuiEnabled)
 
@@ -1972,6 +2041,8 @@ if visualsPage then
         skeletonDesc.Text = lang.Toggles.Skeleton[2]
         healthLabel.Text = lang.Toggles.HealthBar[1]
         healthDesc.Text = lang.Toggles.HealthBar[2]
+        fpsBoostLabel.Text = lang.Toggles.FpsBoost[1]
+        fpsBoostDesc.Text = lang.Toggles.FpsBoost[2]
         particleLabel.Text = lang.Toggles.ParticleEffectGui[1]
         particleDesc.Text = lang.Toggles.ParticleEffectGui[2]
     end)
@@ -3191,6 +3262,7 @@ if settingsPage then
         _G.SkeletonEnabled = false
         _G.HealthBarEnabled = false
         _G.ParticleEffectGuiEnabled = false
+        _G.FpsBoostEnabled = false
         _G.ChamsColor = Color3.fromRGB(110, 60, 170)
         _G.SkeletonColor = Color3.fromRGB(255, 255, 255)
         MainFrame.BackgroundTransparency = 0.12
@@ -3216,6 +3288,7 @@ if settingsPage then
         if SetHealthBarToggleState then SetHealthBarToggleState(false) end
         RemoveParticleGui()
         if SetParticleGuiToggleState then SetParticleGuiToggleState(false) end
+        if SetFpsBoostState then SetFpsBoostState(false) end
         for _, btn in ipairs(langButtonData) do pcall(btn.Update, false) end
         UpdateAllTexts()
         if rainbowConnection then rainbowConnection:Disconnect() rainbowConnection = nil end
@@ -3460,5 +3533,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] META v7.1.11 - Fixed Chams Color Pickers")
+print("[META] META v7.1.12 - FPS Boost + Key Frame Shake")
 print("[META] Press Insert or click icon")
