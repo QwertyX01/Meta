@@ -1,5 +1,5 @@
--- ====================================================================
--- KEY SYSTEM + META UI V7.1.11
+
+-- KEY SYSTEM + META UI V7.1.10
 -- ====================================================================
 local GIST_ID = "0952fe76bcc259fcbda99e552956e5e6"
 local TOKEN_PART1 = "ghp_kMjn"
@@ -586,7 +586,6 @@ _G.SkeletonEnabled = false
 _G.ParticleEffectGuiEnabled = false
 _G.ChamsColor = Color3.fromRGB(110, 60, 170)
 _G.SkeletonColor = Color3.fromRGB(255, 255, 255)
-_G.NightModeEnabled = false
 
 local Dots = {}
 local DotConnection = nil
@@ -608,7 +607,6 @@ local guiMuteConnection = nil
 local MainBorderFrame = nil
 local MainBorderGradient = nil
 local mainBorderConnection = nil
-local nightConnection = nil
 
 local LANG = {
     RU = {
@@ -624,8 +622,7 @@ local LANG = {
             Skeleton = {"Скелетон", "Скелетон для противников"},
             HealthBar = {"Здоровье противников", "Полоска здоровья над головой"},
             ParticleEffectGui = {"Эффект частиц GUI", "Добавляет эффект точек на GUI интерфейса"},
-            Reset = {"Сброс настроек", "Вернуть все настройки к стандартным"},
-            NightMode = {"Night Mode", "Белая переливающаяся обводка как в Key System"}
+            Reset = {"Сброс настроек", "Вернуть все настройки к стандартным"}
         }
     },
     EN = {
@@ -641,8 +638,7 @@ local LANG = {
             Skeleton = {"Skeleton", "Skeleton for enemies"},
             HealthBar = {"Health Bar", "Health bar above enemies"},
             ParticleEffectGui = {"Particle Effect GUI", "Adds particle effect to GUI interface"},
-            Reset = {"Reset Settings", "Return all settings to default"},
-            NightMode = {"Night Mode", "White pulsing border like in Key System"}
+            Reset = {"Reset Settings", "Return all settings to default"}
         }
     }
 }
@@ -2416,7 +2412,7 @@ end
 -- SETTINGS PAGE
 local settingsPage = ContentPages["Settings"]
 if settingsPage then
-    settingsPage.CanvasSize = UDim2.new(0, 0, 0, 700)
+    settingsPage.CanvasSize = UDim2.new(0, 0, 0, 600)
     local settingsContainer = Instance.new("Frame")
     settingsContainer.Size = UDim2.new(1, 0, 0, 500)
     settingsContainer.Position = UDim2.new(0, 0, 0, 55)
@@ -2521,7 +2517,7 @@ if settingsPage then
         local hue = angle / (math.pi * 2)
         local saturation = clampedDistance / radius
         local pickedColor = Color3.fromHSV(hue, saturation, 1)
-        if not _G.RainbowEnabled and not _G.NightModeEnabled then
+        if not _G.RainbowEnabled then
             MainStroke.Color = pickedColor
             UpdateIndicatorColor(pickedColor)
             SearchStroke.Color = pickedColor
@@ -2565,7 +2561,7 @@ if settingsPage then
             ShiftContainer(false)
         end
         _G.CustomThemeEnabled = value
-        if not value and not _G.RainbowEnabled and not _G.NightModeEnabled then
+        if not value and not _G.RainbowEnabled then
             MainStroke.Color = _G.MenuThemeColor
             UpdateIndicatorColor(_G.MenuThemeColor)
             SearchStroke.Color = _G.MenuThemeColor
@@ -2806,9 +2802,6 @@ if settingsPage then
     rainbowClickArea.Parent = rainbowFrame
     SetRainbowToggleState = function(value)
         if value then
-            if _G.NightModeEnabled then
-                if SetNightMode then SetNightMode(false) end
-            end
             TweenService:Create(rainbowToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
             TweenService:Create(rainbowHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 23, 0.5, -9)}):Play()
         else
@@ -2838,21 +2831,19 @@ if settingsPage then
             if rainbowConnection then
                 rainbowConnection:Disconnect()
                 rainbowConnection = nil
-                if not _G.NightModeEnabled then
-                    MainStroke.Color = _G.MenuThemeColor
-                    UpdateIndicatorColor(_G.MenuThemeColor)
-                    SearchStroke.Color = _G.MenuThemeColor
-                    if skyStroke then skyStroke.Color = _G.MenuThemeColor end
-                    if soundStroke then soundStroke.Color = _G.MenuThemeColor end
-                    if MainBorderGradient then
-                        MainBorderGradient.Color = ColorSequence.new({
-                            ColorSequenceKeypoint.new(0, Color3.fromRGB(160, 160, 160)),
-                            ColorSequenceKeypoint.new(0.25, Color3.fromRGB(200, 200, 200)),
-                            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
-                            ColorSequenceKeypoint.new(0.75, Color3.fromRGB(200, 200, 200)),
-                            ColorSequenceKeypoint.new(1, Color3.fromRGB(160, 160, 160))
-                        })
-                    end
+                MainStroke.Color = _G.MenuThemeColor
+                UpdateIndicatorColor(_G.MenuThemeColor)
+                SearchStroke.Color = _G.MenuThemeColor
+                if skyStroke then skyStroke.Color = _G.MenuThemeColor end
+                if soundStroke then soundStroke.Color = _G.MenuThemeColor end
+                if MainBorderGradient then
+                    MainBorderGradient.Color = ColorSequence.new({
+                        ColorSequenceKeypoint.new(0, Color3.fromRGB(160, 160, 160)),
+                        ColorSequenceKeypoint.new(0.25, Color3.fromRGB(200, 200, 200)),
+                        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
+                        ColorSequenceKeypoint.new(0.75, Color3.fromRGB(200, 200, 200)),
+                        ColorSequenceKeypoint.new(1, Color3.fromRGB(160, 160, 160))
+                    })
                 end
             end
         end
@@ -3122,203 +3113,9 @@ if settingsPage then
     end
     table.insert(langUpdateCallbacks, UpdateFlyingText)
 
-    -- ====================================================================
-    -- NIGHT MODE (Белая переливка как в Key Panel)
-    -- ====================================================================
-    local nightFrame = Instance.new("Frame")
-    nightFrame.Size = UDim2.new(1, 0, 0, 45)
-    nightFrame.Position = UDim2.new(0, 0, 0, 280)
-    nightFrame.BackgroundTransparency = 1
-    nightFrame.Parent = settingsContainer
-
-    local nightLabel = Instance.new("TextLabel")
-    nightLabel.Size = UDim2.new(0.6, 0, 0, 20)
-    nightLabel.BackgroundTransparency = 1
-    nightLabel.Text = "Night Mode"
-    nightLabel.TextColor3 = Color3.fromRGB(209, 213, 219)
-    nightLabel.TextSize = 13
-    nightLabel.Font = Enum.Font.GothamBold
-    nightLabel.TextXAlignment = Enum.TextXAlignment.Left
-    nightLabel.Parent = nightFrame
-
-    local nightDesc = Instance.new("TextLabel")
-    nightDesc.Size = UDim2.new(0.7, 0, 0, 16)
-    nightDesc.Position = UDim2.new(0, 0, 0, 22)
-    nightDesc.BackgroundTransparency = 1
-    nightDesc.Text = "White pulsing border like in Key System"
-    nightDesc.TextColor3 = Color3.fromRGB(113, 113, 122)
-    nightDesc.TextSize = 11
-    nightDesc.Font = Enum.Font.Gotham
-    nightDesc.TextXAlignment = Enum.TextXAlignment.Left
-    nightDesc.Parent = nightFrame
-
-    local nightToggleBg = Instance.new("Frame")
-    nightToggleBg.Size = UDim2.new(0, 44, 0, 24)
-    nightToggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
-    nightToggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
-    nightToggleBg.BorderSizePixel = 0
-    nightToggleBg.Parent = nightFrame
-    local nightToggleCorner = Instance.new("UICorner")
-    nightToggleCorner.CornerRadius = UDim.new(1, 0)
-    nightToggleCorner.Parent = nightToggleBg
-
-    local nightHandle = Instance.new("Frame")
-    nightHandle.Size = UDim2.new(0, 18, 0, 18)
-    nightHandle.Position = UDim2.new(0, 3, 0.5, -9)
-    nightHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    nightHandle.BorderSizePixel = 0
-    nightHandle.Parent = nightToggleBg
-    local nightHandleCorner = Instance.new("UICorner")
-    nightHandleCorner.CornerRadius = UDim.new(1, 0)
-    nightHandleCorner.Parent = nightHandle
-
-    local nightClickArea = Instance.new("TextButton")
-    nightClickArea.Size = UDim2.new(0, 44, 0, 24)
-    nightClickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
-    nightClickArea.BackgroundTransparency = 1
-    nightClickArea.Text = ""
-    nightClickArea.ZIndex = 10
-    nightClickArea.Parent = nightFrame
-
-    local originalBorderGradient = nil
-    local originalStrokeColor = nil
-    local originalIndicatorColor = nil
-    local originalSearchColor = nil
-    local originalSkyColor = nil
-    local originalSoundColor = nil
-    local nightConnection = nil
-
-    local function SaveOriginalColors()
-        if MainBorderGradient then
-            originalBorderGradient = MainBorderGradient.Color
-        end
-        originalStrokeColor = MainStroke.Color
-        originalIndicatorColor = IndicatorColor
-        originalSearchColor = SearchStroke.Color
-        if skyStroke then originalSkyColor = skyStroke.Color end
-        if soundStroke then originalSoundColor = soundStroke.Color end
-    end
-
-    local function RestoreOriginalColors()
-        if MainBorderGradient and originalBorderGradient then
-            MainBorderGradient.Color = originalBorderGradient
-        end
-        if originalStrokeColor then
-            MainStroke.Color = originalStrokeColor
-        end
-        if originalIndicatorColor then
-            UpdateIndicatorColor(originalIndicatorColor)
-        end
-        if originalSearchColor then
-            SearchStroke.Color = originalSearchColor
-        end
-        if skyStroke and originalSkyColor then
-            skyStroke.Color = originalSkyColor
-        end
-        if soundStroke and originalSoundColor then
-            soundStroke.Color = originalSoundColor
-        end
-    end
-
-    local function SetNightMode(value)
-        _G.NightModeEnabled = value
-        
-        if value then
-            -- Отключаем Rainbow если включён
-            if _G.RainbowEnabled then
-                if SetRainbowToggleState then SetRainbowToggleState(false) end
-            end
-            
-            TweenService:Create(nightToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
-            TweenService:Create(nightHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 23, 0.5, -9)}):Play()
-            
-            if not originalStrokeColor then SaveOriginalColors() end
-            
-            MainFrame.BackgroundColor3 = Color3.fromRGB(5, 7, 12)
-            MainFrame.BackgroundTransparency = 0.05
-            
-            if nightConnection then nightConnection:Disconnect() end
-            nightConnection = RunService.Heartbeat:Connect(function()
-                local t = tick()
-                
-                if MainBorderGradient then
-                    MainBorderGradient.Rotation = (t * 80) % 360
-                    MainBorderGradient.Offset = Vector2.new(math.sin(t * 1.2) * 0.5, math.cos(t * 0.9) * 0.3)
-                    
-                    local pulse = (math.sin(t * 1.5) + 1) / 2
-                    local brightness = 0.6 + pulse * 0.4
-                    
-                    MainBorderGradient.Color = ColorSequence.new({
-                        ColorSequenceKeypoint.new(0, Color3.fromRGB(180 * brightness, 180 * brightness, 180 * brightness)),
-                        ColorSequenceKeypoint.new(0.25, Color3.fromRGB(210 * brightness, 210 * brightness, 210 * brightness)),
-                        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255 * brightness, 255 * brightness, 255 * brightness)),
-                        ColorSequenceKeypoint.new(0.75, Color3.fromRGB(210 * brightness, 210 * brightness, 210 * brightness)),
-                        ColorSequenceKeypoint.new(1, Color3.fromRGB(180 * brightness, 180 * brightness, 180 * brightness))
-                    })
-                end
-                
-                local pulseStroke = (math.sin(t * 2.0) + 1) / 2
-                local whiteBright = 180 + 75 * pulseStroke
-                local strokeColor = Color3.fromRGB(whiteBright, whiteBright, whiteBright)
-                MainStroke.Color = strokeColor
-                MainStroke.Transparency = 0.1 + (1 - pulseStroke) * 0.2
-                
-                UpdateIndicatorColor(strokeColor)
-                SearchStroke.Color = strokeColor
-                if skyStroke then skyStroke.Color = strokeColor end
-                if soundStroke then soundStroke.Color = strokeColor end
-            end)
-        else
-            TweenService:Create(nightToggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(42, 47, 58)}):Play()
-            TweenService:Create(nightHandle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 3, 0.5, -9)}):Play()
-            
-            MainFrame.BackgroundColor3 = Color3.fromRGB(17, 20, 26)
-            MainFrame.BackgroundTransparency = _G.MenuOpacity / 100
-            
-            if nightConnection then
-                nightConnection:Disconnect()
-                nightConnection = nil
-            end
-            
-            if MainBorderGradient then
-                MainBorderGradient.Rotation = 0
-                MainBorderGradient.Offset = Vector2.new(0, 0)
-            end
-            
-            RestoreOriginalColors()
-            
-            if not _G.RainbowEnabled and not _G.CustomThemeEnabled then
-                MainStroke.Color = _G.MenuThemeColor
-                UpdateIndicatorColor(_G.MenuThemeColor)
-                SearchStroke.Color = _G.MenuThemeColor
-                if skyStroke then skyStroke.Color = _G.MenuThemeColor end
-                if soundStroke then soundStroke.Color = _G.MenuThemeColor end
-            end
-            
-            originalStrokeColor = nil
-            originalBorderGradient = nil
-            originalIndicatorColor = nil
-            originalSearchColor = nil
-            originalSkyColor = nil
-            originalSoundColor = nil
-        end
-    end
-
-    nightClickArea.MouseButton1Click:Connect(function()
-        PlayClickSound()
-        SetNightMode(not _G.NightModeEnabled)
-    end)
-
-    local function UpdateNightText()
-        local lang = GetLang()
-        nightLabel.Text = lang.Toggles.NightMode[1]
-        nightDesc.Text = lang.Toggles.NightMode[2]
-    end
-    table.insert(langUpdateCallbacks, UpdateNightText)
-
     local resetFrame = Instance.new("Frame")
     resetFrame.Size = UDim2.new(1, 0, 0, 45)
-    resetFrame.Position = UDim2.new(0, 0, 0, 330)
+    resetFrame.Position = UDim2.new(0, 0, 0, 280)
     resetFrame.BackgroundTransparency = 1
     resetFrame.Parent = settingsContainer
     local resetLabel = Instance.new("TextLabel")
@@ -3370,16 +3167,6 @@ if settingsPage then
         _G.ParticleEffectGuiEnabled = false
         _G.ChamsColor = Color3.fromRGB(110, 60, 170)
         _G.SkeletonColor = Color3.fromRGB(255, 255, 255)
-        
-        if _G.NightModeEnabled then
-            SetNightMode(false)
-        end
-        if nightConnection then
-            nightConnection:Disconnect()
-            nightConnection = nil
-        end
-        
-        MainFrame.BackgroundColor3 = Color3.fromRGB(17, 20, 26)
         MainFrame.BackgroundTransparency = 0.12
         if MainBorderFrame then
             MainBorderFrame.BackgroundTransparency = 0.12
@@ -3393,7 +3180,6 @@ if settingsPage then
         SearchStroke.Color = _G.MenuThemeColor
         if skyStroke then skyStroke.Color = _G.MenuThemeColor end
         if soundStroke then soundStroke.Color = _G.MenuThemeColor end
-        
         RemoveChams()
         if SetChamsToggleState then SetChamsToggleState(false) end
         RemoveESP()
@@ -3404,23 +3190,18 @@ if settingsPage then
         if SetHealthBarToggleState then SetHealthBarToggleState(false) end
         RemoveParticleGui()
         if SetParticleGuiToggleState then SetParticleGuiToggleState(false) end
-        
         for _, btn in ipairs(langButtonData) do pcall(btn.Update, false) end
         UpdateAllTexts()
-        
         if rainbowConnection then rainbowConnection:Disconnect() rainbowConnection = nil end
         if SetRainbowToggleState then SetRainbowToggleState(false) end
-        
         if DotConnection then DotConnection:Disconnect() DotConnection = nil end
         for _, data in ipairs(Dots) do if data and data.Frame then data.Frame:Destroy() end end
         Dots = {}
         _G.FlyingDots = false
         if SetFlyingToggleState then SetFlyingToggleState(false) end
-        
         if SetToggleState then SetToggleState(false) end
         if pickerContainer then pickerContainer.Visible = false end
         if ShiftContainer then ShiftContainer(false) end
-        
         if opacitySliderFill and opacitySliderHandle and opacityValue then
             opacitySliderFill.Size = UDim2.new(0.24, 0, 1, 0)
             opacitySliderHandle.Position = UDim2.new(0.24, -8, 0.5, -8)
@@ -3432,30 +3213,9 @@ if settingsPage then
             scaleValue.Text = "100%"
         end
         if pickerDot then pickerDot.Position = UDim2.new(0.5, -5, 0.5, -5) end
-        
         SwitchToTab(1)
         SearchInput.Text = "Search..."
         SearchClose.Visible = false
-        
-        if MainBorderGradient then
-            MainBorderGradient.Rotation = 0
-            MainBorderGradient.Offset = Vector2.new(0, 0)
-            MainBorderGradient.Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Color3.fromRGB(160, 160, 160)),
-                ColorSequenceKeypoint.new(0.25, Color3.fromRGB(200, 200, 200)),
-                ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
-                ColorSequenceKeypoint.new(0.75, Color3.fromRGB(200, 200, 200)),
-                ColorSequenceKeypoint.new(1, Color3.fromRGB(160, 160, 160))
-            })
-        end
-        
-        originalStrokeColor = nil
-        originalBorderGradient = nil
-        originalIndicatorColor = nil
-        originalSearchColor = nil
-        originalSkyColor = nil
-        originalSoundColor = nil
-        
         print("[RESET] All settings restored")
         PlayClickSound()
     end
@@ -3674,5 +3434,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] META v7.1.11 - Night Mode with Key System border")
+print("[META] META v7.1.10 - Particle Effect GUI")
 print("[META] Press Insert or click icon")
