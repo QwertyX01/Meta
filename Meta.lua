@@ -1,4 +1,4 @@
-local GIST_ID = "0952fe76bcc259fcbda99e552956e5e6"
+
 local TOKEN_PART1 = "ghp_kMjn"
 local TOKEN_PART2 = "27lM0JWIRu"
 local TOKEN_PART3 = "XqDm0fvABt"
