@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.2.0
+-- KEY SYSTEM + META UI V7.3.0
 -- ====================================================================
 local GIST_ID = "0952fe76bcc259fcbda99e552956e5e6"
 local TOKEN_PART1 = "ghp_kMjn"
@@ -21,7 +21,6 @@ local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
-
 
 local http = (syn and syn.request) or (http and http.request) or http_request
 if not http then return print("Дельта не поддерживает http_request!") end
@@ -630,6 +629,7 @@ _G.SkeletonColor = Color3.fromRGB(255, 255, 255)
 _G.FpsBoostEnabled = false
 _G.SilentAimEnabled = false
 _G.OffCircleEnabled = false
+_G.SilentAimFOV = 200
 
 local Dots = {}
 local DotConnection = nil
@@ -1704,7 +1704,6 @@ SearchInput.FocusLost:Connect(function(enterPressed)
 end)
 
 -- AIMBOT PAGE
--- AIMBOT PAGE
 local aimbotPage = ContentPages["Aimbot"]
 if aimbotPage then
     aimbotPage.CanvasSize = UDim2.new(0, 0, 0, 400)
@@ -1896,7 +1895,6 @@ if aimbotPage then
         end
     end)
 
-    -- Тумблеры
     local SetSilentAimState, silentLabel, silentDesc = CreateToggle("Silent Aim", "Automatically aims at enemies in FOV", 10, function(v)
         SilentAimEnabled = v
         _G.SilentAimEnabled = v
@@ -1947,7 +1945,7 @@ if aimbotPage then
     Instance.new("UICorner", fovSliderBg).CornerRadius = UDim.new(1, 0)
 
     local fovSliderFill = Instance.new("Frame")
-    fovSliderFill.Size = UDim2.new(0.67, 0, 1, 0)
+    fovSliderFill.Size = UDim2.new(0.33, 0, 1, 0)
     fovSliderFill.BackgroundColor3 = Color3.fromRGB(59, 130, 246)
     fovSliderFill.BorderSizePixel = 0
     fovSliderFill.Parent = fovSliderBg
@@ -1955,7 +1953,7 @@ if aimbotPage then
 
     local fovSliderHandle = Instance.new("Frame")
     fovSliderHandle.Size = UDim2.new(0, 16, 0, 16)
-    fovSliderHandle.Position = UDim2.new(0.67, -8, 0.5, -8)
+    fovSliderHandle.Position = UDim2.new(0.33, -8, 0.5, -8)
     fovSliderHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     fovSliderHandle.BorderSizePixel = 0
     fovSliderHandle.Parent = fovSliderBg
@@ -2018,148 +2016,8 @@ if aimbotPage then
         fovLabel.Text = "FOV Size"
     end)
 end
-    -- SILENT AIM SYSTEM
-    local SilentAimEnabled = false
-    local OffCircleEnabled = false
-    local MaxFOV = 200
 
-    local FOVCircle = Drawing.new("Circle")
-    FOVCircle.Thickness = 2.5
-    FOVCircle.Filled = false
-    FOVCircle.Transparency = 1
-    FOVCircle.NumSides = 64
-    FOVCircle.Visible = false
-
-    local CurrentTarget = nil
-
-    local function UpdateClosestTarget()
-        if not SilentAimEnabled then 
-            CurrentTarget = nil 
-            return 
-        end
-
-        local closestTarget = nil
-        local shortestDistance = MaxFOV
-
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player ~= LocalPlayer then
-                local character = player.Character
-                if character and character:FindFirstChild("Head") then
-                    local humanoid = character:FindFirstChildOfClass("Humanoid")
-                    if (humanoid and humanoid.Health > 0) or not humanoid then
-                        local head = character.Head
-                        local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
-                        
-                        if onScreen then
-                            local distance = (Vector2.new(pos.X, pos.Y) - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
-                            if distance < shortestDistance then
-                                closestTarget = head
-                                shortestDistance = distance
-                            end
-                        end
-                    end
-                end
-            end
-        end
-        CurrentTarget = closestTarget
-    end
-
-    RunService.RenderStepped:Connect(function()
-        UpdateClosestTarget()
-        
-        if FOVCircle then
-            if OffCircleEnabled then
-                FOVCircle.Visible = false
-            else
-                FOVCircle.Visible = SilentAimEnabled
-            end
-            FOVCircle.Radius = MaxFOV
-            FOVCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-            FOVCircle.Color = CurrentTarget and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(0, 255, 0)
-        end
-    end)
-
-    local gmt = getrawmetatable(game)
-    setreadonly(gmt, false)
-    local oldIndex = gmt.__index
-    local oldNamecall = gmt.__namecall
-
-    gmt.__index = newcclosure(function(self, key)
-        if SilentAimEnabled and self == Mouse and CurrentTarget then
-            if key == "Hit" then return CurrentTarget.CFrame
-            elseif key == "Target" then return CurrentTarget end
-        end
-        return oldIndex(self, key)
-    end)
-
-    gmt.__namecall = newcclosure(function(self, ...)
-        local method = getnamecallmethod()
-        local args = {...}
-        if SilentAimEnabled and CurrentTarget then
-            if method == "Raycast" and self == workspace then
-                local origin = args[1]
-                if typeof(origin) == "Vector3" then
-                    args[2] = (CurrentTarget.Position - origin).Unit * 5000
-                    return oldNamecall(self, unpack(args))
-                end
-            end
-        end
-        return oldNamecall(self, ...)
-    end)
-    setreadonly(gmt, true)
-
-    task.spawn(function()
-        local NetworkPath = ReplicatedStorage:WaitForChild("Database", 5):WaitForChild("Security", 5):WaitForChild("Network", 5)
-        if NetworkPath then
-            local Network = require(NetworkPath)
-            if Network and Network.CreatePacket then
-                local oldCreatePacket = Network.CreatePacket
-                
-                Network.CreatePacket = newcclosure(function(p6, p7, p_u_3, v_u_5)
-                    if SilentAimEnabled and CurrentTarget then
-                        local function modifyTable(t)
-                            for k, v in pairs(t) do
-                                if typeof(v) == "Vector3" then
-                                    t[k] = CurrentTarget.Position
-                                elseif type(v) == "table" then
-                                    modifyTable(v)
-                                end
-                            end
-                        end
-                        
-                        if type(p6) == "table" then modifyTable(p6) end
-                        if type(p7) == "table" then modifyTable(p7) end
-                    end
-                    return oldCreatePacket(p6, p7, p_u_3, v_u_5)
-                end)
-                print("Сэр, гибридный хук CreatePacket успешно интегрирован.")
-            end
-        end
-    end)
-
-    local SetSilentAimState, silentLabel, silentDesc = CreateToggle("Silent Aim", "Automatically aims at enemies in FOV", 10, function(v)
-        SilentAimEnabled = v
-        _G.SilentAimEnabled = v
-        if not v then
-            CurrentTarget = nil
-        end
-    end, "SilentAimFrame")
-
-    local SetOffCircleState, offCircleLabel, offCircleDesc = CreateToggle("Off Circle", "Hides the FOV circle but keeps aim", 65, function(v)
-        OffCircleEnabled = v
-        _G.OffCircleEnabled = v
-    end, "OffCircleFrame")
-
-    table.insert(langUpdateCallbacks, function()
-        local lang = GetLang()
-        silentLabel.Text = lang.Toggles.SilentAim[1]
-        silentDesc.Text = lang.Toggles.SilentAim[2]
-        offCircleLabel.Text = lang.Toggles.OffCircle[1]
-        offCircleDesc.Text = lang.Toggles.OffCircle[2]
-    end)
-end
-
--- VISUALS PAGE WITH CHAMS COLOR PICKERS (2 CIRCLES) + FPS BOOST
+-- VISUALS PAGE
 local visualsPage = ContentPages["Visuals"]
 if visualsPage then
     visualsPage.CanvasSize = UDim2.new(0, 0, 0, 800)
@@ -2359,8 +2217,7 @@ if visualsPage then
     skeletonDragArea.Size = UDim2.new(1, 0, 1, 0)
     skeletonDragArea.BackgroundTransparency = 1
     skeletonDragArea.Text = ""
-    skeletonDragArea.ZIndex = 33
-    skeletonDragArea.Parent = skeletonWheel
+    skeletonDragArea.ZIndex = 33    skeletonDragArea.Parent = skeletonWheel
     
     local skeletonLabelText = Instance.new("TextLabel")
     skeletonLabelText.Size = UDim2.new(0, 80, 0, 20)
@@ -2980,9 +2837,7 @@ if settingsPage then
     settingsContainer.Position = UDim2.new(0, 0, 0, 55)
     settingsContainer.BackgroundTransparency = 1
     settingsContainer.ClipsDescendants = true
-    settingsContainer.Parent = settingsPage
-
-    local toggleFrame = Instance.new("Frame")
+    settingsContainer.Parent = settingsPage    local toggleFrame = Instance.new("Frame")
     toggleFrame.Size = UDim2.new(1, 0, 0, 45)
     toggleFrame.Position = UDim2.new(0, 0, 0, 10)
     toggleFrame.BackgroundTransparency = 1
@@ -3730,6 +3585,7 @@ if settingsPage then
         _G.FpsBoostEnabled = false
         _G.SilentAimEnabled = false
         _G.OffCircleEnabled = false
+        _G.SilentAimFOV = 200
         _G.ChamsColor = Color3.fromRGB(110, 60, 170)
         _G.SkeletonColor = Color3.fromRGB(255, 255, 255)
         MainFrame.BackgroundTransparency = 0.12
@@ -4007,5 +3863,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] META v7.2.0 - Aimbot Silent Aim + Off Circle")
+print("[META] META v7.3.0 - Aimbot + FOV Slider")
 print("[META] Press Insert or click icon")
