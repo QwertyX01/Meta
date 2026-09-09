@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.3.0
+-- KEY SYSTEM + META UI V7.4.0
 -- ====================================================================
 local GIST_ID = "0952fe76bcc259fcbda99e552956e5e6"
 local TOKEN_PART1 = "ghp_kMjn"
@@ -630,6 +630,7 @@ _G.FpsBoostEnabled = false
 _G.SilentAimEnabled = false
 _G.OffCircleEnabled = false
 _G.SilentAimFOV = 200
+_G.SelectedPart = "Head"
 
 local Dots = {}
 local DotConnection = nil
@@ -733,8 +734,7 @@ MainFrame.Size = UDim2.new(0, 640 * (_G.MenuScale / 45), 0, 470 * (_G.MenuScale 
 MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(17, 20, 26)
-MainFrame.BackgroundTransparency = _G.MenuOpacity / 100
-MainFrame.ClipsDescendants = true
+MainFrame.BackgroundTransparency = _G.MenuOpacity / 100MainFrame.ClipsDescendants = true
 MainFrame.Parent = ScreenGui
 MainFrame.Draggable = true
 MainFrame.Active = true
@@ -1152,14 +1152,15 @@ SkeletonConnection = RunService.RenderStepped:Connect(function()
         local upperTorso = char:FindFirstChild("UpperTorso")
         local lowerTorso = char:FindFirstChild("LowerTorso")
         local hrp = char:FindFirstChild("HumanoidRootPart")
+        local torso = char:FindFirstChild("Torso")
 
-        if not head or not upperTorso then
+        if not head or (not upperTorso and not torso) then
             RemoveSkeletonData(player)
             continue
         end
 
         local headPos = GetSkeletonPos(head)
-        local upperTorsoPos = GetSkeletonPos(upperTorso)
+        local upperTorsoPos = GetSkeletonPos(upperTorso or torso)
         local lowerTorsoPos = GetSkeletonPos(lowerTorso)
         local hrpPos = GetSkeletonPos(hrp)
 
@@ -1189,16 +1190,16 @@ SkeletonConnection = RunService.RenderStepped:Connect(function()
             idx = idx + 1
         end
 
-        local leftUpperArm = char:FindFirstChild("LeftUpperArm")
+        local leftUpperArm = char:FindFirstChild("LeftUpperArm") or char:FindFirstChild("Left Arm")
         local leftLowerArm = char:FindFirstChild("LeftLowerArm")
         local leftHand = char:FindFirstChild("LeftHand")
-        local rightUpperArm = char:FindFirstChild("RightUpperArm")
+        local rightUpperArm = char:FindFirstChild("RightUpperArm") or char:FindFirstChild("Right Arm")
         local rightLowerArm = char:FindFirstChild("RightLowerArm")
         local rightHand = char:FindFirstChild("RightHand")
-        local leftUpperLeg = char:FindFirstChild("LeftUpperLeg")
+        local leftUpperLeg = char:FindFirstChild("LeftUpperLeg") or char:FindFirstChild("Left Leg")
         local leftLowerLeg = char:FindFirstChild("LeftLowerLeg")
         local leftFoot = char:FindFirstChild("LeftFoot")
-        local rightUpperLeg = char:FindFirstChild("RightUpperLeg")
+        local rightUpperLeg = char:FindFirstChild("RightUpperLeg") or char:FindFirstChild("Right Leg")
         local rightLowerLeg = char:FindFirstChild("RightLowerLeg")
         local rightFoot = char:FindFirstChild("RightFoot")
 
@@ -1706,7 +1707,7 @@ end)
 -- AIMBOT PAGE
 local aimbotPage = ContentPages["Aimbot"]
 if aimbotPage then
-    aimbotPage.CanvasSize = UDim2.new(0, 0, 0, 400)
+    aimbotPage.CanvasSize = UDim2.new(0, 0, 0, 500)
     aimbotPage.ScrollBarThickness = 3
 
     local function CreateToggle(name, descText, yPos, toggleFunc, frameName)
@@ -1780,6 +1781,7 @@ if aimbotPage then
     local SilentAimEnabled = false
     local OffCircleEnabled = false
     local MaxFOV = 200
+    local SelectedPart = "Head"
 
     local FOVCircle = Drawing.new("Circle")
     FOVCircle.Thickness = 2.5
@@ -1789,6 +1791,18 @@ if aimbotPage then
     FOVCircle.Visible = false
 
     local CurrentTarget = nil
+
+    local function GetTargetPart(character)
+        if not character then return nil end
+        if SelectedPart == "Head" then
+            return character:FindFirstChild("Head")
+        elseif SelectedPart == "Torso" then
+            return character:FindFirstChild("Torso") or character:FindFirstChild("UpperTorso")
+        elseif SelectedPart == "Humanoid" then
+            return character:FindFirstChild("HumanoidRootPart")
+        end
+        return character:FindFirstChild("Head")
+    end
 
     local function UpdateClosestTarget()
         if not SilentAimEnabled then 
@@ -1802,17 +1816,19 @@ if aimbotPage then
         for _, player in ipairs(Players:GetPlayers()) do
             if player ~= LocalPlayer then
                 local character = player.Character
-                if character and character:FindFirstChild("Head") then
-                    local humanoid = character:FindFirstChildOfClass("Humanoid")
-                    if (humanoid and humanoid.Health > 0) or not humanoid then
-                        local head = character.Head
-                        local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
-                        
-                        if onScreen then
-                            local distance = (Vector2.new(pos.X, pos.Y) - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
-                            if distance < shortestDistance then
-                                closestTarget = head
-                                shortestDistance = distance
+                if character then
+                    local targetPart = GetTargetPart(character)
+                    if targetPart then
+                        local humanoid = character:FindFirstChildOfClass("Humanoid")
+                        if (humanoid and humanoid.Health > 0) or not humanoid then
+                            local pos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
+                            
+                            if onScreen then
+                                local distance = (Vector2.new(pos.X, pos.Y) - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
+                                if distance < shortestDistance then
+                                    closestTarget = targetPart
+                                    shortestDistance = distance
+                                end
                             end
                         end
                     end
@@ -2001,6 +2017,86 @@ if aimbotPage then
             UpdateFOV(input.Position.X)
         end
     end)
+
+    -- PART SELECTOR BUTTON
+    local partButton = Instance.new("TextButton")
+    partButton.Name = "PartButton"
+    partButton.Size = UDim2.new(0.3, 0, 0, 30)
+    partButton.Position = UDim2.new(0, 10, 0, 180)
+    partButton.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
+    partButton.BackgroundTransparency = 0.3
+    partButton.BorderSizePixel = 0
+    partButton.Text = "Part: Head"
+    partButton.TextColor3 = Color3.fromRGB(209, 213, 219)
+    partButton.TextSize = 12
+    partButton.Font = Enum.Font.GothamBold
+    partButton.ZIndex = 5
+    partButton.Parent = aimbotPage
+    Instance.new("UICorner", partButton).CornerRadius = UDim.new(0, 6)
+
+    -- PART PANEL
+    local partPanel = Instance.new("Frame")
+    partPanel.Name = "PartPanel"
+    partPanel.Size = UDim2.new(0.4, 0, 0, 120)
+    partPanel.Position = UDim2.new(0.35, 0, 0, 180)
+    partPanel.BackgroundColor3 = Color3.fromRGB(20, 24, 32)
+    partPanel.BackgroundTransparency = 0.1
+    partPanel.BorderSizePixel = 0
+    partPanel.Visible = false
+    partPanel.ZIndex = 10
+    partPanel.Parent = aimbotPage
+    Instance.new("UICorner", partPanel).CornerRadius = UDim.new(0, 8)
+
+    local partButtons = {}
+    local partNames = {"Head", "Torso", "Humanoid"}
+
+    local function UpdatePartButtons()
+        for i, partName in ipairs(partNames) do
+            local btn = partButtons[i]
+            if btn then
+                if SelectedPart == partName then
+                    btn.BackgroundColor3 = Color3.fromRGB(59, 130, 246)
+                    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+                else
+                    btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
+                    btn.TextColor3 = Color3.fromRGB(156, 163, 175)
+                end
+            end
+        end
+        partButton.Text = "Part: " .. SelectedPart
+    end
+
+    for i, partName in ipairs(partNames) do
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, -20, 0, 30)
+        btn.Position = UDim2.new(0, 10, 0, 10 + (i - 1) * 35)
+        btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
+        btn.BorderSizePixel = 0
+        btn.Text = partName
+        btn.TextColor3 = Color3.fromRGB(156, 163, 175)
+        btn.TextSize = 12
+        btn.Font = Enum.Font.GothamBold
+        btn.ZIndex = 11
+        btn.Parent = partPanel
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+        
+        btn.MouseButton1Click:Connect(function()
+            PlayClickSound()
+            SelectedPart = partName
+            _G.SelectedPart = partName
+            UpdatePartButtons()
+            partPanel.Visible = false
+        end)
+        
+        partButtons[i] = btn
+    end
+
+    partButton.MouseButton1Click:Connect(function()
+        PlayClickSound()
+        partPanel.Visible = not partPanel.Visible
+    end)
+
+    UpdatePartButtons()
 
     _G.SetSilentAimState = SetSilentAimState
     _G.SetOffCircleState = SetOffCircleState
@@ -2217,7 +2313,8 @@ if visualsPage then
     skeletonDragArea.Size = UDim2.new(1, 0, 1, 0)
     skeletonDragArea.BackgroundTransparency = 1
     skeletonDragArea.Text = ""
-    skeletonDragArea.ZIndex = 33    skeletonDragArea.Parent = skeletonWheel
+    skeletonDragArea.ZIndex = 33
+    skeletonDragArea.Parent = skeletonWheel
     
     local skeletonLabelText = Instance.new("TextLabel")
     skeletonLabelText.Size = UDim2.new(0, 80, 0, 20)
@@ -2837,7 +2934,9 @@ if settingsPage then
     settingsContainer.Position = UDim2.new(0, 0, 0, 55)
     settingsContainer.BackgroundTransparency = 1
     settingsContainer.ClipsDescendants = true
-    settingsContainer.Parent = settingsPage    local toggleFrame = Instance.new("Frame")
+    settingsContainer.Parent = settingsPage
+
+    local toggleFrame = Instance.new("Frame")
     toggleFrame.Size = UDim2.new(1, 0, 0, 45)
     toggleFrame.Position = UDim2.new(0, 0, 0, 10)
     toggleFrame.BackgroundTransparency = 1
@@ -3586,6 +3685,7 @@ if settingsPage then
         _G.SilentAimEnabled = false
         _G.OffCircleEnabled = false
         _G.SilentAimFOV = 200
+        _G.SelectedPart = "Head"
         _G.ChamsColor = Color3.fromRGB(110, 60, 170)
         _G.SkeletonColor = Color3.fromRGB(255, 255, 255)
         MainFrame.BackgroundTransparency = 0.12
@@ -3863,5 +3963,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] META v7.3.0 - Aimbot + FOV Slider")
+print("[META] META v7.4.0 - Part Selection")
 print("[META] Press Insert or click icon")
