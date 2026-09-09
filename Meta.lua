@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.5.1
+-- KEY SYSTEM + META UI V7.6.0
 -- ====================================================================
 local GIST_ID = "0952fe76bcc259fcbda99e552956e5e6"
 local TOKEN_PART1 = "ghp_kMjn"
@@ -745,6 +745,10 @@ MainFrame.Active = true
 MainFrame.Selectable = true
 MainFrame.Visible = false
 
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 12)
+MainCorner.Parent = MainFrame
+
 MainBorderFrame = Instance.new("Frame", MainFrame)
 MainBorderFrame.Name = "MainBorderFrame"
 MainBorderFrame.Size = UDim2.new(1, 8, 1, 8)
@@ -774,10 +778,6 @@ end)
 local MainScale = Instance.new("UIScale")
 MainScale.Scale = 1
 MainScale.Parent = MainFrame
-
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 12)
-MainCorner.Parent = MainFrame
 
 local MainStroke = Instance.new("UIStroke")
 MainStroke.Thickness = 2
@@ -1480,6 +1480,7 @@ local function CreateParticleGui()
     HideFromScanner(ParticleGuiContainer)
     
     local particles = {}
+    local lastSpawnTime = tick()
     
     local function SpawnParticle()
         local dot = Instance.new("Frame", ParticleGuiContainer)
@@ -1543,6 +1544,10 @@ local function CreateParticleGui()
                 data.Frame.Position = UDim2.new(data.PosX, 0, data.PosY, 0)
                 data.Frame.Rotation = math.deg(data.Angle)
             end
+        end
+        if tick() - lastSpawnTime > 0.3 then
+            lastSpawnTime = tick()
+            SpawnParticle()
         end
     end)
 end
@@ -3522,7 +3527,7 @@ if settingsPage then
     flyingFrame.Size = UDim2.new(1, 0, 1, 0)
     flyingFrame.BackgroundTransparency = 1
     flyingFrame.ZIndex = 100
-    flyingFrame.Parent = ScreenGui
+    flyingFrame.Parent = MainFrame
     local dotContainer = Instance.new("Frame")
     dotContainer.Name = "Particles"
     dotContainer.Size = UDim2.new(1, 0, 1, 0)
@@ -3540,30 +3545,30 @@ if settingsPage then
         if w <= 0 then w = 640 end
         if h <= 0 then h = 470 end
         local scale = _G.MenuScale / 45
-        local count = math.floor(50 + scale * 30)
+        local count = math.floor(80 + scale * 40)
         for i = 1, count do
             local dot = Instance.new("Frame")
             dot.Name = "Particle"
-            local size = math.random(15, 25) / 10
+            local size = math.random(20, 35) / 10
             dot.Size = UDim2.new(0, size, 0, size)
             dot.Position = UDim2.new(0, math.random(0, w), 0, math.random(0, h))
             dot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-            dot.BackgroundTransparency = 0.25
+            dot.BackgroundTransparency = 0.2
             dot.BorderSizePixel = 0
             local dotCorner = Instance.new("UICorner")
             dotCorner.CornerRadius = UDim.new(1, 0)
             dotCorner.Parent = dot
             local glow = Instance.new("UIStroke")
-            glow.Thickness = 0.8
+            glow.Thickness = 1
             glow.Color = Color3.fromRGB(255, 255, 255)
-            glow.Transparency = 0.8
+            glow.Transparency = 0.7
             glow.Parent = dot
             dot.Parent = dotContainer
             dot.ZIndex = 101
-            local speed = 0.5 + scale * 0.4
-            local speedX = (math.random() - 0.5) * speed * 0.6
-            local speedY = math.random() * speed * 0.5 + speed * 0.15
-            local rotSpeed = (math.random() - 0.5) * 0.025
+            local speed = 0.8 + scale * 0.5
+            local speedX = (math.random() - 0.5) * speed * 0.8
+            local speedY = math.random() * speed * 0.6 + speed * 0.2
+            local rotSpeed = (math.random() - 0.5) * 0.03
             table.insert(Dots, {Frame = dot, SpeedX = speedX, SpeedY = speedY, RotSpeed = rotSpeed, Angle = math.random() * math.pi * 2, PosX = math.random(0, w), PosY = math.random(0, h)})
         end
     end
@@ -4006,5 +4011,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] META v7.5.1 - Fixed UI Errors")
+print("[META] META v7.6.0 - Fixed Dots and Corners")
 print("[META] Press Insert or click icon")
