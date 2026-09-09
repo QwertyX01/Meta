@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.1.12
+-- KEY SYSTEM + META UI V7.2.0
 -- ====================================================================
 local GIST_ID = "0952fe76bcc259fcbda99e552956e5e6"
 local TOKEN_PART1 = "ghp_kMjn"
@@ -21,6 +21,7 @@ local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
 
 local http = (syn and syn.request) or (http and http.request) or http_request
 if not http then return print("Дельта не поддерживает http_request!") end
@@ -627,6 +628,8 @@ _G.ParticleEffectGuiEnabled = false
 _G.ChamsColor = Color3.fromRGB(110, 60, 170)
 _G.SkeletonColor = Color3.fromRGB(255, 255, 255)
 _G.FpsBoostEnabled = false
+_G.SilentAimEnabled = false
+_G.OffCircleEnabled = false
 
 local Dots = {}
 local DotConnection = nil
@@ -639,6 +642,8 @@ local SetFlyingToggleState, SetESPToggleState = nil, nil
 local SetHealthBarToggleState, SetSkeletonToggleState = nil, nil
 local SetParticleGuiToggleState = nil
 local SetFpsBoostState = nil
+local SetSilentAimState = nil
+local SetOffCircleState = nil
 local skyStroke = nil
 local soundStroke = nil
 local skyConnection = nil
@@ -665,6 +670,8 @@ local LANG = {
             HealthBar = {"Здоровье противников", "Полоска здоровья над головой"},
             ParticleEffectGui = {"Эффект частиц GUI", "Добавляет эффект точек на GUI интерфейса"},
             FpsBoost = {"FPS Boost", "Делает карту безлаганной"},
+            SilentAim = {"Silent Aim", "Автоматически целится во врагов в FOV"},
+            OffCircle = {"Off Circle", "Скрывает круг FOV но оставляет аим"},
             Reset = {"Сброс настроек", "Вернуть все настройки к стандартным"}
         }
     },
@@ -682,6 +689,8 @@ local LANG = {
             HealthBar = {"Health Bar", "Health bar above enemies"},
             ParticleEffectGui = {"Particle Effect GUI", "Adds particle effect to GUI interface"},
             FpsBoost = {"FPS Boost (recommended for weak devices)", "Makes the map lag-free"},
+            SilentAim = {"Silent Aim", "Automatically aims at enemies in FOV"},
+            OffCircle = {"Off Circle", "Hides the FOV circle but keeps aim"},
             Reset = {"Reset Settings", "Return all settings to default"}
         }
     }
@@ -725,7 +734,7 @@ MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(17, 20, 26)
 MainFrame.BackgroundTransparency = _G.MenuOpacity / 100
-MainFrame.ClipsDescendants = false
+MainFrame.ClipsDescendants = true
 MainFrame.Parent = ScreenGui
 MainFrame.Draggable = true
 MainFrame.Active = true
@@ -1693,6 +1702,220 @@ SearchInput.FocusLost:Connect(function(enterPressed)
         SearchInput.Text = "Search..."
     end
 end)
+
+-- AIMBOT PAGE
+local aimbotPage = ContentPages["Aimbot"]
+if aimbotPage then
+    aimbotPage.CanvasSize = UDim2.new(0, 0, 0, 300)
+    aimbotPage.ScrollBarThickness = 3
+
+    local function CreateToggle(name, descText, yPos, toggleFunc, frameName)
+        local frame = Instance.new("Frame")
+        frame.Name = frameName or name
+        frame.Size = UDim2.new(1, 0, 0, 45)
+        frame.Position = UDim2.new(0, 0, 0, yPos)
+        frame.BackgroundTransparency = 1
+        frame.Parent = aimbotPage
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(0.6, 0, 0, 20)
+        label.BackgroundTransparency = 1
+        label.Text = name
+        label.TextColor3 = Color3.fromRGB(209, 213, 219)
+        label.TextSize = 13
+        label.Font = Enum.Font.GothamBold
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.Parent = frame
+        local desc = Instance.new("TextLabel")
+        desc.Size = UDim2.new(0.7, 0, 0, 16)
+        desc.Position = UDim2.new(0, 0, 0, 22)
+        desc.BackgroundTransparency = 1
+        desc.Text = descText
+        desc.TextColor3 = Color3.fromRGB(113, 113, 122)
+        desc.TextSize = 11
+        desc.Font = Enum.Font.Gotham
+        desc.TextXAlignment = Enum.TextXAlignment.Left
+        desc.Parent = frame
+        local toggleBg = Instance.new("Frame")
+        toggleBg.Size = UDim2.new(0, 44, 0, 24)
+        toggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
+        toggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
+        toggleBg.BorderSizePixel = 0
+        toggleBg.Parent = frame
+        local toggleCorner = Instance.new("UICorner")
+        toggleCorner.CornerRadius = UDim.new(1, 0)
+        toggleCorner.Parent = toggleBg
+        local handle = Instance.new("Frame")
+        handle.Size = UDim2.new(0, 18, 0, 18)
+        handle.Position = UDim2.new(0, 3, 0.5, -9)
+        handle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        handle.BorderSizePixel = 0
+        handle.Parent = toggleBg
+        local handleCorner = Instance.new("UICorner")
+        handleCorner.CornerRadius = UDim.new(1, 0)
+        handleCorner.Parent = handle
+        local clickArea = Instance.new("TextButton")
+        clickArea.Size = UDim2.new(0, 44, 0, 24)
+        clickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
+        clickArea.BackgroundTransparency = 1
+        clickArea.Text = ""
+        clickArea.ZIndex = 10
+        clickArea.Parent = frame
+        local state = false
+        local function SetState(value)
+            state = value
+            if value then
+                TweenService:Create(toggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
+                TweenService:Create(handle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 23, 0.5, -9)}):Play()
+            else
+                TweenService:Create(toggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(42, 47, 58)}):Play()
+                TweenService:Create(handle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 3, 0.5, -9)}):Play()
+            end
+            toggleFunc(value)
+        end
+        clickArea.MouseButton1Click:Connect(function() PlayClickSound() SetState(not state) end)
+        return SetState, label, desc, frame
+    end
+
+    -- SILENT AIM SYSTEM
+    local SilentAimEnabled = false
+    local OffCircleEnabled = false
+    local MaxFOV = 200
+
+    local FOVCircle = Drawing.new("Circle")
+    FOVCircle.Thickness = 2.5
+    FOVCircle.Filled = false
+    FOVCircle.Transparency = 1
+    FOVCircle.NumSides = 64
+    FOVCircle.Visible = false
+
+    local CurrentTarget = nil
+
+    local function UpdateClosestTarget()
+        if not SilentAimEnabled then 
+            CurrentTarget = nil 
+            return 
+        end
+
+        local closestTarget = nil
+        local shortestDistance = MaxFOV
+
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                local character = player.Character
+                if character and character:FindFirstChild("Head") then
+                    local humanoid = character:FindFirstChildOfClass("Humanoid")
+                    if (humanoid and humanoid.Health > 0) or not humanoid then
+                        local head = character.Head
+                        local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
+                        
+                        if onScreen then
+                            local distance = (Vector2.new(pos.X, pos.Y) - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
+                            if distance < shortestDistance then
+                                closestTarget = head
+                                shortestDistance = distance
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        CurrentTarget = closestTarget
+    end
+
+    RunService.RenderStepped:Connect(function()
+        UpdateClosestTarget()
+        
+        if FOVCircle then
+            if OffCircleEnabled then
+                FOVCircle.Visible = false
+            else
+                FOVCircle.Visible = SilentAimEnabled
+            end
+            FOVCircle.Radius = MaxFOV
+            FOVCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+            FOVCircle.Color = CurrentTarget and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(0, 255, 0)
+        end
+    end)
+
+    local gmt = getrawmetatable(game)
+    setreadonly(gmt, false)
+    local oldIndex = gmt.__index
+    local oldNamecall = gmt.__namecall
+
+    gmt.__index = newcclosure(function(self, key)
+        if SilentAimEnabled and self == Mouse and CurrentTarget then
+            if key == "Hit" then return CurrentTarget.CFrame
+            elseif key == "Target" then return CurrentTarget end
+        end
+        return oldIndex(self, key)
+    end)
+
+    gmt.__namecall = newcclosure(function(self, ...)
+        local method = getnamecallmethod()
+        local args = {...}
+        if SilentAimEnabled and CurrentTarget then
+            if method == "Raycast" and self == workspace then
+                local origin = args[1]
+                if typeof(origin) == "Vector3" then
+                    args[2] = (CurrentTarget.Position - origin).Unit * 5000
+                    return oldNamecall(self, unpack(args))
+                end
+            end
+        end
+        return oldNamecall(self, ...)
+    end)
+    setreadonly(gmt, true)
+
+    task.spawn(function()
+        local NetworkPath = ReplicatedStorage:WaitForChild("Database", 5):WaitForChild("Security", 5):WaitForChild("Network", 5)
+        if NetworkPath then
+            local Network = require(NetworkPath)
+            if Network and Network.CreatePacket then
+                local oldCreatePacket = Network.CreatePacket
+                
+                Network.CreatePacket = newcclosure(function(p6, p7, p_u_3, v_u_5)
+                    if SilentAimEnabled and CurrentTarget then
+                        local function modifyTable(t)
+                            for k, v in pairs(t) do
+                                if typeof(v) == "Vector3" then
+                                    t[k] = CurrentTarget.Position
+                                elseif type(v) == "table" then
+                                    modifyTable(v)
+                                end
+                            end
+                        end
+                        
+                        if type(p6) == "table" then modifyTable(p6) end
+                        if type(p7) == "table" then modifyTable(p7) end
+                    end
+                    return oldCreatePacket(p6, p7, p_u_3, v_u_5)
+                end)
+                print("Сэр, гибридный хук CreatePacket успешно интегрирован.")
+            end
+        end
+    end)
+
+    local SetSilentAimState, silentLabel, silentDesc = CreateToggle("Silent Aim", "Automatically aims at enemies in FOV", 10, function(v)
+        SilentAimEnabled = v
+        _G.SilentAimEnabled = v
+        if not v then
+            CurrentTarget = nil
+        end
+    end, "SilentAimFrame")
+
+    local SetOffCircleState, offCircleLabel, offCircleDesc = CreateToggle("Off Circle", "Hides the FOV circle but keeps aim", 65, function(v)
+        OffCircleEnabled = v
+        _G.OffCircleEnabled = v
+    end, "OffCircleFrame")
+
+    table.insert(langUpdateCallbacks, function()
+        local lang = GetLang()
+        silentLabel.Text = lang.Toggles.SilentAim[1]
+        silentDesc.Text = lang.Toggles.SilentAim[2]
+        offCircleLabel.Text = lang.Toggles.OffCircle[1]
+        offCircleDesc.Text = lang.Toggles.OffCircle[2]
+    end)
+end
 
 -- VISUALS PAGE WITH CHAMS COLOR PICKERS (2 CIRCLES) + FPS BOOST
 local visualsPage = ContentPages["Visuals"]
@@ -3063,7 +3286,7 @@ if settingsPage then
     flyingFrame.Size = UDim2.new(1, 0, 1, 0)
     flyingFrame.BackgroundTransparency = 1
     flyingFrame.ZIndex = 100
-    flyingFrame.Parent = MainFrame
+    flyingFrame.Parent = ScreenGui
     local dotContainer = Instance.new("Frame")
     dotContainer.Name = "Particles"
     dotContainer.Size = UDim2.new(1, 0, 1, 0)
@@ -3263,6 +3486,8 @@ if settingsPage then
         _G.HealthBarEnabled = false
         _G.ParticleEffectGuiEnabled = false
         _G.FpsBoostEnabled = false
+        _G.SilentAimEnabled = false
+        _G.OffCircleEnabled = false
         _G.ChamsColor = Color3.fromRGB(110, 60, 170)
         _G.SkeletonColor = Color3.fromRGB(255, 255, 255)
         MainFrame.BackgroundTransparency = 0.12
@@ -3289,6 +3514,8 @@ if settingsPage then
         RemoveParticleGui()
         if SetParticleGuiToggleState then SetParticleGuiToggleState(false) end
         if SetFpsBoostState then SetFpsBoostState(false) end
+        if SetSilentAimState then SetSilentAimState(false) end
+        if SetOffCircleState then SetOffCircleState(false) end
         for _, btn in ipairs(langButtonData) do pcall(btn.Update, false) end
         UpdateAllTexts()
         if rainbowConnection then rainbowConnection:Disconnect() rainbowConnection = nil end
@@ -3467,6 +3694,11 @@ end)
 
 IconButton.MouseButton1Click:Connect(function()
     PlayClickSound()
+    
+    TweenService:Create(IconButton, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, 62, 0, 62)}):Play()
+    task.wait(0.05)
+    TweenService:Create(IconButton, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 55, 0, 55)}):Play()
+    
     if MainFrame.Visible then
         TweenService:Create(MainScale, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.7}):Play()
         TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Rotation = 10, BackgroundTransparency = 0.8}):Play()
@@ -3533,5 +3765,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] META v7.1.12 - FPS Boost + Key Frame Shake")
+print("[META] META v7.2.0 - Aimbot Silent Aim + Off Circle")
 print("[META] Press Insert or click icon")
