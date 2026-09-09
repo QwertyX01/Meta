@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.4.0
+-- KEY SYSTEM + META UI V7.5.0
 -- ====================================================================
 local GIST_ID = "0952fe76bcc259fcbda99e552956e5e6"
 local TOKEN_PART1 = "ghp_kMjn"
@@ -2016,7 +2016,7 @@ if aimbotPage then
         end
     end)
 
-    -- PART SELECTOR
+    -- PART SELECTOR (с анимацией)
     local SelectedPart = "Head"
     _G.SelectedPart = "Head"
 
@@ -2046,20 +2046,45 @@ if aimbotPage then
     partPanel.ZIndex = 10
     partPanel.Parent = aimbotPage
     Instance.new("UICorner", partPanel).CornerRadius = UDim.new(0, 8)
+    
+    local partPanelScale = Instance.new("UIScale")
+    partPanelScale.Scale = 0.8
+    partPanelScale.Parent = partPanel
 
     local partButtons = {}
     local partNames = {"Head", "Torso", "HumanoidRootPart"}
 
-    local function UpdatePartButtons()
+    local function AnimatePartPanel(show)
+        if show then
+            partPanel.Visible = true
+            partPanelScale.Scale = 0.7
+            TweenService:Create(partPanelScale, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+            TweenService:Create(partPanel, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.1}):Play()
+        else
+            TweenService:Create(partPanelScale, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.8}):Play()
+            TweenService:Create(partPanel, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
+            task.wait(0.15)
+            partPanel.Visible = false
+        end
+    end
+
+    local function UpdatePartButtons(animate)
         for i, partName in ipairs(partNames) do
             local btn = partButtons[i]
             if btn then
-                if SelectedPart == partName then
-                    btn.BackgroundColor3 = Color3.fromRGB(59, 130, 246)
-                    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+                local isActive = (SelectedPart == partName)
+                local targetBg = isActive and Color3.fromRGB(59, 130, 246) or Color3.fromRGB(35, 40, 50)
+                local targetText = isActive and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(156, 163, 175)
+                local targetScale = isActive and 1.05 or 1
+                
+                if animate then
+                    TweenService:Create(btn, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = targetBg}):Play()
+                    TweenService:Create(btn, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {TextColor3 = targetText}):Play()
+                    TweenService:Create(btn.UIScale, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = targetScale}):Play()
                 else
-                    btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
-                    btn.TextColor3 = Color3.fromRGB(156, 163, 175)
+                    btn.BackgroundColor3 = targetBg
+                    btn.TextColor3 = targetText
+                    btn.UIScale.Scale = targetScale
                 end
             end
         end
@@ -2078,23 +2103,36 @@ if aimbotPage then
         btn.Font = Enum.Font.GothamBold
         btn.ZIndex = 11
         btn.Parent = partPanel
+        
+        local btnScale = Instance.new("UIScale")
+        btnScale.Scale = 1
+        btnScale.Parent = btn
+        
         Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
         
         btn.MouseButton1Click:Connect(function()
-            SelectedPart = partName
-            _G.SelectedPart = partName
-            UpdatePartButtons()
-            partPanel.Visible = false
+            if SelectedPart ~= partName then
+                SelectedPart = partName
+                _G.SelectedPart = partName
+                UpdatePartButtons(true)
+                task.wait(0.1)
+                AnimatePartPanel(false)
+            end
         end)
         
+        btn.UIScale = btnScale
         partButtons[i] = btn
     end
 
     partButton.MouseButton1Click:Connect(function()
-        partPanel.Visible = not partPanel.Visible
+        if partPanel.Visible then
+            AnimatePartPanel(false)
+        else
+            AnimatePartPanel(true)
+        end
     end)
 
-    UpdatePartButtons()
+    UpdatePartButtons(false)
 
     _G.SetSilentAimState = SetSilentAimState
     _G.SetOffCircleState = SetOffCircleState
@@ -3421,8 +3459,7 @@ if settingsPage then
     scaleSliderFill.Parent = scaleSliderBg
     local scaleFillCorner = Instance.new("UICorner")
     scaleFillCorner.CornerRadius = UDim.new(1, 0)
-    scaleFillCorner.Parent = scaleSliderFill
-    scaleSliderHandle = Instance.new("Frame")
+    scaleFillCorner.Parent = scaleSliderFill    scaleSliderHandle = Instance.new("Frame")
     scaleSliderHandle.Size = UDim2.new(0, 16, 0, 16)
     scaleSliderHandle.Position = UDim2.new(0.5, -8, 0.5, -8)
     scaleSliderHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -3961,5 +3998,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] META v7.4.0 - Part Selection")
+print("[META] META v7.5.0 - Animated Part Selection")
 print("[META] Press Insert or click icon")
