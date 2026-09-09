@@ -22,7 +22,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
-
 local http = (syn and syn.request) or (http and http.request) or http_request
 if not http then return print("Дельта не поддерживает http_request!") end
 
@@ -31,7 +30,7 @@ local function getGistData()
     if res.StatusCode == 200 then
         local data = HttpService:JSONDecode(res.Body)
         for filename, fileInfo in pairs(data.files) do return fileInfo.content, filename end
-    end 
+    end
     return nil
 end
 
@@ -735,7 +734,8 @@ MainFrame.Size = UDim2.new(0, 640 * (_G.MenuScale / 45), 0, 470 * (_G.MenuScale 
 MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(17, 20, 26)
-MainFrame.BackgroundTransparency = _G.MenuOpacity / 100MainFrame.ClipsDescendants = true
+MainFrame.BackgroundTransparency = _G.MenuOpacity / 100
+MainFrame.ClipsDescendants = true
 MainFrame.Parent = ScreenGui
 MainFrame.Draggable = true
 MainFrame.Active = true
@@ -1782,7 +1782,6 @@ if aimbotPage then
     local SilentAimEnabled = false
     local OffCircleEnabled = false
     local MaxFOV = 200
-    local SelectedPart = "Head"
 
     local FOVCircle = Drawing.new("Circle")
     FOVCircle.Thickness = 2.5
@@ -1795,11 +1794,9 @@ if aimbotPage then
 
     local function GetTargetPart(character)
         if not character then return nil end
-        if SelectedPart == "Head" then
-            return character:FindFirstChild("Head")
-        elseif SelectedPart == "Torso" then
+        if _G.SelectedPart == "Torso" then
             return character:FindFirstChild("Torso") or character:FindFirstChild("UpperTorso")
-        elseif SelectedPart == "Humanoid" then
+        elseif _G.SelectedPart == "HumanoidRootPart" then
             return character:FindFirstChild("HumanoidRootPart")
         end
         return character:FindFirstChild("Head")
@@ -2019,7 +2016,10 @@ if aimbotPage then
         end
     end)
 
-    -- PART SELECTOR BUTTON
+    -- PART SELECTOR
+    local SelectedPart = "Head"
+    _G.SelectedPart = "Head"
+
     local partButton = Instance.new("TextButton")
     partButton.Name = "PartButton"
     partButton.Size = UDim2.new(0.3, 0, 0, 30)
@@ -2035,7 +2035,6 @@ if aimbotPage then
     partButton.Parent = aimbotPage
     Instance.new("UICorner", partButton).CornerRadius = UDim.new(0, 6)
 
-    -- PART PANEL
     local partPanel = Instance.new("Frame")
     partPanel.Name = "PartPanel"
     partPanel.Size = UDim2.new(0.4, 0, 0, 120)
@@ -2049,7 +2048,7 @@ if aimbotPage then
     Instance.new("UICorner", partPanel).CornerRadius = UDim.new(0, 8)
 
     local partButtons = {}
-    local partNames = {"Head", "Torso", "Humanoid"}
+    local partNames = {"Head", "Torso", "HumanoidRootPart"}
 
     local function UpdatePartButtons()
         for i, partName in ipairs(partNames) do
@@ -2082,7 +2081,6 @@ if aimbotPage then
         Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
         
         btn.MouseButton1Click:Connect(function()
-            PlayClickSound()
             SelectedPart = partName
             _G.SelectedPart = partName
             UpdatePartButtons()
@@ -2093,7 +2091,6 @@ if aimbotPage then
     end
 
     partButton.MouseButton1Click:Connect(function()
-        PlayClickSound()
         partPanel.Visible = not partPanel.Visible
     end)
 
