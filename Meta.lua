@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.5.0
+-- KEY SYSTEM + META UI V7.5.1
 -- ====================================================================
 local GIST_ID = "0952fe76bcc259fcbda99e552956e5e6"
 local TOKEN_PART1 = "ghp_kMjn"
@@ -524,8 +524,11 @@ if not isActivated then
             TweenService:Create(KeyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Position = UDim2.new(0.5, -230, 0.5, -500)}):Play()
             TweenService:Create(KeyFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}):Play()
             for _, child in pairs(KeyFrame:GetDescendants()) do
-                if child:IsA("TextLabel") or child:IsA("TextBox") or child:IsA("Frame") or child:IsA("TextButton") then
-                    TweenService:Create(child, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {TextTransparency = 1, BackgroundTransparency = 1}):Play()
+                if child:IsA("TextLabel") or child:IsA("TextBox") or child:IsA("TextButton") then
+                    TweenService:Create(child, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {TextTransparency = 1}):Play()
+                end
+                if child:IsA("Frame") or child:IsA("TextButton") or child:IsA("TextBox") then
+                    TweenService:Create(child, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {BackgroundTransparency = 1}):Play()
                 end
             end
             task.wait(0.5)
@@ -2071,7 +2074,8 @@ if aimbotPage then
     local function UpdatePartButtons(animate)
         for i, partName in ipairs(partNames) do
             local btn = partButtons[i]
-            if btn then
+            local btnScale = btn and btn:FindFirstChild("UIScale")
+            if btn and btnScale then
                 local isActive = (SelectedPart == partName)
                 local targetBg = isActive and Color3.fromRGB(59, 130, 246) or Color3.fromRGB(35, 40, 50)
                 local targetText = isActive and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(156, 163, 175)
@@ -2080,11 +2084,11 @@ if aimbotPage then
                 if animate then
                     TweenService:Create(btn, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = targetBg}):Play()
                     TweenService:Create(btn, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {TextColor3 = targetText}):Play()
-                    TweenService:Create(btn.UIScale, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = targetScale}):Play()
+                    TweenService:Create(btnScale, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = targetScale}):Play()
                 else
                     btn.BackgroundColor3 = targetBg
                     btn.TextColor3 = targetText
-                    btn.UIScale.Scale = targetScale
+                    btnScale.Scale = targetScale
                 end
             end
         end
@@ -2105,6 +2109,7 @@ if aimbotPage then
         btn.Parent = partPanel
         
         local btnScale = Instance.new("UIScale")
+        btnScale.Name = "UIScale"
         btnScale.Scale = 1
         btnScale.Parent = btn
         
@@ -2120,7 +2125,6 @@ if aimbotPage then
             end
         end)
         
-        btn.UIScale = btnScale
         partButtons[i] = btn
     end
 
@@ -3459,7 +3463,8 @@ if settingsPage then
     scaleSliderFill.Parent = scaleSliderBg
     local scaleFillCorner = Instance.new("UICorner")
     scaleFillCorner.CornerRadius = UDim.new(1, 0)
-    scaleFillCorner.Parent = scaleSliderFill    scaleSliderHandle = Instance.new("Frame")
+    scaleFillCorner.Parent = scaleSliderFill
+    scaleSliderHandle = Instance.new("Frame")
     scaleSliderHandle.Size = UDim2.new(0, 16, 0, 16)
     scaleSliderHandle.Position = UDim2.new(0.5, -8, 0.5, -8)
     scaleSliderHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -3970,16 +3975,19 @@ IconButton.MouseButton1Click:Connect(function()
 end)
 
 if isActivated then
+    task.wait(0.5)
     MainFrame.Visible = true
     MainScale.Scale = 0.1
     MainFrame.Rotation = -10
     MainFrame.BackgroundTransparency = 1
     MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+    task.wait(0.1)
     TweenService:Create(MainScale, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 0.7}):Play()
     TweenService:Create(MainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Rotation = -3, BackgroundTransparency = 0.5}):Play()
     task.wait(0.5)
     TweenService:Create(MainScale, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
     TweenService:Create(MainFrame, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Rotation = 0, BackgroundTransparency = _G.MenuOpacity / 100}):Play()
+    task.wait(0.6)
     if MainBorderFrame then
         MainBorderFrame.BackgroundTransparency = _G.MenuOpacity / 100
     end
@@ -3998,5 +4006,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] META v7.5.0 - Animated Part Selection")
+print("[META] META v7.5.1 - Fixed UI Errors")
 print("[META] Press Insert or click icon")
