@@ -31,7 +31,7 @@ local function getGistData()
     if res.StatusCode == 200 then
         local data = HttpService:JSONDecode(res.Body)
         for filename, fileInfo in pairs(data.files) do return fileInfo.content, filename end
-    end
+    end 
     return nil
 end
 
