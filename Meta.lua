@@ -1702,9 +1702,10 @@ SearchInput.FocusLost:Connect(function(enterPressed)
 end)
 
 -- AIMBOT PAGE
+-- AIMBOT PAGE
 local aimbotPage = ContentPages["Aimbot"]
 if aimbotPage then
-    aimbotPage.CanvasSize = UDim2.new(0, 0, 0, 300)
+    aimbotPage.CanvasSize = UDim2.new(0, 0, 0, 400)
     aimbotPage.ScrollBarThickness = 3
 
     local function CreateToggle(name, descText, yPos, toggleFunc, frameName)
@@ -1774,6 +1775,247 @@ if aimbotPage then
         return SetState, label, desc, frame
     end
 
+    -- SILENT AIM SYSTEM
+    local SilentAimEnabled = false
+    local OffCircleEnabled = false
+    local MaxFOV = 200
+
+    local FOVCircle = Drawing.new("Circle")
+    FOVCircle.Thickness = 2.5
+    FOVCircle.Filled = false
+    FOVCircle.Transparency = 1
+    FOVCircle.NumSides = 64
+    FOVCircle.Visible = false
+
+    local CurrentTarget = nil
+
+    local function UpdateClosestTarget()
+        if not SilentAimEnabled then 
+            CurrentTarget = nil 
+            return 
+        end
+
+        local closestTarget = nil
+        local shortestDistance = MaxFOV
+
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                local character = player.Character
+                if character and character:FindFirstChild("Head") then
+                    local humanoid = character:FindFirstChildOfClass("Humanoid")
+                    if (humanoid and humanoid.Health > 0) or not humanoid then
+                        local head = character.Head
+                        local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
+                        
+                        if onScreen then
+                            local distance = (Vector2.new(pos.X, pos.Y) - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
+                            if distance < shortestDistance then
+                                closestTarget = head
+                                shortestDistance = distance
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        CurrentTarget = closestTarget
+    end
+
+    RunService.RenderStepped:Connect(function()
+        UpdateClosestTarget()
+        
+        if FOVCircle then
+            if OffCircleEnabled then
+                FOVCircle.Visible = false
+            else
+                FOVCircle.Visible = SilentAimEnabled
+            end
+            FOVCircle.Radius = MaxFOV
+            FOVCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+            FOVCircle.Color = CurrentTarget and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(0, 255, 0)
+        end
+    end)
+
+    local gmt = getrawmetatable(game)
+    setreadonly(gmt, false)
+    local oldIndex = gmt.__index
+    local oldNamecall = gmt.__namecall
+
+    gmt.__index = newcclosure(function(self, key)
+        if SilentAimEnabled and CurrentTarget then
+            if key == "Hit" then return CurrentTarget.CFrame
+            elseif key == "Target" then return CurrentTarget end
+        end
+        return oldIndex(self, key)
+    end)
+
+    gmt.__namecall = newcclosure(function(self, ...)
+        local method = getnamecallmethod()
+        local args = {...}
+        if SilentAimEnabled and CurrentTarget then
+            if method == "Raycast" and self == workspace then
+                local origin = args[1]
+                if typeof(origin) == "Vector3" then
+                    args[2] = (CurrentTarget.Position - origin).Unit * 5000
+                    return oldNamecall(self, unpack(args))
+                end
+            end
+        end
+        return oldNamecall(self, ...)
+    end)
+    setreadonly(gmt, true)
+
+    task.spawn(function()
+        local NetworkPath = ReplicatedStorage:WaitForChild("Database", 5):WaitForChild("Security", 5):WaitForChild("Network", 5)
+        if NetworkPath then
+            local Network = require(NetworkPath)
+            if Network and Network.CreatePacket then
+                local oldCreatePacket = Network.CreatePacket
+                
+                Network.CreatePacket = newcclosure(function(p6, p7, p_u_3, v_u_5)
+                    if SilentAimEnabled and CurrentTarget then
+                        local function modifyTable(t)
+                            for k, v in pairs(t) do
+                                if typeof(v) == "Vector3" then
+                                    t[k] = CurrentTarget.Position
+                                elseif type(v) == "table" then
+                                    modifyTable(v)
+                                end
+                            end
+                        end
+                        
+                        if type(p6) == "table" then modifyTable(p6) end
+                        if type(p7) == "table" then modifyTable(p7) end
+                    end
+                    return oldCreatePacket(p6, p7, p_u_3, v_u_5)
+                end)
+                print("Сэр, гибридный хук CreatePacket успешно интегрирован.")
+            end
+        end
+    end)
+
+    -- Тумблеры
+    local SetSilentAimState, silentLabel, silentDesc = CreateToggle("Silent Aim", "Automatically aims at enemies in FOV", 10, function(v)
+        SilentAimEnabled = v
+        _G.SilentAimEnabled = v
+        if not v then
+            CurrentTarget = nil
+        end
+    end, "SilentAimFrame")
+
+    local SetOffCircleState, offCircleLabel, offCircleDesc = CreateToggle("Off Circle", "Hides the FOV circle but keeps aim", 65, function(v)
+        OffCircleEnabled = v
+        _G.OffCircleEnabled = v
+    end, "OffCircleFrame")
+
+    -- FOV SLIDER
+    local fovSliderFrame = Instance.new("Frame")
+    fovSliderFrame.Size = UDim2.new(1, -20, 0, 55)
+    fovSliderFrame.Position = UDim2.new(0, 10, 0, 120)
+    fovSliderFrame.BackgroundTransparency = 1
+    fovSliderFrame.Parent = aimbotPage
+
+    local fovLabel = Instance.new("TextLabel")
+    fovLabel.Size = UDim2.new(0.5, 0, 0, 20)
+    fovLabel.BackgroundTransparency = 1
+    fovLabel.Text = "FOV Size"
+    fovLabel.TextColor3 = Color3.fromRGB(209, 213, 219)
+    fovLabel.TextSize = 13
+    fovLabel.Font = Enum.Font.GothamBold
+    fovLabel.TextXAlignment = Enum.TextXAlignment.Left
+    fovLabel.Parent = fovSliderFrame
+
+    local fovValue = Instance.new("TextLabel")
+    fovValue.Size = UDim2.new(0.15, 0, 0, 20)
+    fovValue.Position = UDim2.new(0.85, 0, 0, 0)
+    fovValue.BackgroundTransparency = 1
+    fovValue.Text = "200"
+    fovValue.TextColor3 = Color3.fromRGB(255, 255, 255)
+    fovValue.TextSize = 14
+    fovValue.Font = Enum.Font.GothamBold
+    fovValue.TextXAlignment = Enum.TextXAlignment.Right
+    fovValue.Parent = fovSliderFrame
+
+    local fovSliderBg = Instance.new("Frame")
+    fovSliderBg.Size = UDim2.new(0.5, 0, 0, 6)
+    fovSliderBg.Position = UDim2.new(0, 0, 0, 30)
+    fovSliderBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
+    fovSliderBg.BorderSizePixel = 0
+    fovSliderBg.Parent = fovSliderFrame
+    Instance.new("UICorner", fovSliderBg).CornerRadius = UDim.new(1, 0)
+
+    local fovSliderFill = Instance.new("Frame")
+    fovSliderFill.Size = UDim2.new(0.67, 0, 1, 0)
+    fovSliderFill.BackgroundColor3 = Color3.fromRGB(59, 130, 246)
+    fovSliderFill.BorderSizePixel = 0
+    fovSliderFill.Parent = fovSliderBg
+    Instance.new("UICorner", fovSliderFill).CornerRadius = UDim.new(1, 0)
+
+    local fovSliderHandle = Instance.new("Frame")
+    fovSliderHandle.Size = UDim2.new(0, 16, 0, 16)
+    fovSliderHandle.Position = UDim2.new(0.67, -8, 0.5, -8)
+    fovSliderHandle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    fovSliderHandle.BorderSizePixel = 0
+    fovSliderHandle.Parent = fovSliderBg
+    Instance.new("UICorner", fovSliderHandle).CornerRadius = UDim.new(1, 0)
+
+    local isDraggingFOV = false
+
+    local function UpdateFOV(mouseX)
+        local absPos = fovSliderBg.AbsolutePosition.X
+        local width = fovSliderBg.AbsoluteSize.X
+        if width <= 0 then return end
+        local percent = math.clamp((mouseX - absPos) / width, 0, 1)
+        local val = math.round(50 + percent * 450)
+        val = math.clamp(val, 50, 500)
+        local p = (val - 50) / 450
+        fovSliderFill.Size = UDim2.new(p, 0, 1, 0)
+        fovSliderHandle.Position = UDim2.new(p, -8, 0.5, -8)
+        fovValue.Text = tostring(val)
+        MaxFOV = val
+        _G.SilentAimFOV = val
+    end
+
+    fovSliderHandle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isDraggingFOV = true
+            UpdateFOV(input.Position.X)
+        end
+    end)
+
+    fovSliderBg.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isDraggingFOV = true
+            UpdateFOV(input.Position.X)
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isDraggingFOV = false
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if isDraggingFOV and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            UpdateFOV(input.Position.X)
+        end
+    end)
+
+    _G.SetSilentAimState = SetSilentAimState
+    _G.SetOffCircleState = SetOffCircleState
+    SetSilentAimState = SetSilentAimState
+    SetOffCircleState = SetOffCircleState
+
+    table.insert(langUpdateCallbacks, function()
+        local lang = GetLang()
+        silentLabel.Text = lang.Toggles.SilentAim[1]
+        silentDesc.Text = lang.Toggles.SilentAim[2]
+        offCircleLabel.Text = lang.Toggles.OffCircle[1]
+        offCircleDesc.Text = lang.Toggles.OffCircle[2]
+        fovLabel.Text = "FOV Size"
+    end)
+end
     -- SILENT AIM SYSTEM
     local SilentAimEnabled = false
     local OffCircleEnabled = false
