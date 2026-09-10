@@ -2066,22 +2066,30 @@ if skyPage then
     skyScroll.Position = UDim2.new(0, 5, 0, 5)
     skyScroll.BackgroundTransparency = 1
     skyScroll.BorderSizePixel = 0
-    skyScroll.CanvasSize = UDim2.new(0, 0, 0, 150)
+    skyScroll.CanvasSize = UDim2.new(0, 0, 0, 200)
     skyScroll.ScrollBarThickness = 3
     skyScroll.ZIndex = 5
     skyScroll.Parent = skyBlock
     local modeButtons = {}
     local activeSkyMode = nil
+    local greenConnection = nil
     local function ResetSky()
         if skyConnection then skyConnection:Disconnect() skyConnection = nil end
+        if greenConnection then greenConnection:Disconnect() greenConnection = nil end
         for _, obj in ipairs(Lighting:GetChildren()) do
-            if obj.Name == "DeltaPurpleFilter" or obj.Name == "DeltaOrangeFilter" or obj.Name == "DeltaBlackSkyFilter" or obj.Name == "DeltaVibeBloom" or obj.Name == "DeltaVibeAtmosphere" then obj:Destroy() end
+            if obj.Name == "DeltaPurpleFilter" or obj.Name == "DeltaOrangeFilter" or obj.Name == "DeltaBlackSkyFilter" or obj.Name == "DeltaVibeBloom" or obj.Name == "DeltaVibeAtmosphere"
+            or obj.Name:match("^META_Green") then obj:Destroy() end
         end
         Lighting.TimeOfDay = "14:00:00"
         Lighting.Brightness = 1
         Lighting.OutdoorAmbient = Color3.fromRGB(127, 127, 127)
         Lighting.Ambient = Color3.fromRGB(70, 70, 70)
         Lighting.GlobalShadows = false
+        Lighting.ExposureCompensation = 0
+        Lighting.EnvironmentDiffuseScale = 1
+        Lighting.EnvironmentSpecularScale = 1
+        Lighting.FogEnd = 100000
+        Lighting.FogStart = 0
     end
     local function StartPurpleSky()
         ResetSky()
@@ -2185,6 +2193,70 @@ if skyPage then
             Lighting.Ambient = Color3.fromRGB(100, 90, 85)
         end)
     end
+    local function StartGreenSky()
+        ResetSky()
+        activeSkyMode = "Green"
+        local greenSky = Instance.new("Sky")
+        greenSky.Name = "META_GreenSky"
+        greenSky.SkyboxBk = "rbxassetid://159454299"
+        greenSky.SkyboxDn = "rbxassetid://159454296"
+        greenSky.SkyboxFt = "rbxassetid://159454293"
+        greenSky.SkyboxLf = "rbxassetid://159454286"
+        greenSky.SkyboxRt = "rbxassetid://159454300"
+        greenSky.SkyboxUp = "rbxassetid://159454288"
+        greenSky.SunAngularSize = 12
+        greenSky.MoonAngularSize = 10
+        greenSky.StarCount = 3000
+        greenSky.CelestialBodiesShown = true
+        greenSky.Parent = Lighting
+        local atmosphere = Instance.new("Atmosphere")
+        atmosphere.Name = "META_GreenAtmosphere"
+        atmosphere.Density = 0.38
+        atmosphere.Offset = 0.1
+        atmosphere.Color = Color3.fromRGB(120, 255, 160)
+        atmosphere.Decay = Color3.fromRGB(40, 120, 60)
+        atmosphere.Glare = 0.6
+        atmosphere.Haze = 2.2
+        atmosphere.Parent = Lighting
+        local cc = Instance.new("ColorCorrectionEffect")
+        cc.Name = "META_GreenFilter"
+        cc.Brightness = 0.04
+        cc.Contrast = 0.18
+        cc.Saturation = 0.55
+        cc.TintColor = Color3.fromRGB(170, 255, 190)
+        cc.Parent = Lighting
+        local bloom = Instance.new("BloomEffect")
+        bloom.Name = "META_GreenBloom"
+        bloom.Intensity = 0.65
+        bloom.Size = 18
+        bloom.Threshold = 0.25
+        bloom.Parent = Lighting
+        local rays = Instance.new("SunRaysEffect")
+        rays.Name = "META_GreenRays"
+        rays.Intensity = 0.18
+        rays.Spread = 1
+        rays.Parent = Lighting
+        Lighting.Ambient = Color3.fromRGB(80, 140, 100)
+        Lighting.OutdoorAmbient = Color3.fromRGB(120, 200, 150)
+        Lighting.Brightness = 1.6
+        Lighting.ClockTime = 15.5
+        Lighting.GeographicLatitude = 12
+        Lighting.GlobalShadows = true
+        Lighting.EnvironmentDiffuseScale = 0.6
+        Lighting.EnvironmentSpecularScale = 0.8
+        Lighting.ExposureCompensation = 0.05
+        Lighting.FogEnd = 100000
+        Lighting.FogStart = 0
+        local speed = 0.6
+        if greenConnection then greenConnection:Disconnect() end
+        greenConnection = RunService.Heartbeat:Connect(function()
+            if not cc or not cc.Parent then greenConnection:Disconnect() return end
+            local wave = (math.sin(tick() * speed) + 1) / 2
+            cc.TintColor = Color3.fromRGB(150 + wave * 40, 240 + wave * 15, 170 + wave * 40)
+            atmosphere.Color = Color3.fromRGB(100 + wave * 40, 230 + wave * 25, 130 + wave * 40)
+            bloom.Intensity = 0.5 + wave * 0.25
+        end)
+    end
     local function CreateModeButton(text, yPos, skyFunc)
         local btnFrame = Instance.new("Frame")
         btnFrame.Size = UDim2.new(0.85, 0, 0, 36)
@@ -2253,6 +2325,7 @@ if skyPage then
     CreateModeButton("Night Sky (Mode)", 15, StartNightSky)
     CreateModeButton("Evening Sky (Mode)", 60, StartEveningSky)
     CreateModeButton("Purple Sky (My Love Mode)", 105, StartPurpleSky)
+    CreateModeButton("Green Vibe", 150, StartGreenSky)
     local ResetSkyButton = Instance.new("TextButton")
     ResetSkyButton.Size = UDim2.new(0, 60, 0, 22)
     ResetSkyButton.Position = UDim2.new(1, -65, 1, -27)
