@@ -14,12 +14,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
--- ====================================================================
--- META UI
--- ====================================================================
 local function SetupAntiCheatBypass()
     pcall(function()
-        local ReplicatedStorage = game:GetService("ReplicatedStorage")
         local Network = require(ReplicatedStorage.Database.Security.Network)
         local OriginalCreatePacket = Network.CreatePacket
         Network.CreatePacket = function(namespace, packetName, schema, options)
@@ -355,7 +351,6 @@ local function IsEnemy(p)
     return false
 end
 
--- CHAMS
 local ChamsConnections = {}
 local function PaintCharacter(character, p)
     if not character or not p then return end
@@ -410,7 +405,6 @@ local function RemoveChams()
     if _G.UnloadChams then _G.UnloadChams() end
 end
 
--- ESP
 local ESPConnections = {}
 local function SetupESP()
     local function NewLine()
@@ -496,7 +490,6 @@ task.spawn(function()
     end
 end)
 
--- SKELETON ESP
 local SkeletonLines = {}
 local SkeletonEnemiesList = {}
 local SkeletonCacheTime = 0
@@ -573,51 +566,41 @@ SkeletonConnection = RunService.RenderStepped:Connect(function()
         end
         return
     end
-
     UpdateSkeletonEnemies()
-
     for player, data in pairs(SkeletonEnemiesList) do
         if not player or not player.Character or not player.Character.Parent then
             RemoveSkeletonData(player)
             continue
         end
-
         local char = player.Character
         local health, maxHealth = GetSkeletonHealth(char)
         if not health or health <= 0 then
             RemoveSkeletonData(player)
             continue
         end
-
         local head = char:FindFirstChild("Head")
         local upperTorso = char:FindFirstChild("UpperTorso")
         local lowerTorso = char:FindFirstChild("LowerTorso")
         local hrp = char:FindFirstChild("HumanoidRootPart")
         local torso = char:FindFirstChild("Torso")
-
         if not head or (not upperTorso and not torso) then
             RemoveSkeletonData(player)
             continue
         end
-
         local headPos = GetSkeletonPos(head)
         local upperTorsoPos = GetSkeletonPos(upperTorso or torso)
         local lowerTorsoPos = GetSkeletonPos(lowerTorso)
         local hrpPos = GetSkeletonPos(hrp)
-
         if not headPos or not upperTorsoPos then
             RemoveSkeletonData(player)
             continue
         end
-
         if not SkeletonLines[player] then
             SkeletonLines[player] = {}
             for i = 1, 15 do table.insert(SkeletonLines[player], CreateSkeletonLine()) end
         end
-
         local lines = SkeletonLines[player]
         local idx = 1
-
         local function setLine(from, to, show)
             if from and to and show then
                 lines[idx].From = from
@@ -630,7 +613,6 @@ SkeletonConnection = RunService.RenderStepped:Connect(function()
             end
             idx = idx + 1
         end
-
         local leftUpperArm = char:FindFirstChild("LeftUpperArm") or char:FindFirstChild("Left Arm")
         local leftLowerArm = char:FindFirstChild("LeftLowerArm")
         local leftHand = char:FindFirstChild("LeftHand")
@@ -643,7 +625,6 @@ SkeletonConnection = RunService.RenderStepped:Connect(function()
         local rightUpperLeg = char:FindFirstChild("RightUpperLeg") or char:FindFirstChild("Right Leg")
         local rightLowerLeg = char:FindFirstChild("RightLowerLeg")
         local rightFoot = char:FindFirstChild("RightFoot")
-
         setLine(headPos, upperTorsoPos, true)
         setLine(upperTorsoPos, lowerTorsoPos, lowerTorsoPos ~= nil)
         setLine(upperTorsoPos, hrpPos, hrpPos ~= nil)
@@ -653,7 +634,6 @@ SkeletonConnection = RunService.RenderStepped:Connect(function()
         setLine(upperTorsoPos, rightUpperArm and GetSkeletonPos(rightUpperArm), rightUpperArm ~= nil)
         setLine(rightUpperArm and GetSkeletonPos(rightUpperArm), rightLowerArm and GetSkeletonPos(rightLowerArm), rightUpperArm ~= nil and rightLowerArm ~= nil)
         setLine(rightLowerArm and GetSkeletonPos(rightLowerArm), rightHand and GetSkeletonPos(rightHand), rightLowerArm ~= nil and rightHand ~= nil)
-
         if lowerTorsoPos then
             setLine(lowerTorsoPos, leftUpperLeg and GetSkeletonPos(leftUpperLeg), leftUpperLeg ~= nil)
             setLine(lowerTorsoPos, rightUpperLeg and GetSkeletonPos(rightUpperLeg), rightUpperLeg ~= nil)
@@ -664,27 +644,21 @@ SkeletonConnection = RunService.RenderStepped:Connect(function()
             setLine(upperTorsoPos, leftUpperLeg and GetSkeletonPos(leftUpperLeg), leftUpperLeg ~= nil)
             setLine(upperTorsoPos, rightUpperLeg and GetSkeletonPos(rightUpperLeg), rightUpperLeg ~= nil)
         end
-
         setLine(leftUpperLeg and GetSkeletonPos(leftUpperLeg), leftLowerLeg and GetSkeletonPos(leftLowerLeg), leftUpperLeg ~= nil and leftLowerLeg ~= nil)
         setLine(rightUpperLeg and GetSkeletonPos(rightUpperLeg), rightLowerLeg and GetSkeletonPos(rightLowerLeg), rightUpperLeg ~= nil and rightLowerLeg ~= nil)
         setLine(leftLowerLeg and GetSkeletonPos(leftLowerLeg), leftFoot and GetSkeletonPos(leftFoot), leftLowerLeg ~= nil and leftFoot ~= nil)
         setLine(rightLowerLeg and GetSkeletonPos(rightLowerLeg), rightFoot and GetSkeletonPos(rightFoot), rightLowerLeg ~= nil and rightFoot ~= nil)
-
         while idx <= #lines do
             lines[idx].Visible = false
             idx = idx + 1
         end
     end
-
     for player, _ in pairs(SkeletonLines) do
         if not SkeletonEnemiesList[player] then RemoveSkeletonData(player) end
     end
 end)
 
-local function ApplySkeleton()
-    _G.SkeletonEnabled = true
-end
-
+local function ApplySkeleton() _G.SkeletonEnabled = true end
 local function RemoveSkeleton()
     _G.SkeletonEnabled = false
     for player, _ in pairs(SkeletonLines) do RemoveSkeletonData(player) end
@@ -706,14 +680,12 @@ local function CreateHealthBar()
     bg.Color = Color3.fromRGB(15, 17, 25)
     bg.Transparency = 0.7
     bg.ZIndex = 0
-
     local bar = Drawing.new("Square")
     bar.Thickness = 0
     bar.Filled = true
     bar.Visible = false
     bar.Transparency = 0.85
     bar.ZIndex = 1
-
     local border = Drawing.new("Square")
     border.Thickness = 1.2
     border.Filled = false
@@ -721,7 +693,6 @@ local function CreateHealthBar()
     border.Color = Color3.fromRGB(80, 90, 120)
     border.Transparency = 0.5
     border.ZIndex = 2
-
     return {Bg = bg, Bar = bar, Border = border}
 end
 
@@ -795,76 +766,61 @@ HealthConnection = RunService.RenderStepped:Connect(function()
         end
         return
     end
-
     UpdateHealthEnemiesList()
-
     for player, data in pairs(HealthEnemiesList) do
         if not player or not player.Character or not player.Character.Parent then
             RemoveHealthBarData(player)
             continue
         end
-
         local char = player.Character
         local health, maxHealth = GetHealthValue(char)
         if not health or health <= 0 then
             RemoveHealthBarData(player)
             continue
         end
-
         local prevHealth = HealthHistoryData[player]
         HealthHistoryData[player] = health
-
         local head = char:FindFirstChild("Head")
         if not head then
             RemoveHealthBarData(player)
             continue
         end
-
         local headPos, headVis = Camera:WorldToViewportPoint(head.Position)
         local distance = (Camera.CFrame.Position - head.Position).Magnitude
-
         if headVis and headPos.Z > 0 and distance <= 1000 then
             local barWidth = 50
             local barHeight = 5
             local scale = 1 / (headPos.Z * 0.015 + 0.5)
             if scale > 1.5 then scale = 1.5 end
             if scale < 0.4 then scale = 0.4 end
-
             local finalWidth = barWidth * scale
             local finalHeight = barHeight * scale
             local offsetY = 4 * scale
             local barX = headPos.X - finalWidth / 2
             local barY = headPos.Y - finalHeight - offsetY
-
             if barX < 5 then barX = 5 end
             if barX + finalWidth > Camera.ViewportSize.X - 5 then barX = Camera.ViewportSize.X - finalWidth - 5 end
             if barY < 5 then barY = 5 end
-
             if not HealthBars[player] then HealthBars[player] = CreateHealthBar() end
-
             local barData = HealthBars[player]
             local hpPercent = health / maxHealth
             local filledWidth = finalWidth * hpPercent
-
             barData.Bg.Size = Vector2.new(finalWidth, finalHeight)
             barData.Bg.Position = Vector2.new(barX, barY)
             barData.Bg.Visible = true
             barData.Bg.Transparency = 0.7
             barData.Bg.Color = Color3.fromRGB(15, 17, 25)
             barData.Bg.Thickness = 0
-
             barData.Bar.Size = Vector2.new(math.max(filledWidth, 0.5), finalHeight)
             barData.Bar.Position = Vector2.new(barX, barY)
             barData.Bar.Visible = true
             barData.Bar.Transparency = 0.85
             barData.Bar.Thickness = 0
             barData.Bar.Color = GetHealthBarColor(health, maxHealth, prevHealth)
-
             if prevHealth and prevHealth > health and (prevHealth - health) > 5 then
                 barData.Bar.Color = Color3.fromRGB(255, 255, 255)
                 barData.Bar.Transparency = 0.7
             end
-
             barData.Border.Size = Vector2.new(finalWidth, finalHeight)
             barData.Border.Position = Vector2.new(barX, barY)
             barData.Border.Visible = true
@@ -879,16 +835,12 @@ HealthConnection = RunService.RenderStepped:Connect(function()
             end
         end
     end
-
     for player, _ in pairs(HealthBars) do
         if not HealthEnemiesList[player] then RemoveHealthBarData(player) end
     end
 end)
 
-local function ApplyHealthBar()
-    _G.HealthBarEnabled = true
-end
-
+local function ApplyHealthBar() _G.HealthBarEnabled = true end
 local function RemoveHealthBar()
     _G.HealthBarEnabled = false
     for player, _ in pairs(HealthBars) do RemoveHealthBarData(player) end
@@ -903,9 +855,7 @@ local ParticleGuiConnection = nil
 local function CreateParticleGui()
     if ParticleGuiContainer then ParticleGuiContainer:Destroy() end
     if ParticleGuiConnection then ParticleGuiConnection:Disconnect() end
-    
     local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-    
     ParticleGuiContainer = Instance.new("ScreenGui")
     ParticleGuiContainer.Name = "META_ParticleEffectGui"
     ParticleGuiContainer.ResetOnSpawn = false
@@ -914,10 +864,8 @@ local function CreateParticleGui()
     ParticleGuiContainer.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     ParticleGuiContainer.Parent = PlayerGui
     HideFromScanner(ParticleGuiContainer)
-    
     local particles = {}
     local lastSpawnTime = tick()
-    
     local function SpawnParticle()
         local dot = Instance.new("Frame", ParticleGuiContainer)
         local size = math.random(2, 5)
@@ -929,7 +877,6 @@ local function CreateParticleGui()
         dot.BorderSizePixel = 0
         dot.ZIndex = 999999
         Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
-        
         local data = {
             Frame = dot,
             SpeedY = math.random(20, 50) / 10,
@@ -940,7 +887,6 @@ local function CreateParticleGui()
             PosY = 1
         }
         table.insert(particles, data)
-        
         task.delay(5, function()
             if dot and dot.Parent then dot:Destroy() end
             for i, p in pairs(particles) do
@@ -951,15 +897,11 @@ local function CreateParticleGui()
             end
         end)
     end
-    
     for i = 1, 50 do
         task.delay(math.random(0, 50) / 10, function()
-            if ParticleGuiContainer then
-                SpawnParticle()
-            end
+            if ParticleGuiContainer then SpawnParticle() end
         end)
     end
-    
     ParticleGuiConnection = RunService.Heartbeat:Connect(function()
         if not ParticleGuiContainer then return end
         for _, data in pairs(particles) do
@@ -967,14 +909,12 @@ local function CreateParticleGui()
                 data.PosY = data.PosY - data.SpeedY / 200
                 data.PosX = data.PosX + data.SpeedX / 200
                 data.Angle = data.Angle + data.RotSpeed / 30
-                
                 if data.PosY < -0.05 then
                     data.PosY = 1
                     data.PosX = math.random(0, 100) / 100
                 end
                 if data.PosX < -0.05 then data.PosX = 1.05 end
                 if data.PosX > 1.05 then data.PosX = -0.05 end
-                
                 data.Frame.Position = UDim2.new(data.PosX, 0, data.PosY, 0)
                 data.Frame.Rotation = math.deg(data.Angle)
             end
@@ -1218,20 +1158,16 @@ if aimbotPage then
     end
 
     local function SetupAimbot()
-        -- SILENT AIM SYSTEM
         local SilentAimEnabled = false
         local OffCircleEnabled = false
         local MaxFOV = 200
-
         local FOVCircle = Drawing.new("Circle")
         FOVCircle.Thickness = 2.5
         FOVCircle.Filled = false
         FOVCircle.Transparency = 1
         FOVCircle.NumSides = 64
         FOVCircle.Visible = false
-
         local CurrentTarget = nil
-
         local function GetTargetPart(character)
             if not character then return nil end
             if _G.SelectedPart == "Torso" then
@@ -1241,16 +1177,10 @@ if aimbotPage then
             end
             return character:FindFirstChild("Head")
         end
-
         local function UpdateClosestTarget()
-            if not SilentAimEnabled then 
-                CurrentTarget = nil 
-                return 
-            end
-
+            if not SilentAimEnabled then CurrentTarget = nil return end
             local closestTarget = nil
             local shortestDistance = MaxFOV
-
             for _, player in ipairs(Players:GetPlayers()) do
                 if player ~= LocalPlayer then
                     local character = player.Character
@@ -1260,7 +1190,6 @@ if aimbotPage then
                             local humanoid = character:FindFirstChildOfClass("Humanoid")
                             if (humanoid and humanoid.Health > 0) or not humanoid then
                                 local pos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
-                                
                                 if onScreen then
                                     local distance = (Vector2.new(pos.X, pos.Y) - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
                                     if distance < shortestDistance then
@@ -1275,10 +1204,8 @@ if aimbotPage then
             end
             CurrentTarget = closestTarget
         end
-
         RunService.RenderStepped:Connect(function()
             UpdateClosestTarget()
-            
             if FOVCircle then
                 if OffCircleEnabled then
                     FOVCircle.Visible = false
@@ -1290,12 +1217,10 @@ if aimbotPage then
                 FOVCircle.Color = CurrentTarget and Color3.fromRGB(255, 0, 0) or Color3.fromRGB(0, 255, 0)
             end
         end)
-
         local gmt = getrawmetatable(game)
         setreadonly(gmt, false)
         local oldIndex = gmt.__index
         local oldNamecall = gmt.__namecall
-
         gmt.__index = newcclosure(function(self, key)
             if SilentAimEnabled and CurrentTarget then
                 if key == "Hit" then return CurrentTarget.CFrame
@@ -1303,7 +1228,6 @@ if aimbotPage then
             end
             return oldIndex(self, key)
         end)
-
         gmt.__namecall = newcclosure(function(self, ...)
             local method = getnamecallmethod()
             local args = {...}
@@ -1319,14 +1243,12 @@ if aimbotPage then
             return oldNamecall(self, ...)
         end)
         setreadonly(gmt, true)
-
         task.spawn(function()
             local NetworkPath = ReplicatedStorage:WaitForChild("Database", 5):WaitForChild("Security", 5):WaitForChild("Network", 5)
             if NetworkPath then
                 local Network = require(NetworkPath)
                 if Network and Network.CreatePacket then
                     local oldCreatePacket = Network.CreatePacket
-                    
                     Network.CreatePacket = newcclosure(function(p6, p7, p_u_3, v_u_5)
                         if SilentAimEnabled and CurrentTarget then
                             local function modifyTable(t)
@@ -1338,7 +1260,6 @@ if aimbotPage then
                                     end
                                 end
                             end
-                            
                             if type(p6) == "table" then modifyTable(p6) end
                             if type(p7) == "table" then modifyTable(p7) end
                         end
@@ -1348,16 +1269,12 @@ if aimbotPage then
                 end
             end
         end)
-
         local SetSilentAimState, silentLabel, silentDesc = CreateToggle("Silent Aim", "Automatically aims at enemies in FOV", 10, function(v)
             SilentAimEnabled = v
             _G.SilentAimEnabled = v
-            if not v then
-                CurrentTarget = nil
-            end
+            if not v then CurrentTarget = nil end
         end, "SilentAimFrame")
         _G.SetSilentAimState = SetSilentAimState
-
         local SetOffCircleState, offCircleLabel, offCircleDesc = CreateToggle("Off Circle", "Hides the FOV circle but keeps aim", 65, function(v)
             OffCircleEnabled = v
             _G.OffCircleEnabled = v
@@ -1370,7 +1287,6 @@ if aimbotPage then
         fovSliderFrame.Position = UDim2.new(0, 10, 0, 120)
         fovSliderFrame.BackgroundTransparency = 1
         fovSliderFrame.Parent = aimbotPage
-
         local fovLabel = Instance.new("TextLabel")
         fovLabel.Size = UDim2.new(0.5, 0, 0, 20)
         fovLabel.BackgroundTransparency = 1
@@ -1380,7 +1296,6 @@ if aimbotPage then
         fovLabel.Font = Enum.Font.GothamBold
         fovLabel.TextXAlignment = Enum.TextXAlignment.Left
         fovLabel.Parent = fovSliderFrame
-
         local fovValue = Instance.new("TextLabel")
         fovValue.Size = UDim2.new(0.15, 0, 0, 20)
         fovValue.Position = UDim2.new(0.85, 0, 0, 0)
@@ -1391,7 +1306,6 @@ if aimbotPage then
         fovValue.Font = Enum.Font.GothamBold
         fovValue.TextXAlignment = Enum.TextXAlignment.Right
         fovValue.Parent = fovSliderFrame
-
         local fovSliderBg = Instance.new("Frame")
         fovSliderBg.Size = UDim2.new(0.5, 0, 0, 6)
         fovSliderBg.Position = UDim2.new(0, 0, 0, 30)
@@ -1399,14 +1313,12 @@ if aimbotPage then
         fovSliderBg.BorderSizePixel = 0
         fovSliderBg.Parent = fovSliderFrame
         Instance.new("UICorner", fovSliderBg).CornerRadius = UDim.new(1, 0)
-
         local fovSliderFill = Instance.new("Frame")
         fovSliderFill.Size = UDim2.new(0.33, 0, 1, 0)
         fovSliderFill.BackgroundColor3 = Color3.fromRGB(59, 130, 246)
         fovSliderFill.BorderSizePixel = 0
         fovSliderFill.Parent = fovSliderBg
         Instance.new("UICorner", fovSliderFill).CornerRadius = UDim.new(1, 0)
-
         local fovSliderHandle = Instance.new("Frame")
         fovSliderHandle.Size = UDim2.new(0, 16, 0, 16)
         fovSliderHandle.Position = UDim2.new(0.33, -8, 0.5, -8)
@@ -1414,9 +1326,7 @@ if aimbotPage then
         fovSliderHandle.BorderSizePixel = 0
         fovSliderHandle.Parent = fovSliderBg
         Instance.new("UICorner", fovSliderHandle).CornerRadius = UDim.new(1, 0)
-
         local isDraggingFOV = false
-
         local function UpdateFOV(mouseX)
             local absPos = fovSliderBg.AbsolutePosition.X
             local width = fovSliderBg.AbsoluteSize.X
@@ -1431,27 +1341,23 @@ if aimbotPage then
             MaxFOV = val
             _G.SilentAimFOV = val
         end
-
         fovSliderHandle.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 isDraggingFOV = true
                 UpdateFOV(input.Position.X)
             end
         end)
-
         fovSliderBg.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 isDraggingFOV = true
                 UpdateFOV(input.Position.X)
             end
         end)
-
         UserInputService.InputEnded:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 isDraggingFOV = false
             end
         end)
-
         UserInputService.InputChanged:Connect(function(input)
             if isDraggingFOV and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
                 UpdateFOV(input.Position.X)
@@ -1461,7 +1367,6 @@ if aimbotPage then
         -- PART SELECTOR
         local SelectedPart = "Head"
         _G.SelectedPart = "Head"
-
         local partButton = Instance.new("TextButton")
         partButton.Name = "PartButton"
         partButton.Size = UDim2.new(0.3, 0, 0, 30)
@@ -1476,7 +1381,6 @@ if aimbotPage then
         partButton.ZIndex = 5
         partButton.Parent = aimbotPage
         Instance.new("UICorner", partButton).CornerRadius = UDim.new(0, 6)
-
         local partPanel = Instance.new("Frame")
         partPanel.Name = "PartPanel"
         partPanel.Size = UDim2.new(0.4, 0, 0, 120)
@@ -1488,14 +1392,11 @@ if aimbotPage then
         partPanel.ZIndex = 10
         partPanel.Parent = aimbotPage
         Instance.new("UICorner", partPanel).CornerRadius = UDim.new(0, 8)
-        
         local partPanelScale = Instance.new("UIScale")
         partPanelScale.Scale = 0.8
         partPanelScale.Parent = partPanel
-
         local partButtons = {}
         local partNames = {"Head", "Torso", "HumanoidRootPart"}
-
         local function AnimatePartPanel(show)
             if show then
                 partPanel.Visible = true
@@ -1509,7 +1410,6 @@ if aimbotPage then
                 partPanel.Visible = false
             end
         end
-
         local function UpdatePartButtons(animate)
             for i, partName in ipairs(partNames) do
                 local btn = partButtons[i]
@@ -1519,7 +1419,6 @@ if aimbotPage then
                     local targetBg = isActive and Color3.fromRGB(59, 130, 246) or Color3.fromRGB(35, 40, 50)
                     local targetText = isActive and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(156, 163, 175)
                     local targetScale = isActive and 1.05 or 1
-                    
                     if animate then
                         TweenService:Create(btn, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = targetBg}):Play()
                         TweenService:Create(btn, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {TextColor3 = targetText}):Play()
@@ -1533,7 +1432,6 @@ if aimbotPage then
             end
             partButton.Text = "Part: " .. SelectedPart
         end
-
         for i, partName in ipairs(partNames) do
             local btn = Instance.new("TextButton")
             btn.Size = UDim2.new(1, -20, 0, 30)
@@ -1546,14 +1444,11 @@ if aimbotPage then
             btn.Font = Enum.Font.GothamBold
             btn.ZIndex = 11
             btn.Parent = partPanel
-            
             local btnScale = Instance.new("UIScale")
             btnScale.Name = "UIScale"
             btnScale.Scale = 1
             btnScale.Parent = btn
-            
             Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
-            
             btn.MouseButton1Click:Connect(function()
                 if SelectedPart ~= partName then
                     SelectedPart = partName
@@ -1563,10 +1458,8 @@ if aimbotPage then
                     AnimatePartPanel(false)
                 end
             end)
-            
             partButtons[i] = btn
         end
-
         partButton.MouseButton1Click:Connect(function()
             if partPanel.Visible then
                 AnimatePartPanel(false)
@@ -1574,7 +1467,6 @@ if aimbotPage then
                 AnimatePartPanel(true)
             end
         end)
-
         UpdatePartButtons(false)
     end
 
@@ -1664,7 +1556,6 @@ if visualsPage then
         chamsColorPicker.Visible = false
         chamsColorPicker.ZIndex = 30
         chamsColorPicker.Parent = visualsPage
-        
         local chamsWheel = Instance.new("ImageLabel")
         chamsWheel.Size = UDim2.new(0, 120, 0, 120)
         chamsWheel.Position = UDim2.new(0.15, 0, 0.5, -60)
@@ -1672,7 +1563,6 @@ if visualsPage then
         chamsWheel.Image = "rbxassetid://7393858625"
         chamsWheel.ZIndex = 31
         chamsWheel.Parent = chamsColorPicker
-        
         local chamsPickerDot = Instance.new("Frame")
         chamsPickerDot.Size = UDim2.new(0, 10, 0, 10)
         chamsPickerDot.Position = UDim2.new(0.5, -5, 0.5, -5)
@@ -1680,14 +1570,12 @@ if visualsPage then
         chamsPickerDot.ZIndex = 32
         chamsPickerDot.Parent = chamsWheel
         Instance.new("UICorner", chamsPickerDot).CornerRadius = UDim.new(1, 0)
-        
         local chamsDragArea = Instance.new("TextButton")
         chamsDragArea.Size = UDim2.new(1, 0, 1, 0)
         chamsDragArea.BackgroundTransparency = 1
         chamsDragArea.Text = ""
         chamsDragArea.ZIndex = 33
         chamsDragArea.Parent = chamsWheel
-        
         local chamsLabelText = Instance.new("TextLabel")
         chamsLabelText.Size = UDim2.new(0, 80, 0, 20)
         chamsLabelText.Position = UDim2.new(0.35, 0, 0.5, -40)
@@ -1698,7 +1586,6 @@ if visualsPage then
         chamsLabelText.Font = Enum.Font.GothamBold
         chamsLabelText.TextXAlignment = Enum.TextXAlignment.Left
         chamsLabelText.Parent = chamsColorPicker
-        
         local isDraggingChamsColor = false
         local function UpdateChamsWheelColor(inputPosition)
             local wheelCenter = chamsWheel.AbsolutePosition + (chamsWheel.AbsoluteSize / 2)
@@ -1726,7 +1613,6 @@ if visualsPage then
                 end
             end
         end
-        
         chamsDragArea.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
                 isDraggingChamsColor = true
@@ -1734,13 +1620,11 @@ if visualsPage then
                 UpdateChamsWheelColor(input.Position)
             end
         end)
-        
         UserInputService.InputChanged:Connect(function(input)
             if isDraggingChamsColor and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
                 UpdateChamsWheelColor(input.Position)
             end
         end)
-        
         UserInputService.InputEnded:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
                 isDraggingChamsColor = false
@@ -1757,7 +1641,6 @@ if visualsPage then
         skeletonColorPicker.Visible = false
         skeletonColorPicker.ZIndex = 30
         skeletonColorPicker.Parent = visualsPage
-        
         local skeletonWheel = Instance.new("ImageLabel")
         skeletonWheel.Size = UDim2.new(0, 120, 0, 120)
         skeletonWheel.Position = UDim2.new(0.65, 0, 0.5, -60)
@@ -1765,7 +1648,6 @@ if visualsPage then
         skeletonWheel.Image = "rbxassetid://7393858625"
         skeletonWheel.ZIndex = 31
         skeletonWheel.Parent = skeletonColorPicker
-        
         local skeletonPickerDot = Instance.new("Frame")
         skeletonPickerDot.Size = UDim2.new(0, 10, 0, 10)
         skeletonPickerDot.Position = UDim2.new(0.5, -5, 0.5, -5)
@@ -1773,14 +1655,12 @@ if visualsPage then
         skeletonPickerDot.ZIndex = 32
         skeletonPickerDot.Parent = skeletonWheel
         Instance.new("UICorner", skeletonPickerDot).CornerRadius = UDim.new(1, 0)
-        
         local skeletonDragArea = Instance.new("TextButton")
         skeletonDragArea.Size = UDim2.new(1, 0, 1, 0)
         skeletonDragArea.BackgroundTransparency = 1
         skeletonDragArea.Text = ""
         skeletonDragArea.ZIndex = 33
         skeletonDragArea.Parent = skeletonWheel
-        
         local skeletonLabelText = Instance.new("TextLabel")
         skeletonLabelText.Size = UDim2.new(0, 80, 0, 20)
         skeletonLabelText.Position = UDim2.new(0.85, 0, 0.5, -40)
@@ -1791,7 +1671,6 @@ if visualsPage then
         skeletonLabelText.Font = Enum.Font.GothamBold
         skeletonLabelText.TextXAlignment = Enum.TextXAlignment.Left
         skeletonLabelText.Parent = skeletonColorPicker
-        
         local isDraggingSkeletonColor = false
         local function UpdateSkeletonWheelColor(inputPosition)
             local wheelCenter = skeletonWheel.AbsolutePosition + (skeletonWheel.AbsoluteSize / 2)
@@ -1816,7 +1695,6 @@ if visualsPage then
                 end
             end
         end
-        
         skeletonDragArea.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
                 isDraggingSkeletonColor = true
@@ -1824,13 +1702,11 @@ if visualsPage then
                 UpdateSkeletonWheelColor(input.Position)
             end
         end)
-        
         UserInputService.InputChanged:Connect(function(input)
             if isDraggingSkeletonColor and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
                 UpdateSkeletonWheelColor(input.Position)
             end
         end)
-        
         UserInputService.InputEnded:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
                 isDraggingSkeletonColor = false
@@ -1868,22 +1744,18 @@ if visualsPage then
         end, "ChamsFrame")
         SetChamsToggleState = SetChamsState
         SetChamsToggleState(_G.ChamsEnabled)
-
         local SetESPState, espLabel, espDesc = CreateToggle("Tracers and 3D Box", "Lines with boxes leading to enemies", 65, function(v) if v then ApplyESP() else RemoveESP() end _G.ESPEnabled = v end, "ESPFrame")
         SetESPToggleState = SetESPState
         SetESPToggleState(_G.ESPEnabled)
-
         local SetSkeletonState, skeletonLabel, skeletonDesc = CreateToggle("Skeleton", "Skeleton for enemies", 120, function(v)
             if v then ApplySkeleton() else RemoveSkeleton() end
             _G.SkeletonEnabled = v
         end, "SkeletonFrame")
         SetSkeletonToggleState = SetSkeletonState
         SetSkeletonToggleState(_G.SkeletonEnabled)
-
         local SetHealthState, healthLabel, healthDesc = CreateToggle("Health Bar", "Health bar above enemies", 175, function(v) if v then ApplyHealthBar() else RemoveHealthBar() end _G.HealthBarEnabled = v end, "HealthFrame")
         SetHealthBarToggleState = SetHealthState
         SetHealthBarToggleState(_G.HealthBarEnabled)
-
         local SetFpsBoostState, fpsBoostLabel, fpsBoostDesc = CreateToggle("FPS Boost (recommended for weak devices)", "Makes the map lag-free", 230, function(v)
             if v then
                 for _, obj in ipairs(game:GetDescendants()) do
@@ -1907,11 +1779,9 @@ if visualsPage then
             _G.FpsBoostEnabled = v
         end, "FPSBoostFrame")
         SetFpsBoostState = SetFpsBoostState
-
         local SetParticleGuiState, particleLabel, particleDesc = CreateToggle("Particle Effect GUI", "Adds particle effect to GUI interface", 285, function(v) if v then ApplyParticleGui() else RemoveParticleGui() end _G.ParticleEffectGuiEnabled = v end, "ParticleGuiFrame")
         SetParticleGuiToggleState = SetParticleGuiState
         SetParticleGuiToggleState(_G.ParticleEffectGuiEnabled)
-
         table.insert(langUpdateCallbacks, function()
             local lang = GetLang()
             chamsLabel.Text = lang.Toggles.Chams[1]
@@ -1936,7 +1806,7 @@ end
 local miscPage = ContentPages["Misc"]
 if miscPage then
     local function SetupMisc()
-        miscPage.CanvasSize = UDim2.new(0, 0, 0, 300)
+        miscPage.CanvasSize = UDim2.new(0, 0, 0, 400)
         miscPage.ScrollBarThickness = 3
 
         local function CreateToggle(name, descText, yPos, toggleFunc, frameName)
@@ -2034,6 +1904,92 @@ if miscPage then
                 end)
             end
         end, "NoSpreadFrame")
+
+        -- NO RELOAD
+        local NoReloadEnabled = false
+        local function StartNoReload()
+            NoReloadEnabled = true
+            task.spawn(function()
+                while NoReloadEnabled do
+                    task.wait(0.3)
+                    pcall(function()
+                        for _, v in pairs(getgc(true)) do
+                            if type(v) == "table" then
+                                if rawget(v, "IsReloading") ~= nil then v.IsReloading = false end
+                                if rawget(v, "Rounds") and rawget(v, "Capacity") then v.Rounds = v.Capacity end
+                                if rawget(v, "ReloadTime") then v.ReloadTime = 0 end
+                            end
+                        end
+                    end)
+                end
+            end)
+            task.spawn(function()
+                local Remotes
+                pcall(function()
+                    Remotes = require(ReplicatedStorage.Database.Security.Remotes)
+                end)
+                if not Remotes then return end
+                local ReloadPacket = Remotes.Inventory and Remotes.Inventory.ReloadWeapon
+                if ReloadPacket and ReloadPacket.Send then
+                    local oldReloadSend = ReloadPacket.Send
+                    ReloadPacket.Send = function(self, data)
+                        if NoReloadEnabled then
+                            if data and data.Value then data.Value.Rounds = data.Value.Capacity end
+                            return nil
+                        end
+                        return oldReloadSend(self, data)
+                    end
+                end
+            end)
+        end
+        CreateToggle("No Reload", "Бесконечные патроны", 120, function(v)
+            if v then StartNoReload() else NoReloadEnabled = false end
+            _G.NoReloadEnabled = v
+        end, "NoReloadFrame")
+
+        -- NO ARMS
+        local InvisibleArmsEnabled = false
+        local HideArmsBypass = newcclosure(function()
+            if not InvisibleArmsEnabled then return end
+            local Camera = workspace.CurrentCamera
+            if Camera then
+                for _, child in ipairs(Camera:GetChildren()) do
+                    if child:IsA("Model") then
+                        for _, part in ipairs(child:GetDescendants()) do
+                            if part:IsA("BasePart") or part:IsA("MeshPart") then
+                                local nameLower = part.Name:lower()
+                                if nameLower:find("arm") or nameLower:find("hand") or nameLower:find("glove") or 
+                                   nameLower:find("sleeve") or nameLower:find("left") or nameLower:find("right") or
+                                   nameLower:find("finger") or nameLower:find("shoulder") then
+                                    pcall(function() part.Transparency = 1 end)
+                                end
+                            elseif part:IsA("Decal") or part:IsA("Texture") then
+                                local parentName = part.Parent and part.Parent.Name:lower() or ""
+                                if parentName:find("arm") or parentName:find("hand") or parentName:find("glove") then
+                                    pcall(function() part.Transparency = 1 end)
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end)
+        RunService.RenderStepped:Connect(HideArmsBypass)
+        CreateToggle("No Arms", "Скрывает руки, оружие видно", 175, function(v)
+            InvisibleArmsEnabled = v
+            if not v then
+                local Camera = workspace.CurrentCamera
+                if Camera then
+                    for _, child in ipairs(Camera:GetChildren()) do
+                        for _, subChild in ipairs(child:GetDescendants()) do
+                            if subChild:IsA("BasePart") or subChild:IsA("MeshPart") then
+                                subChild.Transparency = 0
+                            end
+                        end
+                    end
+                end
+            end
+        end, "NoArmsFrame")
     end
 
     SetupMisc()
@@ -2066,19 +2022,21 @@ if skyPage then
     skyScroll.Position = UDim2.new(0, 5, 0, 5)
     skyScroll.BackgroundTransparency = 1
     skyScroll.BorderSizePixel = 0
-    skyScroll.CanvasSize = UDim2.new(0, 0, 0, 200)
+    skyScroll.CanvasSize = UDim2.new(0, 0, 0, 250)
     skyScroll.ScrollBarThickness = 3
     skyScroll.ZIndex = 5
     skyScroll.Parent = skyBlock
     local modeButtons = {}
     local activeSkyMode = nil
     local greenConnection = nil
+    local pinkConnection = nil
     local function ResetSky()
         if skyConnection then skyConnection:Disconnect() skyConnection = nil end
         if greenConnection then greenConnection:Disconnect() greenConnection = nil end
+        if pinkConnection then pinkConnection:Disconnect() pinkConnection = nil end
         for _, obj in ipairs(Lighting:GetChildren()) do
             if obj.Name == "DeltaPurpleFilter" or obj.Name == "DeltaOrangeFilter" or obj.Name == "DeltaBlackSkyFilter" or obj.Name == "DeltaVibeBloom" or obj.Name == "DeltaVibeAtmosphere"
-            or obj.Name:match("^META_Green") then obj:Destroy() end
+            or obj.Name:match("^META_Green") or obj.Name:match("^META_Pink") then obj:Destroy() end
         end
         Lighting.TimeOfDay = "14:00:00"
         Lighting.Brightness = 1
@@ -2257,6 +2215,70 @@ if skyPage then
             bloom.Intensity = 0.5 + wave * 0.25
         end)
     end
+    local function StartPinkSky()
+        ResetSky()
+        activeSkyMode = "Pink"
+        local pinkSky = Instance.new("Sky")
+        pinkSky.Name = "META_PinkSky"
+        pinkSky.SkyboxBk = "rbxassetid://159454299"
+        pinkSky.SkyboxDn = "rbxassetid://159454296"
+        pinkSky.SkyboxFt = "rbxassetid://159454293"
+        pinkSky.SkyboxLf = "rbxassetid://159454286"
+        pinkSky.SkyboxRt = "rbxassetid://159454300"
+        pinkSky.SkyboxUp = "rbxassetid://159454288"
+        pinkSky.SunAngularSize = 14
+        pinkSky.MoonAngularSize = 12
+        pinkSky.StarCount = 3000
+        pinkSky.CelestialBodiesShown = true
+        pinkSky.Parent = Lighting
+        local atmosphere = Instance.new("Atmosphere")
+        atmosphere.Name = "META_PinkAtmosphere"
+        atmosphere.Density = 0.4
+        atmosphere.Offset = 0.15
+        atmosphere.Color = Color3.fromRGB(255, 180, 220)
+        atmosphere.Decay = Color3.fromRGB(180, 90, 150)
+        atmosphere.Glare = 0.7
+        atmosphere.Haze = 2.5
+        atmosphere.Parent = Lighting
+        local cc = Instance.new("ColorCorrectionEffect")
+        cc.Name = "META_PinkFilter"
+        cc.Brightness = 0.06
+        cc.Contrast = 0.18
+        cc.Saturation = 0.6
+        cc.TintColor = Color3.fromRGB(255, 200, 230)
+        cc.Parent = Lighting
+        local bloom = Instance.new("BloomEffect")
+        bloom.Name = "META_PinkBloom"
+        bloom.Intensity = 0.75
+        bloom.Size = 22
+        bloom.Threshold = 0.2
+        bloom.Parent = Lighting
+        local rays = Instance.new("SunRaysEffect")
+        rays.Name = "META_PinkRays"
+        rays.Intensity = 0.22
+        rays.Spread = 1.2
+        rays.Parent = Lighting
+        Lighting.Ambient = Color3.fromRGB(140, 100, 130)
+        Lighting.OutdoorAmbient = Color3.fromRGB(200, 150, 190)
+        Lighting.Brightness = 1.8
+        Lighting.ClockTime = 16.5
+        Lighting.GeographicLatitude = 15
+        Lighting.GlobalShadows = true
+        Lighting.EnvironmentDiffuseScale = 0.7
+        Lighting.EnvironmentSpecularScale = 0.9
+        Lighting.ExposureCompensation = 0.08
+        Lighting.FogEnd = 100000
+        Lighting.FogStart = 0
+        local speed = 0.5
+        if pinkConnection then pinkConnection:Disconnect() end
+        pinkConnection = RunService.Heartbeat:Connect(function()
+            if not cc or not cc.Parent then pinkConnection:Disconnect() return end
+            local wave = (math.sin(tick() * speed) + 1) / 2
+            cc.TintColor = Color3.fromRGB(240 + wave * 15, 190 + wave * 20, 220 + wave * 25)
+            atmosphere.Color = Color3.fromRGB(240 + wave * 15, 170 + wave * 25, 210 + wave * 30)
+            bloom.Intensity = 0.6 + wave * 0.3
+        end)
+    end
     local function CreateModeButton(text, yPos, skyFunc)
         local btnFrame = Instance.new("Frame")
         btnFrame.Size = UDim2.new(0.85, 0, 0, 36)
@@ -2326,6 +2348,7 @@ if skyPage then
     CreateModeButton("Evening Sky (Mode)", 60, StartEveningSky)
     CreateModeButton("Purple Sky (My Love Mode)", 105, StartPurpleSky)
     CreateModeButton("Green Vibe", 150, StartGreenSky)
+    CreateModeButton("Pink Vibe", 195, StartPinkSky)
     local ResetSkyButton = Instance.new("TextButton")
     ResetSkyButton.Size = UDim2.new(0, 60, 0, 22)
     ResetSkyButton.Position = UDim2.new(1, -65, 1, -27)
@@ -2579,7 +2602,6 @@ if settingsPage then
         settingsContainer.BackgroundTransparency = 1
         settingsContainer.ClipsDescendants = true
         settingsContainer.Parent = settingsPage
-
         local toggleFrame = Instance.new("Frame")
         toggleFrame.Size = UDim2.new(1, 0, 0, 45)
         toggleFrame.Position = UDim2.new(0, 0, 0, 10)
@@ -2730,7 +2752,6 @@ if settingsPage then
         end
         table.insert(langUpdateCallbacks, UpdateUIColorText)
         clickArea.MouseButton1Click:Connect(function() PlayClickSound() SetToggleState(not _G.CustomThemeEnabled) end)
-
         local langFrame = Instance.new("Frame")
         langFrame.Size = UDim2.new(1, -20, 0, 42)
         langFrame.Position = UDim2.new(0, 10, 0, 10)
@@ -2795,7 +2816,6 @@ if settingsPage then
         CreateLangButton("Русский", "RU", 0.03)
         CreateLangButton("English", "EN", 0.55)
 
-        -- OPACITY SLIDER
         local opacityFrame = Instance.new("Frame")
         opacityFrame.Size = UDim2.new(1, -20, 0, 55)
         opacityFrame.Position = UDim2.new(0, 10, 0, 60)
@@ -2897,7 +2917,6 @@ if settingsPage then
         end
         table.insert(langUpdateCallbacks, UpdateOpacityText)
 
-        -- RAINBOW
         local rainbowFrame = Instance.new("Frame")
         rainbowFrame.Size = UDim2.new(1, 0, 0, 45)
         rainbowFrame.Position = UDim2.new(0, 0, 0, 120)
@@ -3000,7 +3019,6 @@ if settingsPage then
         end
         table.insert(langUpdateCallbacks, UpdateRainbowText)
 
-        -- SCALE SLIDER
         local scaleFrame = Instance.new("Frame")
         scaleFrame.Size = UDim2.new(1, -20, 0, 55)
         scaleFrame.Position = UDim2.new(0, 10, 0, 170)
@@ -3099,7 +3117,6 @@ if settingsPage then
         end
         table.insert(langUpdateCallbacks, UpdateScaleText)
 
-        -- FLYING DOTS
         local flyingFrame = Instance.new("Frame")
         flyingFrame.Name = "Effects"
         flyingFrame.Size = UDim2.new(1, 0, 1, 0)
@@ -3246,7 +3263,6 @@ if settingsPage then
         end
         table.insert(langUpdateCallbacks, UpdateFlyingText)
 
-        -- RESET
         local resetFrame = Instance.new("Frame")
         resetFrame.Size = UDim2.new(1, 0, 0, 45)
         resetFrame.Position = UDim2.new(0, 0, 0, 280)
@@ -3397,7 +3413,6 @@ IconLetter.Font = Enum.Font.GothamBold
 IconLetter.TextXAlignment = Enum.TextXAlignment.Center
 IconLetter.TextYAlignment = Enum.TextYAlignment.Center
 IconLetter.ZIndex = 1000
-
 local IconLetterGradient = Instance.new("UIGradient", IconLetter)
 IconLetterGradient.Color = ColorSequence.new({
     ColorSequenceKeypoint.new(0, Color3.fromRGB(180, 180, 180)),
@@ -3407,7 +3422,6 @@ IconLetterGradient.Color = ColorSequence.new({
     ColorSequenceKeypoint.new(1, Color3.fromRGB(180, 180, 180))
 })
 IconLetterGradient.Rotation = 0
-
 local iconLetterConnection
 iconLetterConnection = RunService.Heartbeat:Connect(function()
     local t = tick()
@@ -3418,14 +3432,11 @@ iconLetterConnection = RunService.Heartbeat:Connect(function()
     local scale = 1 + pulse * 0.05
     IconLetter.TextSize = 32 * scale
 end)
-
 IconButton.MouseButton1Click:Connect(function()
     PlayClickSound()
-    
     TweenService:Create(IconButton, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(0, 62, 0, 62)}):Play()
     task.wait(0.05)
     TweenService:Create(IconButton, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 55, 0, 55)}):Play()
-    
     if MainFrame.Visible then
         TweenService:Create(MainScale, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.7}):Play()
         TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Rotation = 10, BackgroundTransparency = 0.8}):Play()
@@ -3463,7 +3474,6 @@ IconButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- Автоматическое открытие окна (Key System убран)
 task.wait(0.5)
 MainFrame.Visible = true
 MainScale.Scale = 0.1
