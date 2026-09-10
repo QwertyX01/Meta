@@ -2513,77 +2513,116 @@ if visualsPage then
 end
 
 -- MISC PAGE
+-- MISC PAGE
 local miscPage = ContentPages["Misc"]
 if miscPage then
-    miscPage.CanvasSize = UDim2.new(0, 0, 0, 300)
-    miscPage.ScrollBarThickness = 3
+    local function SetupMisc()
+        miscPage.CanvasSize = UDim2.new(0, 0, 0, 300)
+        miscPage.ScrollBarThickness = 3
 
-    local function CreateToggle(name, descText, yPos, toggleFunc, frameName)
-        local frame = Instance.new("Frame")
-        frame.Name = frameName or name
-        frame.Size = UDim2.new(1, 0, 0, 45)
-        frame.Position = UDim2.new(0, 0, 0, yPos)
-        frame.BackgroundTransparency = 1
-        frame.Parent = miscPage
-        local label = Instance.new("TextLabel")
-        label.Size = UDim2.new(0.6, 0, 0, 20)
-        label.BackgroundTransparency = 1
-        label.Text = name
-        label.TextColor3 = Color3.fromRGB(209, 213, 219)
-        label.TextSize = 13
-        label.Font = Enum.Font.GothamBold
-        label.TextXAlignment = Enum.TextXAlignment.Left
-        label.Parent = frame
-        local desc = Instance.new("TextLabel")
-        desc.Size = UDim2.new(0.7, 0, 0, 16)
-        desc.Position = UDim2.new(0, 0, 0, 22)
-        desc.BackgroundTransparency = 1
-        desc.Text = descText
-        desc.TextColor3 = Color3.fromRGB(113, 113, 122)
-        desc.TextSize = 11
-        desc.Font = Enum.Font.Gotham
-        desc.TextXAlignment = Enum.TextXAlignment.Left
-        desc.Parent = frame
-        local toggleBg = Instance.new("Frame")
-        toggleBg.Size = UDim2.new(0, 44, 0, 24)
-        toggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
-        toggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
-        toggleBg.BorderSizePixel = 0
-        toggleBg.Parent = frame
-        local toggleCorner = Instance.new("UICorner")
-        toggleCorner.CornerRadius = UDim.new(1, 0)
-        toggleCorner.Parent = toggleBg
-        local handle = Instance.new("Frame")
-        handle.Size = UDim2.new(0, 18, 0, 18)
-        handle.Position = UDim2.new(0, 3, 0.5, -9)
-        handle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-        handle.BorderSizePixel = 0
-        handle.Parent = toggleBg
-        local handleCorner = Instance.new("UICorner")
-        handleCorner.CornerRadius = UDim.new(1, 0)
-        handleCorner.Parent = handle
-        local clickArea = Instance.new("TextButton")
-        clickArea.Size = UDim2.new(0, 44, 0, 24)
-        clickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
-        clickArea.BackgroundTransparency = 1
-        clickArea.Text = ""
-        clickArea.ZIndex = 10
-        clickArea.Parent = frame
-        local state = false
-        local function SetState(value)
-            state = value
-            if value then
-                TweenService:Create(toggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
-                TweenService:Create(handle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 23, 0.5, -9)}):Play()
-            else
-                TweenService:Create(toggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(42, 47, 58)}):Play()
-                TweenService:Create(handle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 3, 0.5, -9)}):Play()
+        local function CreateToggle(name, descText, yPos, toggleFunc, frameName)
+            local frame = Instance.new("Frame")
+            frame.Name = frameName or name
+            frame.Size = UDim2.new(1, 0, 0, 45)
+            frame.Position = UDim2.new(0, 0, 0, yPos)
+            frame.BackgroundTransparency = 1
+            frame.Parent = miscPage
+            local label = Instance.new("TextLabel")
+            label.Size = UDim2.new(0.6, 0, 0, 20)
+            label.BackgroundTransparency = 1
+            label.Text = name
+            label.TextColor3 = Color3.fromRGB(209, 213, 219)
+            label.TextSize = 13
+            label.Font = Enum.Font.GothamBold
+            label.TextXAlignment = Enum.TextXAlignment.Left
+            label.Parent = frame
+            local desc = Instance.new("TextLabel")
+            desc.Size = UDim2.new(0.7, 0, 0, 16)
+            desc.Position = UDim2.new(0, 0, 0, 22)
+            desc.BackgroundTransparency = 1
+            desc.Text = descText
+            desc.TextColor3 = Color3.fromRGB(113, 113, 122)
+            desc.TextSize = 11
+            desc.Font = Enum.Font.Gotham
+            desc.TextXAlignment = Enum.TextXAlignment.Left
+            desc.Parent = frame
+            local toggleBg = Instance.new("Frame")
+            toggleBg.Size = UDim2.new(0, 44, 0, 24)
+            toggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
+            toggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
+            toggleBg.BorderSizePixel = 0
+            toggleBg.Parent = frame
+            local toggleCorner = Instance.new("UICorner")
+            toggleCorner.CornerRadius = UDim.new(1, 0)
+            toggleCorner.Parent = toggleBg
+            local handle = Instance.new("Frame")
+            handle.Size = UDim2.new(0, 18, 0, 18)
+            handle.Position = UDim2.new(0, 3, 0.5, -9)
+            handle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            handle.BorderSizePixel = 0
+            handle.Parent = toggleBg
+            local handleCorner = Instance.new("UICorner")
+            handleCorner.CornerRadius = UDim.new(1, 0)
+            handleCorner.Parent = handle
+            local clickArea = Instance.new("TextButton")
+            clickArea.Size = UDim2.new(0, 44, 0, 24)
+            clickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
+            clickArea.BackgroundTransparency = 1
+            clickArea.Text = ""
+            clickArea.ZIndex = 10
+            clickArea.Parent = frame
+            local state = false
+            local function SetState(value)
+                state = value
+                if value then
+                    TweenService:Create(toggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
+                    TweenService:Create(handle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 23, 0.5, -9)}):Play()
+                else
+                    TweenService:Create(toggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(42, 47, 58)}):Play()
+                    TweenService:Create(handle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 3, 0.5, -9)}):Play()
+                end
+                toggleFunc(value)
             end
-            toggleFunc(value)
+            clickArea.MouseButton1Click:Connect(function() PlayClickSound() SetState(not state) end)
+            return SetState, label, desc, frame
         end
-        clickArea.MouseButton1Click:Connect(function() PlayClickSound() SetState(not state) end)
-        return SetState, label, desc, frame
+
+        CreateToggle("No Recoil", "Антиотдача", 10, function(v)
+            _G.NoRecoilEnabled = v
+            if v then
+                pcall(function()
+                    local CameraController = require(game:GetService("ReplicatedStorage").Controllers.CameraController)
+                    CameraController.weaponKick = function() end
+                    CameraController.setWeaponRecoil = function() end
+                    print("[META] No Recoil активирован")
+                end)
+            end
+        end, "NoRecoilFrame")
+
+        CreateToggle("No Spread", "Анти разброс пуль", 65, function(v)
+            _G.NoSpreadEnabled = v
+            if v then
+                pcall(function()
+                    local Bullet = require(game:GetService("ReplicatedStorage").Components.Weapon.Classes.Bullet)
+                    Bullet.getTrueSpread = function() return 0 end
+                    Bullet.getBaseSpread = function() return 0 end
+                    Bullet.getSpreadForConfig = function() return 0 end
+                    local OldCreate = Bullet.create
+                    Bullet.create = function(self, aimingOptions, isAiming)
+                        if self.Spread then
+                            self.Spread:setPosition(0)
+                            self.Spread:setGoal(0)
+                        end
+                        return OldCreate(self, aimingOptions, isAiming)
+                    end
+                    print("[META] No Spread активирован")
+                end)
+            end
+        end, "NoSpreadFrame")
     end
+
+    SetupMisc()
+end
 
     -- NO RECOIL
     local NoRecoilEnabled = false
