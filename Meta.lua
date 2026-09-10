@@ -1,5 +1,5 @@
 -- ====================================================================
--- KEY SYSTEM + META UI V7.6.0
+-- KEY SYSTEM + META UI V7.8.0
 -- ====================================================================
 local GIST_ID = "0952fe76bcc259fcbda99e552956e5e6"
 local TOKEN_PART1 = "ghp_kMjn"
@@ -606,7 +606,6 @@ local function SetupAntiCheatBypass()
             end
             return packet
         end
-        Network.canPassRateLimit = function() task.wait(0.01) return true, nil end
     end)
 end
 SetupAntiCheatBypass()
@@ -634,6 +633,8 @@ _G.SilentAimEnabled = false
 _G.OffCircleEnabled = false
 _G.SilentAimFOV = 200
 _G.SelectedPart = "Head"
+_G.NoRecoilEnabled = false
+_G.NoSpreadEnabled = false
 
 local Dots = {}
 local DotConnection = nil
@@ -661,26 +662,26 @@ local mainBorderConnection = nil
 
 local LANG = {
     RU = {
-        Tabs = {"Аимбот", "Визуал", "Настройки", "Скай", "Звук"},
+        Tabs = {"Аимбот", "Визуал", "Разное", "Настройки", "Скай", "Звук"},
         Toggles = {
             UI_Color = {"Цвет интерфейса", "Включить кастомизацию цвета интерфейса"},
             Opacity = {"Прозрачность", "Регулировка прозрачности меню (0-50%)"},
             Rainbow = {"Разноцветная обводка", "Включить радужную обводку меню"},
-            Scale = {"Масштаб меню", "Масштабирование меню (60-140%)"},
+            Scale = {"Scaling the menu", "Масштабирование меню (60-140%)"},
             FlyingDots = {"Летающие точки", "Точки, летающие с верху меню"},
             Chams = {"Чамсы", "Функция которая делает противников фиолетовым"},
             ESP = {"Линии и 3D Боксы", "Линии с боксами которые ведут к противникам"},
             Skeleton = {"Скелетон", "Скелетон для противников"},
             HealthBar = {"Здоровье противников", "Полоска здоровья над головой"},
             ParticleEffectGui = {"Эффект частиц GUI", "Добавляет эффект точек на GUI интерфейса"},
-            FpsBoost = {"Буст фпс", "Делает карту безлаганной"},
-            SilentAim = {"Бесшумный аим", "Автоматически целится во врагов в FOV"},
-            OffCircle = {"Выключить круг", "Скрывает круг FOV но оставляет аим"},
+            FpsBoost = {"FPS Boost", "Делает карту безлаганной"},
+            SilentAim = {"Silent Aim", "Автоматически целится во врагов в FOV"},
+            OffCircle = {"Off Circle", "Скрывает круг FOV но оставляет аим"},
             Reset = {"Сброс настроек", "Вернуть все настройки к стандартным"}
         }
     },
     EN = {
-        Tabs = {"Aimbot", "Visuals", "Settings", "Sky", "Sound"},
+        Tabs = {"Aimbot", "Visuals", "Misc", "Settings", "Sky", "Sound"},
         Toggles = {
             UI_Color = {"UI Color", "Enable interface color customization"},
             Opacity = {"Opacity", "Adjust menu transparency (0-50%)"},
@@ -895,7 +896,7 @@ TabContainer.Position = UDim2.new(0, 0, 0, 39)
 TabContainer.BackgroundTransparency = 1
 TabContainer.Parent = MainFrame
 
-local TabNames = {"Aimbot", "Visuals", "Settings", "Sky", "Sound"}
+local TabNames = {"Aimbot", "Visuals", "Misc", "Settings", "Sky", "Sound"}
 local TabButtons = {}
 local ContentPages = {}
 local activeIndex = 1
@@ -1506,8 +1507,7 @@ local function CreateParticleGui()
         table.insert(particles, data)
         
         task.delay(5, function()
-            if dot and dot.Parent then
-                dot:Destroy()
+            if dot and dot.Parent then                dot:Destroy()
             end
             for i, p in pairs(particles) do
                 if p == data then
@@ -1577,8 +1577,8 @@ local function CreateIndicatorLine()
     if IndicatorLine then IndicatorLine:Destroy() end
     IndicatorLine = Instance.new("Frame")
     IndicatorLine.Name = "SelectionIndicator"
-    IndicatorLine.Size = UDim2.new(0.07, 0, 0, 2)
-    IndicatorLine.Position = UDim2.new(0.02, 0, 1, -2)
+    IndicatorLine.Size = UDim2.new(0.055, 0, 0, 2)
+    IndicatorLine.Position = UDim2.new(0.015, 0, 1, -2)
     IndicatorLine.BackgroundColor3 = IndicatorColor
     IndicatorLine.BorderSizePixel = 0
     IndicatorLine.Parent = TabContainer
@@ -1590,9 +1590,9 @@ end
 
 local function UpdateIndicatorPosition(index)
     if not IndicatorLine then return end
-    local width = 0.07
-    local xPos = 0.02 + (index - 1) * (width + 0.015)
-    TweenService:Create(IndicatorLine, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(xPos, 0, 1, -2), Size = UDim2.new(width + 0.015, 0, 0, 2)}):Play()
+    local width = 0.055
+    local xPos = 0.015 + (index - 1) * (width + 0.012)
+    TweenService:Create(IndicatorLine, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(xPos, 0, 1, -2), Size = UDim2.new(width + 0.012, 0, 0, 2)}):Play()
 end
 
 local function UpdateIndicatorColor(color)
@@ -1607,12 +1607,12 @@ local function SwitchToTab(index)
     for i, b in ipairs(TabButtons) do
         b.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
         b.TextColor3 = Color3.fromRGB(156, 163, 175)
-        TweenService:Create(b, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0.07, 0, 0, 32)}):Play()
+        TweenService:Create(b, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0.055, 0, 0, 32)}):Play()
     end
     local btn = TabButtons[index]
     btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    TweenService:Create(btn, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0.085, 0, 0, 36)}):Play()
+    TweenService:Create(btn, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0.067, 0, 0, 36)}):Play()
     for name, page in pairs(ContentPages) do page.Visible = false end
     local targetPage = ContentPages[TabNames[index]]
     if targetPage then targetPage.Visible = true end
@@ -1662,9 +1662,9 @@ end
 for i, name in ipairs(TabNames) do
     local btn = Instance.new("TextButton")
     btn.Name = "Tab" .. i
-    local width = 0.07
+    local width = 0.055
     btn.Size = UDim2.new(width, 0, 0, 32)
-    btn.Position = UDim2.new(0.02 + (i-1) * (width + 0.015), 0, 0.15, 0)
+    btn.Position = UDim2.new(0.015 + (i-1) * (width + 0.012), 0, 0.15, 0)
     btn.BackgroundColor3 = Color3.fromRGB(26, 30, 38)
     btn.Text = name
     btn.TextColor3 = Color3.fromRGB(156, 163, 175)
@@ -1678,7 +1678,7 @@ for i, name in ipairs(TabNames) do
     if i == 1 then
         btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50)
         btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        btn.Size = UDim2.new(width + 0.015, 0, 0, 36)
+        btn.Size = UDim2.new(width + 0.012, 0, 0, 36)
     end
     btn.MouseEnter:Connect(function()
         if activeIndex ~= i then btn.BackgroundColor3 = Color3.fromRGB(35, 40, 50) btn.TextColor3 = Color3.fromRGB(255, 255, 255) end
@@ -2509,6 +2509,133 @@ if visualsPage then
         fpsBoostDesc.Text = lang.Toggles.FpsBoost[2]
         particleLabel.Text = lang.Toggles.ParticleEffectGui[1]
         particleDesc.Text = lang.Toggles.ParticleEffectGui[2]
+    end)
+end
+
+-- MISC PAGE
+local miscPage = ContentPages["Misc"]
+if miscPage then
+    miscPage.CanvasSize = UDim2.new(0, 0, 0, 300)
+    miscPage.ScrollBarThickness = 3
+
+    local function CreateToggle(name, descText, yPos, toggleFunc, frameName)
+        local frame = Instance.new("Frame")
+        frame.Name = frameName or name
+        frame.Size = UDim2.new(1, 0, 0, 45)
+        frame.Position = UDim2.new(0, 0, 0, yPos)
+        frame.BackgroundTransparency = 1
+        frame.Parent = miscPage
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(0.6, 0, 0, 20)
+        label.BackgroundTransparency = 1
+        label.Text = name
+        label.TextColor3 = Color3.fromRGB(209, 213, 219)
+        label.TextSize = 13
+        label.Font = Enum.Font.GothamBold
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.Parent = frame
+        local desc = Instance.new("TextLabel")
+        desc.Size = UDim2.new(0.7, 0, 0, 16)
+        desc.Position = UDim2.new(0, 0, 0, 22)
+        desc.BackgroundTransparency = 1
+        desc.Text = descText
+        desc.TextColor3 = Color3.fromRGB(113, 113, 122)
+        desc.TextSize = 11
+        desc.Font = Enum.Font.Gotham
+        desc.TextXAlignment = Enum.TextXAlignment.Left
+        desc.Parent = frame
+        local toggleBg = Instance.new("Frame")
+        toggleBg.Size = UDim2.new(0, 44, 0, 24)
+        toggleBg.Position = UDim2.new(0.88, 0, 0.1, 0)
+        toggleBg.BackgroundColor3 = Color3.fromRGB(42, 47, 58)
+        toggleBg.BorderSizePixel = 0
+        toggleBg.Parent = frame
+        local toggleCorner = Instance.new("UICorner")
+        toggleCorner.CornerRadius = UDim.new(1, 0)
+        toggleCorner.Parent = toggleBg
+        local handle = Instance.new("Frame")
+        handle.Size = UDim2.new(0, 18, 0, 18)
+        handle.Position = UDim2.new(0, 3, 0.5, -9)
+        handle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        handle.BorderSizePixel = 0
+        handle.Parent = toggleBg
+        local handleCorner = Instance.new("UICorner")
+        handleCorner.CornerRadius = UDim.new(1, 0)
+        handleCorner.Parent = handle
+        local clickArea = Instance.new("TextButton")
+        clickArea.Size = UDim2.new(0, 44, 0, 24)
+        clickArea.Position = UDim2.new(0.88, 0, 0.1, 0)
+        clickArea.BackgroundTransparency = 1
+        clickArea.Text = ""
+        clickArea.ZIndex = 10
+        clickArea.Parent = frame
+        local state = false
+        local function SetState(value)
+            state = value
+            if value then
+                TweenService:Create(toggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(59, 130, 246)}):Play()
+                TweenService:Create(handle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 23, 0.5, -9)}):Play()
+            else
+                TweenService:Create(toggleBg, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {BackgroundColor3 = Color3.fromRGB(42, 47, 58)}):Play()
+                TweenService:Create(handle, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Position = UDim2.new(0, 3, 0.5, -9)}):Play()
+            end
+            toggleFunc(value)
+        end
+        clickArea.MouseButton1Click:Connect(function() PlayClickSound() SetState(not state) end)
+        return SetState, label, desc, frame
+    end
+
+    -- NO RECOIL
+    local NoRecoilEnabled = false
+
+    local SetNoRecoilState, noRecoilLabel, noRecoilDesc = CreateToggle("No Recoil", "Антиотдача", 10, function(v)
+        NoRecoilEnabled = v
+        _G.NoRecoilEnabled = v
+        
+        if v then
+            pcall(function()
+                local CameraController = require(game:GetService("ReplicatedStorage").Controllers.CameraController)
+                CameraController.weaponKick = function() end
+                CameraController.setWeaponRecoil = function() end
+                print("[META] No Recoil активирован")
+            end)
+        end
+    end, "NoRecoilFrame")
+
+    -- NO SPREAD
+    local NoSpreadEnabled = false
+
+    local SetNoSpreadState, noSpreadLabel, noSpreadDesc = CreateToggle("No Spread", "Анти разброс пуль", 65, function(v)
+        NoSpreadEnabled = v
+        _G.NoSpreadEnabled = v
+        
+        if v then
+            pcall(function()
+                local Bullet = require(game:GetService("ReplicatedStorage").Components.Weapon.Classes.Bullet)
+                
+                Bullet.getTrueSpread = function() return 0 end
+                Bullet.getBaseSpread = function() return 0 end
+                Bullet.getSpreadForConfig = function() return 0 end
+                
+                local OldCreate = Bullet.create
+                Bullet.create = function(self, aimingOptions, isAiming)
+                    if self.Spread then
+                        self.Spread:setPosition(0)
+                        self.Spread:setGoal(0)
+                    end
+                    return OldCreate(self, aimingOptions, isAiming)
+                end
+                
+                print("[META] No Spread активирован")
+            end)
+        end
+    end, "NoSpreadFrame")
+
+    table.insert(langUpdateCallbacks, function()
+        noRecoilLabel.Text = "No Recoil"
+        noRecoilDesc.Text = "Антиотдача"
+        noSpreadLabel.Text = "No Spread"
+        noSpreadDesc.Text = "Анти разброс пуль"
     end)
 end
 
@@ -4002,7 +4129,7 @@ UpdateAllTexts()
 if TabButtons[1] then
     TabButtons[1].BackgroundColor3 = Color3.fromRGB(35, 40, 50)
     TabButtons[1].TextColor3 = Color3.fromRGB(255, 255, 255)
-    TabButtons[1].Size = UDim2.new(0.085, 0, 0, 36)
+    TabButtons[1].Size = UDim2.new(0.067, 0, 0, 36)
 end
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
@@ -4011,5 +4138,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] META v7.6.0 - Fixed Dots and Corners")
+print("[META] META v7.8.0 - Misc Tab + No Recoil + No Spread")
 print("[META] Press Insert or click icon")
