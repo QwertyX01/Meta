@@ -10,7 +10,6 @@ local Workspace=game:GetService("Workspace")
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local Camera=workspace.CurrentCamera
 local LocalPlayer=Players.LocalPlayer
-
 local function SetupAntiCheatBypass()
 pcall(function()
 local Network=require(ReplicatedStorage.Database.Security.Network)
@@ -38,7 +37,6 @@ end
 end)
 end
 SetupAntiCheatBypass()
-
 local AntiBanEnabled=true
 local BlockedRemoteNames={"iac-respond","report","Memer","AC_Detect","AntiCheat","detect","suspicious","kick","ban"}
 local SpoofedProperties={WalkSpeed=16,JumpPower=50,HipHeight=2}
