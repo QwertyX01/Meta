@@ -1905,85 +1905,133 @@ if miscPage then
             end
         end, "NoSpreadFrame")
 
-        -- NO RELOAD
+        -- ====================================================================
+        -- NO RELOAD (ANTI-DESYNC FIXED)
+        -- ====================================================================
         local NoReloadEnabled = false
-        local function StartNoReload()
-            NoReloadEnabled = true
-            task.spawn(function()
-                while NoReloadEnabled do
-                    task.wait(0.3)
-                    pcall(function()
-                        for _, v in pairs(getgc(true)) do
-                            if type(v) == "table" then
-                                if rawget(v, "IsReloading") ~= nil then v.IsReloading = false end
-                                if rawget(v, "Rounds") and rawget(v, "Capacity") then v.Rounds = v.Capacity end
-                                if rawget(v, "ReloadTime") then v.ReloadTime = 0 end
+        task.spawn(function()
+            while true do
+                task.wait(0.3)
+                if not NoReloadEnabled then 
+                    task.wait(0.5)
+                    continue 
+                end
+                pcall(function()
+                    for _, v in pairs(getgc(true)) do
+                        if type(v) == "table" then
+                            if rawget(v, "IsReloading") ~= nil then
+                                v.IsReloading = false
+                            end
+                            if rawget(v, "Rounds") and rawget(v, "Capacity") then
+                                v.Rounds = v.Capacity
+                            end
+                            if rawget(v, "ReloadTime") then
+                                v.ReloadTime = 0
                             end
                         end
-                    end)
-                end
-            end)
-            task.spawn(function()
-                local Remotes
-                pcall(function()
-                    Remotes = require(ReplicatedStorage.Database.Security.Remotes)
-                end)
-                if not Remotes then return end
-                local ReloadPacket = Remotes.Inventory and Remotes.Inventory.ReloadWeapon
-                if ReloadPacket and ReloadPacket.Send then
-                    local oldReloadSend = ReloadPacket.Send
-                    ReloadPacket.Send = function(self, data)
-                        if NoReloadEnabled then
-                            if data and data.Value then data.Value.Rounds = data.Value.Capacity end
-                            return nil
-                        end
-                        return oldReloadSend(self, data)
                     end
-                end
+                end)
+            end
+        end)
+        task.spawn(function()
+            local Remotes
+            pcall(function()
+                Remotes = require(ReplicatedStorage.Database.Security.Remotes)
             end)
-        end
+            if not Remotes then return end
+            local ReloadPacket = Remotes.Inventory and Remotes.Inventory.ReloadWeapon
+            if ReloadPacket and ReloadPacket.Send and not ReloadPacket.__META_NoReloadHooked then
+                ReloadPacket.__META_NoReloadHooked = true
+                local oldReloadSend = ReloadPacket.Send
+                ReloadPacket.Send = function(self, data)
+                    if NoReloadEnabled then
+                        if data and data.Value then
+                            data.Value.Rounds = data.Value.Capacity
+                            data.Value.IsReloading = false
+                            data.Value.ReloadTime = 0
+                        end
+                        return nil 
+                    end
+                    return oldReloadSend(self, data)
+                end
+                print("[NO RELOAD] ON")
+            end
+        end)
         CreateToggle("No Reload", "Бесконечные патроны", 120, function(v)
-            if v then StartNoReload() else NoReloadEnabled = false end
+            NoReloadEnabled = v
             _G.NoReloadEnabled = v
         end, "NoReloadFrame")
 
-        -- NO ARMS
+        -- ====================================================================
+        -- NO ARMS (FIXED - RESTORE PARENT ON OFF)
+        -- ====================================================================
         local InvisibleArmsEnabled = false
+        local ArmsHidden = {} -- [part] = originalTransparency
+
         local HideArmsBypass = newcclosure(function()
             if not InvisibleArmsEnabled then return end
             local Camera = workspace.CurrentCamera
-            if Camera then
-                for _, child in ipairs(Camera:GetChildren()) do
-                    if child:IsA("Model") then
-                        for _, part in ipairs(child:GetDescendants()) do
-                            if part:IsA("BasePart") or part:IsA("MeshPart") then
-                                local nameLower = part.Name:lower()
-                                if nameLower:find("arm") or nameLower:find("hand") or nameLower:find("glove") or 
-                                   nameLower:find("sleeve") or nameLower:find("left") or nameLower:find("right") or
-                                   nameLower:find("finger") or nameLower:find("shoulder") then
-                                    pcall(function() part.Transparency = 1 end)
+            if not Camera then return end
+            for _, child in ipairs(Camera:GetChildren()) do
+                if child:IsA("Model") then
+                    for _, part in ipairs(child:GetDescendants()) do
+                        if part:IsA("BasePart") or part:IsA("MeshPart") then
+                            local nameLower = part.Name:lower()
+                            if nameLower:find("arm") or nameLower:find("hand") or nameLower:find("glove") or 
+                               nameLower:find("sleeve") or nameLower:find("left") or nameLower:find("right") or
+                               nameLower:find("finger") or nameLower:find("shoulder") then
+                                if ArmsHidden[part] == nil then
+                                    ArmsHidden[part] = part.Transparency
                                 end
-                            elseif part:IsA("Decal") or part:IsA("Texture") then
-                                local parentName = part.Parent and part.Parent.Name:lower() or ""
-                                if parentName:find("arm") or parentName:find("hand") or parentName:find("glove") then
-                                    pcall(function() part.Transparency = 1 end)
+                                pcall(function() part.Transparency = 1 end)
+                            end
+                        elseif part:IsA("Decal") or part:IsA("Texture") then
+                            local parentName = part.Parent and part.Parent.Name:lower() or ""
+                            if parentName:find("arm") or parentName:find("hand") or parentName:find("glove") then
+                                if ArmsHidden[part] == nil then
+                                    ArmsHidden[part] = part.Transparency
                                 end
+                                pcall(function() part.Transparency = 1 end)
                             end
                         end
                     end
                 end
             end
         end)
+
         RunService.RenderStepped:Connect(HideArmsBypass)
+
         CreateToggle("No Arms", "Скрывает руки, оружие видно", 175, function(v)
             InvisibleArmsEnabled = v
             if not v then
+                -- Восстанавливаем оригинальную прозрачность у ВСЕХ частей, которые мы трогали
+                for part, origTransp in pairs(ArmsHidden) do
+                    pcall(function()
+                        if part and part.Parent then
+                            part.Transparency = origTransp
+                        end
+                    end)
+                end
+                ArmsHidden = {}
+                -- Дополнительно проходим по камере и сбрасываем прозрачность у всех частей,
+                -- чтобы убрать серые квадраты (ViewmodelLight, weapon_collisions и т.д.)
                 local Camera = workspace.CurrentCamera
                 if Camera then
                     for _, child in ipairs(Camera:GetChildren()) do
                         for _, subChild in ipairs(child:GetDescendants()) do
                             if subChild:IsA("BasePart") or subChild:IsA("MeshPart") then
-                                subChild.Transparency = 0
+                                pcall(function()
+                                    if subChild.Name:lower():find("viewmodel") or 
+                                       subChild.Name:lower():find("collision") or
+                                       subChild.Name:lower():find("light") or
+                                       subChild.Name:lower():find("cube") or
+                                       subChild.Name:lower():find("square") or
+                                       subChild.Name:lower():find("box") then
+                                        subChild.Transparency = 1
+                                    elseif subChild.Transparency == 1 and not subChild.Name:lower():find("arm") and not subChild.Name:lower():find("hand") then
+                                        subChild.Transparency = 0
+                                    end
+                                end)
                             end
                         end
                     end
@@ -3504,5 +3552,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-print("[META] META v7.8.1 - Key System removed")
+print("[META] META v7.8.1 - Key System Loaded")
 print("[META] Press Insert or click icon")
