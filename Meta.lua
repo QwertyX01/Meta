@@ -1547,6 +1547,7 @@ end)
 UpdatePartButtons(false)
 end
 SetupAimbot()
+    end
 end
 
 -- VISUALS PAGE
