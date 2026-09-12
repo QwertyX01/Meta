@@ -3553,4 +3553,4 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 print("[META] META v7.8.1 - Key System Loaded")
-print("[META] Press Insert or click icon") вот ты мне писал код
+print("[META] Press Insert or click icon")
