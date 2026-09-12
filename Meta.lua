@@ -1,7 +1,7 @@
 -- ====================================================================
 -- VOLLEYBALL LEGENDS - AGGRESSIVE SPORT EDITION (PREMIUM LOADING)
 -- + COLOR PICKER + CORNER RADIUS + MEGA HITBOX + BALL ESP + PREDICTOR
--- + VISUAL HITBOX SPHERE (FIXED)
+-- + VISUAL HITBOX SPHERE (ENGLISH DESCRIPTIONS)
 -- ====================================================================
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -2205,7 +2205,6 @@ CreateSection(combatPage, "// HITBOX EXPANDER", 10, THEME.ACCENT_HOT)
 local HitboxVisual = {
     Sphere = nil,
     Ring = nil,
-    Particles = nil,
     BallModel = nil,
     Radius = 6,
     Transparency = 0.35,
@@ -2216,7 +2215,6 @@ local HitboxVisual = {
 local function DestroyHitboxVisual()
     if HitboxVisual.Sphere then pcall(function() HitboxVisual.Sphere:Destroy() end) HitboxVisual.Sphere = nil end
     if HitboxVisual.Ring then pcall(function() HitboxVisual.Ring:Destroy() end) HitboxVisual.Ring = nil end
-    if HitboxVisual.Particles then pcall(function() HitboxVisual.Particles:Destroy() end) HitboxVisual.Particles = nil end
     HitboxVisual.BallModel = nil
 end
 
@@ -2235,55 +2233,26 @@ local function CreateHitboxVisual(ball)
     HitboxVisual.Sphere.CastShadow = false
     HitboxVisual.Sphere.Material = Enum.Material.ForceField
     HitboxVisual.Sphere.Color = THEME.ACCENT
-    HitboxVisual.Sphere.Transparency = 0.35
+    HitboxVisual.Sphere.Transparency = 0.75
     HitboxVisual.Sphere.Parent = workspace
 
     HitboxVisual.Ring = Instance.new("Part")
     HitboxVisual.Ring.Name = "VL_HitboxRing"
     HitboxVisual.Ring.Shape = Enum.PartType.Cylinder
-    HitboxVisual.Ring.Size = Vector3.new(0.1, HitboxVisual.Radius * 2, HitboxVisual.Radius * 2)
+    HitboxVisual.Ring.Size = Vector3.new(0.15, HitboxVisual.Radius * 2, HitboxVisual.Radius * 2)
     HitboxVisual.Ring.Anchored = true
     HitboxVisual.Ring.CanCollide = false
     HitboxVisual.Ring.CanQuery = false
     HitboxVisual.Ring.CanTouch = false
     HitboxVisual.Ring.CastShadow = false
     HitboxVisual.Ring.Material = Enum.Material.Neon
-    HitboxVisual.Ring.Color = THEME.ACCENT_HOT
-    HitboxVisual.Ring.Transparency = 0.2
+    HitboxVisual.Ring.Color = THEME.ACCENT
+    HitboxVisual.Ring.Transparency = 0.3
     HitboxVisual.Ring.Parent = workspace
-
-    HitboxVisual.Particles = Instance.new("ParticleEmitter")
-    HitboxVisual.Particles.Name = "VL_HitboxSparks"
-    HitboxVisual.Particles.Texture = "rbxasset://textures/particles/sparkles_main.dds"
-    HitboxVisual.Particles.LightEmission = 1
-    HitboxVisual.Particles.LightInfluence = 0
-    HitboxVisual.Particles.Size = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0),
-        NumberSequenceKeypoint.new(0.5, 0.4),
-        NumberSequenceKeypoint.new(1, 0),
-    })
-    HitboxVisual.Particles.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 1),
-        NumberSequenceKeypoint.new(0.3, 0.2),
-        NumberSequenceKeypoint.new(1, 1),
-    })
-    HitboxVisual.Particles.Lifetime = NumberRange.new(0.8, 1.4)
-    HitboxVisual.Particles.Rate = 15
-    HitboxVisual.Particles.Speed = NumberRange.new(1.5, 3)
-    HitboxVisual.Particles.SpreadAngle = Vector2.new(360, 360)
-    HitboxVisual.Particles.Rotation = NumberRange.new(0, 360)
-    HitboxVisual.Particles.RotSpeed = NumberRange.new(-60, 60)
-    HitboxVisual.Particles.VelocityInheritance = 0
-    HitboxVisual.Particles.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, THEME.ACCENT),
-        ColorSequenceKeypoint.new(1, THEME.ACCENT_HOT),
-    })
-    HitboxVisual.Particles.Parent = HitboxVisual.Sphere  -- ← ЧАСТИЦЫ НА СФЕРЕ
 
     HitboxVisual.BallModel = ball
 end
 
--- Цикл обновления сферы
 task.spawn(function()
     while ScreenGui.Parent do
         if Config.HitboxEnabled then
@@ -2307,25 +2276,17 @@ task.spawn(function()
                 HitboxVisual.Sphere.Size = Vector3.new(radius * 2, radius * 2, radius * 2)
                 HitboxVisual.Sphere.CFrame = CFrame.new(ballPos)
                 HitboxVisual.Sphere.Color = THEME.ACCENT
-                HitboxVisual.Sphere.Transparency = 0.35
+                HitboxVisual.Sphere.Transparency = 0.75
 
                 if HitboxVisual.Ring then
                     if not HitboxVisual.Ring.Parent then
                         HitboxVisual.Ring.Parent = workspace
                     end
                     HitboxVisual.RotateAngle = HitboxVisual.RotateAngle + 0.05 * 90
-                    HitboxVisual.Ring.Size = Vector3.new(0.1, radius * 2, radius * 2)
-                    HitboxVisual.Ring.CFrame = CFrame.new(ballPos) * CFrame.Angles(math.rad(HitboxVisual.RotateAngle), math.rad(HitboxVisual.RotateAngle * 0.6), 0)
-                    HitboxVisual.Ring.Color = THEME.ACCENT_HOT
-                    HitboxVisual.Ring.Transparency = 0.2
-                end
-
-                -- Частицы остаются на СФЕРЕ, не трогаем ball.PrimaryPart
-                if HitboxVisual.Particles then
-                    HitboxVisual.Particles.Color = ColorSequence.new({
-                        ColorSequenceKeypoint.new(0, THEME.ACCENT),
-                        ColorSequenceKeypoint.new(1, THEME.ACCENT_HOT),
-                    })
+                    HitboxVisual.Ring.Size = Vector3.new(0.15, radius * 2, radius * 2)
+                    HitboxVisual.Ring.CFrame = CFrame.new(ballPos) * CFrame.Angles(0, 0, math.rad(90)) * CFrame.Angles(math.rad(HitboxVisual.RotateAngle), math.rad(HitboxVisual.RotateAngle * 0.6), 0)
+                    HitboxVisual.Ring.Color = THEME.ACCENT
+                    HitboxVisual.Ring.Transparency = 0.3
                 end
             end
         else
@@ -2335,8 +2296,7 @@ task.spawn(function()
     end
 end)
 
--- Тумблер Hitbox Expander
-CreateToggle(combatPage, "Hitbox Expander", "Расширяет зону удара + сфера вокруг мяча", 40, MegaHitbox.Enabled, function(v)
+CreateToggle(combatPage, "Hitbox Expander", "Expands hitbox zone + sphere around the ball", 40, MegaHitbox.Enabled, function(v)
     MegaHitbox.Enabled = v
     Config.HitboxEnabled = v
     if v then
@@ -2349,7 +2309,7 @@ CreateToggle(combatPage, "Hitbox Expander", "Расширяет зону уда�
     end
 end)
 
-CreateSlider(combatPage, "Hitbox Size", "Множитель (x1 - x20)", 95, 10, 200, Config.HitboxSize, "x", function(v)
+CreateSlider(combatPage, "Hitbox Size", "Multiplier (x1 - x20)", 95, 10, 200, Config.HitboxSize, "x", function(v)
     Config.HitboxSize = v
     MegaHitbox.SizeMultiplier = v / 10
     if MegaHitbox.Enabled then
@@ -2364,7 +2324,7 @@ visualsPage.CanvasSize = UDim2.new(0, 0, 0, 400)
 
 CreateSection(visualsPage, "// BALL VISUALS", 10, Color3.fromRGB(120, 220, 255))
 
-CreateToggle(visualsPage, "Ball ESP", "Аура + блёстки + свет на мяче", 40, Config.BallESPEnabled, function(v)
+CreateToggle(visualsPage, "Ball ESP", "Aura + sparks + light on the ball", 40, Config.BallESPEnabled, function(v)
     Config.BallESPEnabled = v
     if v then
         if BallESP.model then _CreateBallESP(BallESP.model) end
@@ -2373,7 +2333,7 @@ CreateToggle(visualsPage, "Ball ESP", "Аура + блёстки + свет на
     end
 end)
 
-CreateToggle(visualsPage, "Ball Predictor", "Линия + круг куда летит мяч", 95, Config.BallPredictorEnabled, function(v)
+CreateToggle(visualsPage, "Ball Predictor", "Line + circle where the ball will land", 95, Config.BallPredictorEnabled, function(v)
     Config.BallPredictorEnabled = v
     if not v then
         Pred.smoothVel = nil
@@ -2668,7 +2628,7 @@ local function ApplyAccentColor(color)
     if Pred.center then Pred.center.Color = newAccent end
 
     if HitboxVisual.Sphere then HitboxVisual.Sphere.Color = newAccent end
-    if HitboxVisual.Ring then HitboxVisual.Ring.Color = newHot end
+    if HitboxVisual.Ring then HitboxVisual.Ring.Color = newAccent end
 
     for _, el in ipairs(ColorSyncedElements) do
         if el.Kind == "Toggle" then
