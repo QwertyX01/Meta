@@ -730,9 +730,25 @@ Instance.new("UICorner", AccentBar).CornerRadius = UDim.new(0, 1)
 local AccentGradient = Instance.new("UIGradient", AccentBar)
 AccentGradient.Rotation = 90
 AccentGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, THEME.ACCENT_HOT),
-    ColorSequenceKeypoint.new(1, THEME.ACCENT),
+    ColorSequenceKeypoint.new(0, THEME.ACCENT_DARK),
+    ColorSequenceKeypoint.new(0.5, THEME.ACCENT_HOT),
+    ColorSequenceKeypoint.new(1, THEME.ACCENT_DARK),
 })
+
+task.spawn(function()
+    while AccentGradient.Parent do
+        for i = -1, 1, 0.03 do
+            if not AccentGradient.Parent then break end
+            AccentGradient.Offset = Vector2.new(0, i)
+            task.wait(0.05)
+        end
+        for i = 1, -1, -0.03 do
+            if not AccentGradient.Parent then break end
+            AccentGradient.Offset = Vector2.new(0, i)
+            task.wait(0.05)
+        end
+    end
+end)
 
 local PageIndex = Instance.new("TextLabel")
 PageIndex.Size = UDim2.new(0, 40, 0, 22)
@@ -1080,6 +1096,7 @@ for i, name in ipairs(TabNames) do
     }
     CreatePage(name)
 end
+
 -- MAIN PAGE
 local mainPage = TabPages["Main"]
 mainPage.CanvasSize = UDim2.new(0, 0, 0, 380)
@@ -1940,6 +1957,7 @@ local function CreateSlider(parent, name, descText, yPos, minVal, maxVal, defaul
 
     SliderRegistry[name] = SetValue
 end
+
 -- ====================================================================
 -- BALL FUNCTIONS
 -- ====================================================================
@@ -2153,7 +2171,7 @@ end
 _CreatePredictorVisuals()
 
 -- ====================================================================
--- HITBOX VISUAL (кольцо + сфера вокруг мяча при Hitbox ON)
+-- HITBOX VISUAL
 -- ====================================================================
 local function _DestroyHitboxVisual()
     if HitboxVisual.Ring then pcall(function() HitboxVisual.Ring:Destroy() end) HitboxVisual.Ring = nil end
@@ -2243,7 +2261,7 @@ local function _UpdateHitboxVisual(dt)
 end
 
 -- ====================================================================
--- MEGA HITBOX FUNCTIONS
+-- MEGA HITBOX
 -- ====================================================================
 local function ExpandAllHitboxTemplates()
     local Assets = ReplicatedStorage:FindFirstChild("Assets")
@@ -2646,7 +2664,17 @@ local function ApplyAccentColor(color)
     AvatarStroke.Color = newHot
     AvatarGlow.Color = newGlow
     Divider.BackgroundColor3 = newAccent
+    DividerGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, newDark),
+        ColorSequenceKeypoint.new(0.5, newHot),
+        ColorSequenceKeypoint.new(1, newDark),
+    })
     AccentBar.BackgroundColor3 = newAccent
+    AccentGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, newDark),
+        ColorSequenceKeypoint.new(0.5, newHot),
+        ColorSequenceKeypoint.new(1, newDark),
+    })
     HeaderBaseLine.BackgroundColor3 = newDark
     HeaderRunner.BackgroundColor3 = newHot
     HeaderPulse.BackgroundColor3 = newGlow
@@ -2676,10 +2704,6 @@ local function ApplyAccentColor(color)
         ColorSequenceKeypoint.new(0, newDark),
         ColorSequenceKeypoint.new(0.5, newHot),
         ColorSequenceKeypoint.new(1, newDark),
-    })
-    AccentGradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, newHot),
-        ColorSequenceKeypoint.new(1, newAccent),
     })
     DividerGradient.Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0, newDark),
