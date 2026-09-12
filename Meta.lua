@@ -1,7 +1,7 @@
 -- ====================================================================
 -- VOLLEYBALL LEGENDS - AGGRESSIVE SPORT EDITION (PREMIUM LOADING)
 -- + COLOR PICKER + CORNER RADIUS + MEGA HITBOX + BALL ESP + PREDICTOR
--- + VISUAL HITBOX SPHERE (ENGLISH DESCRIPTIONS)
+-- + VISUAL HITBOX RING
 -- ====================================================================
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -69,6 +69,7 @@ local ToggleRegistry = {}
 local Br = {}
 local BallESP = { model = nil, highlight = nil, particles = nil, light = nil }
 local Pred = { ring = nil, center = nil, tracer = nil, lastPos = nil, lastTime = nil, smoothVel = nil, smoothLand = nil }
+local HitboxVisual = { Sphere = nil, Ring = nil, BallModel = nil, Radius = 6, PulseTime = 0, RotateAngle = 0 }
 
 local function RegisterCorner(uiCorner, baseRadius)
     table.insert(CornerElements, { Corner = uiCorner, BaseRadius = baseRadius or Config.CornerRadius })
@@ -2126,6 +2127,7 @@ end)
 local MegaHitbox = {
     Enabled = false,
     SizeMultiplier = 3,
+    UpdateInterval = 0.05,
     ExpandedCount = 0,
 }
 
@@ -2200,18 +2202,8 @@ combatPage.CanvasSize = UDim2.new(0, 0, 0, 400)
 CreateSection(combatPage, "// HITBOX EXPANDER", 10, THEME.ACCENT_HOT)
 
 -- ====================================================================
--- VISUAL HITBOX SPHERE
+-- VISUAL HITBOX RING
 -- ====================================================================
-local HitboxVisual = {
-    Sphere = nil,
-    Ring = nil,
-    BallModel = nil,
-    Radius = 6,
-    Transparency = 0.35,
-    PulseTime = 0,
-    RotateAngle = 0,
-}
-
 local function DestroyHitboxVisual()
     if HitboxVisual.Sphere then pcall(function() HitboxVisual.Sphere:Destroy() end) HitboxVisual.Sphere = nil end
     if HitboxVisual.Ring then pcall(function() HitboxVisual.Ring:Destroy() end) HitboxVisual.Ring = nil end
@@ -2233,7 +2225,7 @@ local function CreateHitboxVisual(ball)
     HitboxVisual.Sphere.CastShadow = false
     HitboxVisual.Sphere.Material = Enum.Material.ForceField
     HitboxVisual.Sphere.Color = THEME.ACCENT
-    HitboxVisual.Sphere.Transparency = 0.75
+    HitboxVisual.Sphere.Transparency = 0.8
     HitboxVisual.Sphere.Parent = workspace
 
     HitboxVisual.Ring = Instance.new("Part")
@@ -2256,33 +2248,25 @@ end
 task.spawn(function()
     while ScreenGui.Parent do
         if Config.HitboxEnabled then
-            if not HitboxVisual.Sphere or not HitboxVisual.Sphere.Parent then
-                local ball = _FindBall()
-                if ball then CreateHitboxVisual(ball) end
-            end
-
-            local currentBall = _FindBall()
-            if currentBall and HitboxVisual.BallModel ~= currentBall then
-                CreateHitboxVisual(currentBall)
+            if not HitboxVisual.BallModel or not HitboxVisual.BallModel.Parent or not HitboxVisual.BallModel.PrimaryPart then
+                HitboxVisual.BallModel = _FindBall()
+                if HitboxVisual.BallModel then CreateHitboxVisual(HitboxVisual.BallModel) end
             end
 
             local ball = HitboxVisual.BallModel
             if ball and ball.PrimaryPart and HitboxVisual.Sphere and HitboxVisual.Sphere.Parent then
                 local ballPos = ball.PrimaryPart.Position
-                HitboxVisual.PulseTime = HitboxVisual.PulseTime + 0.05 * 2.5
-                local pulse = 1 + math.sin(HitboxVisual.PulseTime) * 0.08
+                HitboxVisual.PulseTime = HitboxVisual.PulseTime + 0.05 * 1.5
+                local pulse = 1 + math.sin(HitboxVisual.PulseTime) * 0.04
                 local radius = HitboxVisual.Radius * pulse
 
                 HitboxVisual.Sphere.Size = Vector3.new(radius * 2, radius * 2, radius * 2)
                 HitboxVisual.Sphere.CFrame = CFrame.new(ballPos)
                 HitboxVisual.Sphere.Color = THEME.ACCENT
-                HitboxVisual.Sphere.Transparency = 0.75
+                HitboxVisual.Sphere.Transparency = 0.8
 
                 if HitboxVisual.Ring then
-                    if not HitboxVisual.Ring.Parent then
-                        HitboxVisual.Ring.Parent = workspace
-                    end
-                    HitboxVisual.RotateAngle = HitboxVisual.RotateAngle + 0.05 * 90
+                    HitboxVisual.RotateAngle = HitboxVisual.RotateAngle + 0.05 * 60
                     HitboxVisual.Ring.Size = Vector3.new(0.15, radius * 2, radius * 2)
                     HitboxVisual.Ring.CFrame = CFrame.new(ballPos) * CFrame.Angles(0, 0, math.rad(90)) * CFrame.Angles(math.rad(HitboxVisual.RotateAngle), math.rad(HitboxVisual.RotateAngle * 0.6), 0)
                     HitboxVisual.Ring.Color = THEME.ACCENT
@@ -2296,7 +2280,7 @@ task.spawn(function()
     end
 end)
 
-CreateToggle(combatPage, "Hitbox Expander", "Expands hitbox zone + sphere around the ball", 40, MegaHitbox.Enabled, function(v)
+CreateToggle(combatPage, "Hitbox Expander", "Расширяет зону удара + фиолетовое кольцо", 40, MegaHitbox.Enabled, function(v)
     MegaHitbox.Enabled = v
     Config.HitboxEnabled = v
     if v then
@@ -2309,7 +2293,7 @@ CreateToggle(combatPage, "Hitbox Expander", "Expands hitbox zone + sphere around
     end
 end)
 
-CreateSlider(combatPage, "Hitbox Size", "Multiplier (x1 - x20)", 95, 10, 200, Config.HitboxSize, "x", function(v)
+CreateSlider(combatPage, "Hitbox Size", "Множитель (x1 - x20)", 95, 10, 200, Config.HitboxSize, "x", function(v)
     Config.HitboxSize = v
     MegaHitbox.SizeMultiplier = v / 10
     if MegaHitbox.Enabled then
@@ -2324,7 +2308,7 @@ visualsPage.CanvasSize = UDim2.new(0, 0, 0, 400)
 
 CreateSection(visualsPage, "// BALL VISUALS", 10, Color3.fromRGB(120, 220, 255))
 
-CreateToggle(visualsPage, "Ball ESP", "Aura + sparks + light on the ball", 40, Config.BallESPEnabled, function(v)
+CreateToggle(visualsPage, "Ball ESP", "Аура + блёстки + свет на мяче", 40, Config.BallESPEnabled, function(v)
     Config.BallESPEnabled = v
     if v then
         if BallESP.model then _CreateBallESP(BallESP.model) end
@@ -2333,7 +2317,7 @@ CreateToggle(visualsPage, "Ball ESP", "Aura + sparks + light on the ball", 40, C
     end
 end)
 
-CreateToggle(visualsPage, "Ball Predictor", "Line + circle where the ball will land", 95, Config.BallPredictorEnabled, function(v)
+CreateToggle(visualsPage, "Ball Predictor", "Линия + круг куда летит мяч", 95, Config.BallPredictorEnabled, function(v)
     Config.BallPredictorEnabled = v
     if not v then
         Pred.smoothVel = nil
@@ -2626,7 +2610,6 @@ local function ApplyAccentColor(color)
     if BallESP.light then BallESP.light.Color = newAccent end
     if Pred.ring then Pred.ring.Color = newHot end
     if Pred.center then Pred.center.Color = newAccent end
-
     if HitboxVisual.Sphere then HitboxVisual.Sphere.Color = newAccent end
     if HitboxVisual.Ring then HitboxVisual.Ring.Color = newAccent end
 
@@ -2848,4 +2831,4 @@ HeaderBaseLine.BackgroundTransparency = 0.7
 HeaderRunner.BackgroundTransparency = 0
 HeaderPulse.BackgroundTransparency = 0.6
 
-print("[VL] Loaded: Menu + Mega Hitbox + Visual Sphere + Ball ESP + Predictor")
+print("[VL] Loaded: Menu + Mega Hitbox + Ball ESP + Predictor + Visual Ring")
