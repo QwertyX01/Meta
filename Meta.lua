@@ -10,6 +10,39 @@ local Workspace=game:GetService("Workspace")
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local Camera=workspace.CurrentCamera
 local LocalPlayer=Players.LocalPlayer
+
+local function SetupAntiCheatBypass()
+pcall(function()
+local Network=require(ReplicatedStorage.Database.Security.Network)
+local OriginalCreatePacket=Network.CreatePacket
+Network.CreatePacket=function(namespace,packetName,schema,options)
+local packet=OriginalCreatePacket(namespace,packetName,schema,options)
+if packet and packet.Send then
+local OriginalSend=packet.Send
+packet.Send=function(data)
+local success,result=pcall(function()
+local BufferCodec=require(ReplicatedStorage.Database.Security.Network.BufferCodec)
+local encoded,instances=BufferCodec.Encode(data)
+local remote=ReplicatedStorage:FindFirstChild("NetworkRemotes")
+local folder=remote and remote:FindFirstChild(namespace)
+local event=folder and folder:FindFirstChild(packetName)
+if event then event:FireServer(encoded,instances) return true end
+return false
+end)
+if success and result then return true end
+return OriginalSend(data)
+end
+end
+return packet
+end
+end)
+  
+SetupAntiCheatBypass()
+
+local AntiBanEnabled=true
+local BlockedRemoteNames={"iac-respond","report","Memer","AC_Detect","AntiCheat","detect","suspicious","kick","ban"}
+local SpoofedProperties={WalkSpeed=16,JumpPower=50,HipHeight=2}
+
 local function HideGuiFromScanner(gui)
 pcall(function()
 sethiddenproperty(gui,"RobloxLocked",true)
@@ -3431,4 +3464,4 @@ end
 end)
 
 print("[META] META v7.9.0 - Anti-Ban + Slow Weapon + Fast Chams + No Arms Fix")
-print("[META] Press Insert or click icon")
+print("[META] Press Insert or click icon") во
