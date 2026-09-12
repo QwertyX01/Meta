@@ -1,17 +1,3 @@
-warn("[META] Line 1 reached")
-warn("getrawmetatable:", typeof(getrawmetatable))
-warn("setreadonly:", typeof(setreadonly))
-warn("sethiddenproperty:", typeof(sethiddenproperty))
-warn("hookfunction:", typeof(hookfunction))
-warn("newcclosure:", typeof(newcclosure))
-warn("getgc:", typeof(getgc))
-warn("Drawing:", typeof(Drawing))
-warn("getnamecallmethod:", typeof(getnamecallmethod))
-warn("isreadonly:", typeof(isreadonly))
-warn("getreg:", typeof(getreg))
-warn("getupvalue:", typeof(getupvalue))
-warn("setupvalue:", typeof(setupvalue))
-warn("getconnections:", typeof(getconnections))
 
 local TweenService=game:GetService("TweenService")
 local CoreGui=game:GetService("CoreGui")
@@ -3478,4 +3464,4 @@ end
 end)
 
 print("[META] META v7.9.0 - Anti-Ban + Slow Weapon + Fast Chams + No Arms Fix")
-print("[META] Press Insert or click icon") во
+print("[META] Press Insert or click icon") 
