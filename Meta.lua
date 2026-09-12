@@ -1,7 +1,7 @@
 -- ====================================================================
 -- VOLLEYBALL LEGENDS - AGGRESSIVE SPORT EDITION (PREMIUM LOADING)
 -- + COLOR PICKER + CORNER RADIUS + MEGA HITBOX + BALL ESP + PREDICTOR
--- + VISUAL HITBOX RING
+-- + VISUAL HITBOX RING (FIXED)
 -- ====================================================================
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -69,7 +69,6 @@ local ToggleRegistry = {}
 local Br = {}
 local BallESP = { model = nil, highlight = nil, particles = nil, light = nil }
 local Pred = { ring = nil, center = nil, tracer = nil, lastPos = nil, lastTime = nil, smoothVel = nil, smoothLand = nil }
-local HitboxVisual = { Sphere = nil, Ring = nil, BallModel = nil, Radius = 6, PulseTime = 0, RotateAngle = 0 }
 
 local function RegisterCorner(uiCorner, baseRadius)
     table.insert(CornerElements, { Corner = uiCorner, BaseRadius = baseRadius or Config.CornerRadius })
@@ -1882,7 +1881,8 @@ local function _FindBall()
         if obj:IsA("Model") and obj.PrimaryPart then
             local lname = string.lower(obj.Name)
             if (string.find(lname, "volleyball") or string.find(lname, "ball"))
-               and not string.find(lname, "shadow") and not string.find(lname, "rack") then
+               and not string.find(lname, "shadow")
+               and not string.find(lname, "rack") then
                 return obj
             end
         end
@@ -2122,7 +2122,7 @@ task.spawn(function()
 end)
 
 -- ====================================================================
--- MEGA HITBOX
+-- MEGA HITBOX — функционал + визуальное кольцо (FIXED)
 -- ====================================================================
 local MegaHitbox = {
     Enabled = false,
@@ -2130,6 +2130,26 @@ local MegaHitbox = {
     UpdateInterval = 0.05,
     ExpandedCount = 0,
 }
+
+-- Рабочий FindBall из тестового скрипта
+local function FindBallForVisual()
+    for _, obj in ipairs(workspace:GetChildren()) do
+        if obj:IsA("Model") and string.find(string.lower(obj.Name), "client_ball") then
+            if obj.PrimaryPart then return obj end
+        end
+    end
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("Model") and obj.PrimaryPart then
+            local lname = string.lower(obj.Name)
+            if (string.find(lname, "volleyball") or string.find(lname, "ball"))
+               and not string.find(lname, "shadow")
+               and not string.find(lname, "rack") then
+                return obj
+            end
+        end
+    end
+    return nil
+end
 
 local function ExpandAllHitboxTemplates()
     local Assets = ReplicatedStorage:FindFirstChild("Assets")
@@ -2186,24 +2206,14 @@ local function RestoreAllHitboxes()
     end
 end
 
-task.spawn(function()
-    while ScreenGui.Parent do
-        if MegaHitbox.Enabled then
-            pcall(ExpandAllHitboxTemplates)
-        end
-        task.wait(1)
-    end
-end)
-
--- COMBAT PAGE
-local combatPage = TabPages["Combat"]
-combatPage.CanvasSize = UDim2.new(0, 0, 0, 400)
-
-CreateSection(combatPage, "// HITBOX EXPANDER", 10, THEME.ACCENT_HOT)
-
 -- ====================================================================
--- VISUAL HITBOX RING
+-- VISUAL HITBOX RING — рабочая версия
 -- ====================================================================
+local HitboxVisual = {
+    Sphere = nil, Ring = nil, BallModel = nil,
+    Radius = 6, PulseTime = 0, RotateAngle = 0,
+}
+
 local function DestroyHitboxVisual()
     if HitboxVisual.Sphere then pcall(function() HitboxVisual.Sphere:Destroy() end) HitboxVisual.Sphere = nil end
     if HitboxVisual.Ring then pcall(function() HitboxVisual.Ring:Destroy() end) HitboxVisual.Ring = nil end
@@ -2215,7 +2225,7 @@ local function CreateHitboxVisual(ball)
     if not ball or not ball.PrimaryPart then return end
 
     HitboxVisual.Sphere = Instance.new("Part")
-    HitboxVisual.Sphere.Name = "VL_HitboxSphere"
+    HitboxVisual.Sphere.Name = "RbxMegaSphere"
     HitboxVisual.Sphere.Shape = Enum.PartType.Ball
     HitboxVisual.Sphere.Size = Vector3.new(HitboxVisual.Radius * 2, HitboxVisual.Radius * 2, HitboxVisual.Radius * 2)
     HitboxVisual.Sphere.Anchored = true
@@ -2229,7 +2239,7 @@ local function CreateHitboxVisual(ball)
     HitboxVisual.Sphere.Parent = workspace
 
     HitboxVisual.Ring = Instance.new("Part")
-    HitboxVisual.Ring.Name = "VL_HitboxRing"
+    HitboxVisual.Ring.Name = "RbxMegaRing"
     HitboxVisual.Ring.Shape = Enum.PartType.Cylinder
     HitboxVisual.Ring.Size = Vector3.new(0.15, HitboxVisual.Radius * 2, HitboxVisual.Radius * 2)
     HitboxVisual.Ring.Anchored = true
@@ -2238,7 +2248,7 @@ local function CreateHitboxVisual(ball)
     HitboxVisual.Ring.CanTouch = false
     HitboxVisual.Ring.CastShadow = false
     HitboxVisual.Ring.Material = Enum.Material.Neon
-    HitboxVisual.Ring.Color = THEME.ACCENT
+    HitboxVisual.Ring.Color = THEME.ACCENT_HOT
     HitboxVisual.Ring.Transparency = 0.3
     HitboxVisual.Ring.Parent = workspace
 
@@ -2249,7 +2259,7 @@ task.spawn(function()
     while ScreenGui.Parent do
         if Config.HitboxEnabled then
             if not HitboxVisual.BallModel or not HitboxVisual.BallModel.Parent or not HitboxVisual.BallModel.PrimaryPart then
-                HitboxVisual.BallModel = _FindBall()
+                HitboxVisual.BallModel = FindBallForVisual()
                 if HitboxVisual.BallModel then CreateHitboxVisual(HitboxVisual.BallModel) end
             end
 
@@ -2268,10 +2278,15 @@ task.spawn(function()
                 if HitboxVisual.Ring then
                     HitboxVisual.RotateAngle = HitboxVisual.RotateAngle + 0.05 * 60
                     HitboxVisual.Ring.Size = Vector3.new(0.15, radius * 2, radius * 2)
-                    HitboxVisual.Ring.CFrame = CFrame.new(ballPos) * CFrame.Angles(0, 0, math.rad(90)) * CFrame.Angles(math.rad(HitboxVisual.RotateAngle), math.rad(HitboxVisual.RotateAngle * 0.6), 0)
-                    HitboxVisual.Ring.Color = THEME.ACCENT
+                    HitboxVisual.Ring.CFrame = CFrame.new(ballPos)
+                        * CFrame.Angles(0, 0, math.rad(90))
+                        * CFrame.Angles(math.rad(HitboxVisual.RotateAngle), math.rad(HitboxVisual.RotateAngle * 0.6), 0)
+                    HitboxVisual.Ring.Color = THEME.ACCENT_HOT
                     HitboxVisual.Ring.Transparency = 0.3
                 end
+            else
+                if HitboxVisual.Sphere then HitboxVisual.Sphere.Transparency = 1 end
+                if HitboxVisual.Ring then HitboxVisual.Ring.Transparency = 1 end
             end
         else
             if HitboxVisual.Sphere then DestroyHitboxVisual() end
@@ -2280,12 +2295,26 @@ task.spawn(function()
     end
 end)
 
-CreateToggle(combatPage, "Hitbox Expander", "Расширяет зону удара + фиолетовое кольцо", 40, MegaHitbox.Enabled, function(v)
+-- COMBAT PAGE
+local combatPage = TabPages["Combat"]
+combatPage.CanvasSize = UDim2.new(0, 0, 0, 400)
+
+CreateSection(combatPage, "// HITBOX EXPANDER", 10, THEME.ACCENT_HOT)
+
+CreateToggle(combatPage, "Hitbox Expander", "Расширяет зону удара + кольцо вокруг мяча", 40, MegaHitbox.Enabled, function(v)
     MegaHitbox.Enabled = v
     Config.HitboxEnabled = v
     if v then
         MegaHitbox.ExpandedCount = ExpandAllHitboxTemplates()
         print("[VL] Hitbox ENABLED | multiplier x" .. MegaHitbox.SizeMultiplier .. " | " .. MegaHitbox.ExpandedCount .. " templates")
+        -- МГНОВЕННО создаём кольцо
+        local ball = FindBallForVisual()
+        if ball then
+            CreateHitboxVisual(ball)
+            print("[VL] Ring created on: " .. ball.Name)
+        else
+            print("[VL] Ball not found yet — ring will appear when ball spawns")
+        end
     else
         RestoreAllHitboxes()
         DestroyHitboxVisual()
@@ -2293,12 +2322,13 @@ CreateToggle(combatPage, "Hitbox Expander", "Расширяет зону уда�
     end
 end)
 
-CreateSlider(combatPage, "Hitbox Size", "Множитель (x1 - x20)", 95, 10, 200, Config.HitboxSize, "x", function(v)
+CreateSlider(combatPage, "Hitbox Size", "Множитель (x1 - x20) + радиус кольца", 95, 10, 200, Config.HitboxSize, "x", function(v)
     Config.HitboxSize = v
     MegaHitbox.SizeMultiplier = v / 10
+    -- Радиус кольца: x1 → 3 studs, x20 → 12 studs
+    HitboxVisual.Radius = 3 + (v / 10 - 1) * 0.5
     if MegaHitbox.Enabled then
         MegaHitbox.ExpandedCount = ExpandAllHitboxTemplates()
-        print("[VL] Hitbox size x" .. MegaHitbox.SizeMultiplier .. " | " .. MegaHitbox.ExpandedCount .. " templates")
     end
 end)
 
@@ -2611,7 +2641,7 @@ local function ApplyAccentColor(color)
     if Pred.ring then Pred.ring.Color = newHot end
     if Pred.center then Pred.center.Color = newAccent end
     if HitboxVisual.Sphere then HitboxVisual.Sphere.Color = newAccent end
-    if HitboxVisual.Ring then HitboxVisual.Ring.Color = newAccent end
+    if HitboxVisual.Ring then HitboxVisual.Ring.Color = newHot end
 
     for _, el in ipairs(ColorSyncedElements) do
         if el.Kind == "Toggle" then
@@ -2831,4 +2861,4 @@ HeaderBaseLine.BackgroundTransparency = 0.7
 HeaderRunner.BackgroundTransparency = 0
 HeaderPulse.BackgroundTransparency = 0.6
 
-print("[VL] Loaded: Menu + Mega Hitbox + Ball ESP + Predictor + Visual Ring")
+print("[VL] Loaded: Menu + Mega Hitbox + Ball ESP + Predictor + Visual Ring (FIXED)")
