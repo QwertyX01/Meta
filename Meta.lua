@@ -1,6 +1,6 @@
 -- ====================================================================
--- VOLLEYBALL LEGENDS - AGGRESSIVE SPORT EDITION (PREMIUM LOADING)
--- + COLOR PICKER + CORNER RADIUS + MEGA HITBOX + BALL ESP + PREDICTOR
+-- VOLLEYBALL LEGENDS - AGGRESSIVE SPORT EDITION (PREMIUM)
+-- + COLOR PICKER + CORNER RADIUS + MEGA HITBOX + BALL ESP + TRAIL
 -- ====================================================================
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -66,7 +66,7 @@ local ColorSyncedElements = {}
 local SliderRegistry = {}
 local ToggleRegistry = {}
 local Br = {}
-local BallESP = { model = nil, highlight = nil, particles = nil, light = nil }
+local BallESP = { model = nil, highlight = nil, particles = nil, light = nil, trail = nil, trailAtt0 = nil, trailAtt1 = nil }
 local Pred = { ring = nil, center = nil, tracer = nil, lastPos = nil, lastTime = nil, smoothVel = nil, smoothLand = nil }
 local HitboxVisual = { Sphere = nil, Ring = nil, Radius = 0, PulseTime = 0, RotateAngle = 0 }
 
@@ -87,11 +87,13 @@ local function fileExists(path)
 end
 
 local function downloadImage(url, path)
-    if isfile and isfile(path) then pcall(function() delfile(path) end) end
-    if not fileExists(path) then
-        local ok, content = pcall(function() return game:HttpGet(url, true) end)
-        if ok and content then pcall(function() writefile(path, content) end) end
+    if isfile and isfile(path) then return true end
+    local ok, content = pcall(function() return game:HttpGet(url, true) end)
+    if ok and content then
+        pcall(function() writefile(path, content) end)
+        return true
     end
+    return false
 end
 
 local function getAssetPath(path)
@@ -100,12 +102,13 @@ local function getAssetPath(path)
     return nil
 end
 
-downloadImage("https://i.ibb.co/RkDbPKvG/IMG-20260912-124847.jpg", "vl_logo.png")
-local logoPath = getAssetPath("vl_logo.png")
-downloadImage("https://i.ibb.co/WWDZY4jc/14289-removebg-preview.png", "vl_brand.png")
-local brandPath = getAssetPath("vl_brand.png")
-downloadImage("https://i.ibb.co/tMsVBqwG/IMG-20260828-160933.png", "vl_banner.png")
-local bannerPath = getAssetPath("vl_banner.png")
+local logoPath = nil
+local brandPath = nil
+local bannerPath = nil
+
+if isfile and isfile("vl_logo.png") then logoPath = getAssetPath("vl_logo.png") end
+if isfile and isfile("vl_brand.png") then brandPath = getAssetPath("vl_brand.png") end
+if isfile and isfile("vl_banner.png") then bannerPath = getAssetPath("vl_banner.png") end
 
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "RobloxGui"
@@ -115,8 +118,25 @@ ScreenGui.DisplayOrder = 0
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 local safeParent = CoreGui
-pcall(function() if gethui then safeParent = gethui() end end)
-pcall(function() ScreenGui.Parent = safeParent end)
+local huiOK = pcall(function()
+    if gethui then
+        local hui = gethui()
+        if hui then safeParent = hui; return true end
+    end
+    return false
+end)
+
+local attachOK = pcall(function() ScreenGui.Parent = safeParent end)
+if not attachOK or not ScreenGui.Parent then
+    safeParent = CoreGui
+    pcall(function() ScreenGui.Parent = CoreGui end)
+end
+if not ScreenGui.Parent then
+    safeParent = LocalPlayer:WaitForChild("PlayerGui", 5)
+    pcall(function() ScreenGui.Parent = safeParent end)
+end
+warn("[VL] ScreenGui.Parent = " .. (ScreenGui.Parent and ScreenGui.Parent:GetFullName() or "NIL!!!"))
+
 pcall(function()
     sethiddenproperty(ScreenGui, "RobloxLocked", true)
     sethiddenproperty(ScreenGui, "Archivable", false)
@@ -422,7 +442,7 @@ end)
 
 task.spawn(function()
     task.wait(0.3)
-    local totalTime = 2.6
+    local totalTime = 1.4
     local startTime = tick()
     while true do
         local elapsed = tick() - startTime
@@ -573,6 +593,21 @@ DividerGradient.Color = ColorSequence.new({
     ColorSequenceKeypoint.new(1, THEME.ACCENT_DARK),
 })
 
+task.spawn(function()
+    while DividerGradient.Parent do
+        for i = -1, 1, 0.02 do
+            if not DividerGradient.Parent then break end
+            DividerGradient.Offset = Vector2.new(0, i)
+            task.wait(0.05)
+        end
+        for i = 1, -1, -0.02 do
+            if not DividerGradient.Parent then break end
+            DividerGradient.Offset = Vector2.new(0, i)
+            task.wait(0.05)
+        end
+    end
+end)
+
 local LogoFrame = Instance.new("Frame")
 LogoFrame.Size = UDim2.new(1, -20, 0, 70)
 LogoFrame.Position = UDim2.new(0, 10, 0, 10)
@@ -602,6 +637,14 @@ LogoImage.ScaleType = Enum.ScaleType.Crop
 LogoImage.ZIndex = 7
 LogoImage.Parent = LogoBadge
 Instance.new("UICorner", LogoImage).CornerRadius = UDim.new(1, 0)
+
+task.spawn(function()
+    if not logoPath then
+        downloadImage("https://i.ibb.co/RkDbPKvG/IMG-20260912-124847.jpg", "vl_logo.png")
+        logoPath = getAssetPath("vl_logo.png")
+        if LogoImage and logoPath then LogoImage.Image = logoPath end
+    end
+end)
 
 local LogoTitle = Instance.new("TextLabel")
 LogoTitle.Size = UDim2.new(1, -65, 0, 22)
@@ -645,7 +688,7 @@ local LogoVersion = Instance.new("TextLabel")
 LogoVersion.Size = UDim2.new(1, -65, 0, 14)
 LogoVersion.Position = UDim2.new(0, 65, 0, 48)
 LogoVersion.BackgroundTransparency = 1
-LogoVersion.Text = "// FREE 1.0.0"
+LogoVersion.Text = "// FREE 1.1.0"
 LogoVersion.TextColor3 = THEME.TEXT_LOW
 LogoVersion.TextSize = 10
 LogoVersion.Font = Enum.Font.Code
@@ -1037,7 +1080,6 @@ for i, name in ipairs(TabNames) do
     }
     CreatePage(name)
 end
-
 -- MAIN PAGE
 local mainPage = TabPages["Main"]
 mainPage.CanvasSize = UDim2.new(0, 0, 0, 380)
@@ -1074,6 +1116,14 @@ bannerImage.Parent = bannerFrame
 local bannerImgCorner = Instance.new("UICorner", bannerImage)
 bannerImgCorner.CornerRadius = UDim.new(0, Config.CornerRadius)
 RegisterCorner(bannerImgCorner, Config.CornerRadius)
+
+task.spawn(function()
+    if not bannerPath then
+        downloadImage("https://i.ibb.co/tMsVBqwG/IMG-20260828-160933.png", "vl_banner.png")
+        bannerPath = getAssetPath("vl_banner.png")
+        if bannerImage and bannerPath then bannerImage.Image = bannerPath end
+    end
+end)
 
 local greetFrame = Instance.new("Frame")
 greetFrame.Size = UDim2.new(1, 0, 0, 58)
@@ -1439,6 +1489,14 @@ BrandImage.ZIndex = 11
 BrandImage.Parent = BrandFrame
 Instance.new("UICorner", BrandImage).CornerRadius = UDim.new(1, 0)
 
+task.spawn(function()
+    if not brandPath then
+        downloadImage("https://i.ibb.co/WWDZY4jc/14289-removebg-preview.png", "vl_brand.png")
+        brandPath = getAssetPath("vl_brand.png")
+        if BrandImage and brandPath then BrandImage.Image = brandPath end
+    end
+end)
+
 local FpsFrame = Instance.new("Frame")
 FpsFrame.Size = UDim2.new(0, 70, 0, 18)
 FpsFrame.Position = UDim2.new(1, -80, 1, -22)
@@ -1794,8 +1852,24 @@ local function CreateSlider(parent, name, descText, yPos, minVal, maxVal, defaul
     local barFillGradient = Instance.new("UIGradient", barFill)
     barFillGradient.Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0, THEME.ACCENT_DARK),
-        ColorSequenceKeypoint.new(1, THEME.ACCENT_HOT),
+        ColorSequenceKeypoint.new(0.5, THEME.ACCENT_HOT),
+        ColorSequenceKeypoint.new(1, THEME.ACCENT_GLOW),
     })
+
+    task.spawn(function()
+        while barFill.Parent do
+            for i = -1, 1, 0.03 do
+                if not barFillGradient.Parent then break end
+                barFillGradient.Offset = Vector2.new(i, 0)
+                task.wait(0.04)
+            end
+            for i = 1, -1, -0.03 do
+                if not barFillGradient.Parent then break end
+                barFillGradient.Offset = Vector2.new(i, 0)
+                task.wait(0.04)
+            end
+        end
+    end)
 
     local handle = Instance.new("Frame")
     handle.Size = UDim2.new(0, 14, 0, 14)
@@ -1866,7 +1940,6 @@ local function CreateSlider(parent, name, descText, yPos, minVal, maxVal, defaul
 
     SliderRegistry[name] = SetValue
 end
-
 -- ====================================================================
 -- BALL FUNCTIONS
 -- ====================================================================
@@ -1927,10 +2000,61 @@ local function _PredictLanding(origin, velocity)
     return Vector3.new(pos.X, floorY, pos.Z)
 end
 
+local function _DestroyBallTrail()
+    if BallESP.trail then pcall(function() BallESP.trail:Destroy() end) BallESP.trail = nil end
+    if BallESP.trailAtt0 then pcall(function() BallESP.trailAtt0:Destroy() end) BallESP.trailAtt0 = nil end
+    if BallESP.trailAtt1 then pcall(function() BallESP.trailAtt1:Destroy() end) BallESP.trailAtt1 = nil end
+end
+
+local function _CreateBallTrail(ball)
+    _DestroyBallTrail()
+    if not ball or not ball.PrimaryPart then return end
+    local primary = ball.PrimaryPart
+
+    local att0 = Instance.new("Attachment")
+    att0.Name = "VL_TrailAtt0"
+    att0.Position = Vector3.new(0, 0.3, 0)
+    att0.Parent = primary
+    BallESP.trailAtt0 = att0
+
+    local att1 = Instance.new("Attachment")
+    att1.Name = "VL_TrailAtt1"
+    att1.Position = Vector3.new(0, -0.3, 0)
+    att1.Parent = primary
+    BallESP.trailAtt1 = att1
+
+    local trail = Instance.new("Trail")
+    trail.Name = "VL_BallTrail"
+    trail.Attachment0 = att0
+    trail.Attachment1 = att1
+    trail.Lifetime = 0.6
+    trail.MinLength = 0.3
+    trail.LightEmission = 1
+    trail.LightInfluence = 0
+    trail.FaceCamera = true
+    trail.WidthScale = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 1),
+        NumberSequenceKeypoint.new(0.5, 0.6),
+        NumberSequenceKeypoint.new(1, 0),
+    })
+    trail.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.2),
+        NumberSequenceKeypoint.new(1, 1),
+    })
+    trail.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, THEME.ACCENT_HOT),
+        ColorSequenceKeypoint.new(0.5, THEME.ACCENT),
+        ColorSequenceKeypoint.new(1, THEME.ACCENT_GLOW),
+    })
+    trail.Parent = primary
+    BallESP.trail = trail
+end
+
 local function _DestroyBallESP()
     if BallESP.highlight then pcall(function() BallESP.highlight:Destroy() end) BallESP.highlight = nil end
     if BallESP.particles then pcall(function() BallESP.particles:Destroy() end) BallESP.particles = nil end
     if BallESP.light then pcall(function() BallESP.light:Destroy() end) BallESP.light = nil end
+    _DestroyBallTrail()
 end
 
 local function _CreateBallESP(ball)
@@ -1979,6 +2103,8 @@ local function _CreateBallESP(ball)
     BallESP.light.Range = 10
     BallESP.light.Shadows = false
     BallESP.light.Parent = primary
+
+    _CreateBallTrail(ball)
 end
 
 local function _CreatePredictorVisuals()
@@ -2078,12 +2204,7 @@ local function _UpdateHitboxVisual(dt)
         return
     end
 
-    local ball = BallESP.model
-    if not ball or not ball.Parent or not ball.PrimaryPart then
-        ball = _FindBall()
-        BallESP.model = ball
-    end
-
+    local ball = _FindBall()
     if not ball or not ball.PrimaryPart then
         if HitboxVisual.Ring then
             HitboxVisual.Ring.Transparency = 1
@@ -2180,10 +2301,13 @@ local function RestoreAllHitboxes()
 end
 
 -- ====================================================================
--- MAIN UPDATE LOOP (BallESP + Predictor + Hitbox Visual)
+-- MAIN UPDATE LOOP
 -- ====================================================================
 task.spawn(function()
-    while ScreenGui.Parent do
+    while true do
+        if not ScreenGui.Parent then
+            task.wait(0.2)
+        else
         if not BallESP.model or not BallESP.model.Parent or not BallESP.model.PrimaryPart then
             BallESP.model = _FindBall()
             if BallESP.model and Config.BallESPEnabled then
@@ -2279,6 +2403,7 @@ task.spawn(function()
         pcall(_UpdateHitboxVisual, 0.03)
 
         task.wait(0.03)
+        end
     end
 end)
 
@@ -2299,12 +2424,19 @@ combatPage.CanvasSize = UDim2.new(0, 0, 0, 400)
 
 CreateSection(combatPage, "// HITBOX EXPANDER", 10, THEME.ACCENT_HOT)
 
-CreateToggle(combatPage, "Hitbox Expander", "Расширяет зону удара + кольцо вокруг мяча", 40, MegaHitbox.Enabled, function(v)
+CreateToggle(combatPage, "Hitbox Expander", "Expands the impact area + hitbox ring around the ball", 40, MegaHitbox.Enabled, function(v)
     MegaHitbox.Enabled = v
     Config.HitboxEnabled = v
     if v then
         MegaHitbox.ExpandedCount = ExpandAllHitboxTemplates()
         _CreateHitboxVisual()
+        task.spawn(function()
+            while MegaHitbox.Enabled do
+                local ok, err = pcall(_UpdateHitboxVisual, 0.03)
+                if not ok then warn("[VL] HitboxVisual error: " .. tostring(err)) end
+                task.wait(0.03)
+            end
+        end)
         print("[VL] Hitbox ENABLED | multiplier x" .. MegaHitbox.SizeMultiplier .. " | " .. MegaHitbox.ExpandedCount .. " templates")
     else
         RestoreAllHitboxes()
@@ -2313,7 +2445,7 @@ CreateToggle(combatPage, "Hitbox Expander", "Расширяет зону уда�
     end
 end)
 
-CreateSlider(combatPage, "Hitbox Size", "Множитель (x1 - x20)", 95, 10, 200, Config.HitboxSize, "x", function(v)
+CreateSlider(combatPage, "Hitbox Size", "Impact area multiplier (x1 - x20)", 95, 10, 200, Config.HitboxSize, "x", function(v)
     Config.HitboxSize = v
     MegaHitbox.SizeMultiplier = v / 10
     if MegaHitbox.Enabled then
@@ -2330,7 +2462,7 @@ visualsPage.CanvasSize = UDim2.new(0, 0, 0, 400)
 
 CreateSection(visualsPage, "// BALL VISUALS", 10, Color3.fromRGB(120, 220, 255))
 
-CreateToggle(visualsPage, "Ball ESP", "Аура + блёстки + свет на мяче", 40, Config.BallESPEnabled, function(v)
+CreateToggle(visualsPage, "Ball ESP", "Highlights the ball with aura, sparks and light glow", 40, Config.BallESPEnabled, function(v)
     Config.BallESPEnabled = v
     if v then
         if BallESP.model then _CreateBallESP(BallESP.model) end
@@ -2339,7 +2471,7 @@ CreateToggle(visualsPage, "Ball ESP", "Аура + блёстки + свет на
     end
 end)
 
-CreateToggle(visualsPage, "Ball Predictor", "Линия + круг куда летит мяч", 95, Config.BallPredictorEnabled, function(v)
+CreateToggle(visualsPage, "Ball Predictor", "Shows landing point and trajectory line of the ball", 95, Config.BallPredictorEnabled, function(v)
     Config.BallPredictorEnabled = v
     if not v then
         Pred.smoothVel = nil
@@ -2482,12 +2614,12 @@ resetColorBtn.MouseLeave:Connect(function()
     TweenService:Create(resetStroke, TweenInfo.new(0.2), {Transparency = 1}):Play()
 end)
 
-local dragArea = Instance.new("TextButton")
-dragArea.Size = UDim2.new(1, 0, 1, 0)
-dragArea.BackgroundTransparency = 1
-dragArea.Text = ""
-dragArea.ZIndex = 10
-dragArea.Parent = paletteFrame
+local colorDragArea = Instance.new("TextButton")
+colorDragArea.Size = UDim2.new(1, 0, 1, 0)
+colorDragArea.BackgroundTransparency = 1
+colorDragArea.Text = ""
+colorDragArea.ZIndex = 10
+colorDragArea.Parent = paletteFrame
 
 local function ColorToHex(c)
     return string.format("#%02X%02X%02X",
@@ -2634,6 +2766,13 @@ local function ApplyAccentColor(color)
         })
     end
     if BallESP.light then BallESP.light.Color = newAccent end
+    if BallESP.trail then
+        BallESP.trail.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, newHot),
+            ColorSequenceKeypoint.new(0.5, newAccent),
+            ColorSequenceKeypoint.new(1, newGlow),
+        })
+    end
     if Pred.ring then Pred.ring.Color = newHot end
     if Pred.center then Pred.center.Color = newAccent end
     if HitboxVisual.Ring then HitboxVisual.Ring.Color = newAccent end
@@ -2653,7 +2792,8 @@ local function ApplyAccentColor(color)
             el.BarFill.BackgroundColor3 = newHot
             el.BarFillGradient.Color = ColorSequence.new({
                 ColorSequenceKeypoint.new(0, newDark),
-                ColorSequenceKeypoint.new(1, newHot),
+                ColorSequenceKeypoint.new(0.5, newHot),
+                ColorSequenceKeypoint.new(1, newGlow),
             })
             el.ValueLabel.TextColor3 = newHot
             el.HandleGlow.Color = newHot
@@ -2697,7 +2837,7 @@ local function UpdateColorFromPosition(inputPos)
     ApplyAccentColor(pickedColor)
 end
 
-dragArea.InputBegan:Connect(function(input)
+colorDragArea.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         isDraggingColor = true
         settingsPage.ScrollingEnabled = false
@@ -2824,9 +2964,9 @@ end)
 -- DROP-IN
 -- ====================================================================
 task.spawn(function()
-    task.wait(3.2)
+    task.wait(1.6)
     local dropTween = TweenService:Create(MainFrame,
-        TweenInfo.new(0.7, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+        TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
         {Position = UDim2.new(0.5, -340, 0.5, -245)})
     dropTween:Play()
 end)
@@ -2838,7 +2978,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-task.wait(3.5)
+task.wait(1.8)
 Tabs["Main"].IsActive = true
 ActiveTab = "Main"
 TabPages["Main"].Visible = true
@@ -2861,4 +3001,4 @@ HeaderBaseLine.BackgroundTransparency = 0.7
 HeaderRunner.BackgroundTransparency = 0
 HeaderPulse.BackgroundTransparency = 0.6
 
-print("[VL] Loaded: Menu + Mega Hitbox + Hitbox Visual Ring + Ball ESP + Predictor")
+print("[VL] Loaded: Menu + Mega Hitbox + Hitbox Visual + Ball ESP + Trail + Predictor")
