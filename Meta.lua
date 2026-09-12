@@ -1,7 +1,7 @@
 -- ====================================================================
 -- VOLLEYBALL LEGENDS - AGGRESSIVE SPORT EDITION (PREMIUM LOADING)
 -- + COLOR PICKER + CORNER RADIUS + MEGA HITBOX + BALL ESP + PREDICTOR
--- + VISUAL HITBOX SPHERE
+-- + VISUAL HITBOX SPHERE (UPDATED LOOP)
 -- ====================================================================
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -2287,9 +2287,16 @@ end
 task.spawn(function()
     while ScreenGui.Parent do
         if Config.HitboxEnabled then
-            if not HitboxVisual.BallModel or not HitboxVisual.BallModel.Parent or not HitboxVisual.BallModel.PrimaryPart then
+            -- Найти мяч только если сферы ещё нет
+            if not HitboxVisual.Sphere or not HitboxVisual.Sphere.Parent then
                 local ball = _FindBall()
                 if ball then CreateHitboxVisual(ball) end
+            end
+
+            -- Если мяч сменился — пересоздать
+            local currentBall = _FindBall()
+            if currentBall and HitboxVisual.BallModel ~= currentBall then
+                CreateHitboxVisual(currentBall)
             end
 
             local ball = HitboxVisual.BallModel
@@ -2299,25 +2306,34 @@ task.spawn(function()
                 local pulse = 1 + math.sin(HitboxVisual.PulseTime) * 0.08
                 local radius = HitboxVisual.Radius * pulse
 
+                -- Сфера
                 HitboxVisual.Sphere.Size = Vector3.new(radius * 2, radius * 2, radius * 2)
                 HitboxVisual.Sphere.CFrame = CFrame.new(ballPos)
                 HitboxVisual.Sphere.Color = THEME.ACCENT
+                HitboxVisual.Sphere.Transparency = HitboxVisual.Transparency
 
+                -- Кольцо — проверяем что оно есть
                 if HitboxVisual.Ring then
+                    if not HitboxVisual.Ring.Parent then
+                        HitboxVisual.Ring.Parent = workspace
+                    end
                     HitboxVisual.RotateAngle = HitboxVisual.RotateAngle + 0.05 * 90
                     HitboxVisual.Ring.Size = Vector3.new(0.1, radius * 2, radius * 2)
                     HitboxVisual.Ring.CFrame = CFrame.new(ballPos) * CFrame.Angles(math.rad(HitboxVisual.RotateAngle), math.rad(HitboxVisual.RotateAngle * 0.6), 0)
                     HitboxVisual.Ring.Color = THEME.ACCENT_HOT
+                    HitboxVisual.Ring.Transparency = HitboxVisual.Transparency - 0.15
                 end
 
+                -- Частицы
                 if HitboxVisual.Particles then
+                    if HitboxVisual.Particles.Parent ~= ball.PrimaryPart then
+                        HitboxVisual.Particles.Parent = ball.PrimaryPart
+                    end
                     HitboxVisual.Particles.Color = ColorSequence.new({
                         ColorSequenceKeypoint.new(0, THEME.ACCENT),
                         ColorSequenceKeypoint.new(1, THEME.ACCENT_HOT),
                     })
                 end
-            else
-                if HitboxVisual.Sphere then DestroyHitboxVisual() end
             end
         else
             if HitboxVisual.Sphere then DestroyHitboxVisual() end
