@@ -10,17 +10,14 @@ local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local Camera=workspace.CurrentCamera
 local LocalPlayer=Players.LocalPlayer
 
--- ====================================================================
--- ФИКС: ВАЖНЫЕ ПЕРЕМЕННЫЕ ОБЪЯВЛЕНЫ ЗАРАНЕЕ (ЧТОБЫ НЕ БЫЛО ОШИБКИ)
--- ====================================================================
-local ContentPages = {}
-local TabNames = {"Aimbot","Visuals","Misc","Settings","Sky","Sound"}
-local TabButtons = {}
-local activeIndex = 1
-local langUpdateCallbacks = {}
-local rainbowConnection = nil
-local langButtonData = {}
--- ====================================================================
+-- ВАЖНЫЕ ПЕРЕМЕННЫЕ (ОБЪЯВЛЕНЫ ЗАРАНЕЕ)
+local ContentPages={}
+local TabNames={"Aimbot","Visuals","Misc","Settings","Sky","Sound"}
+local TabButtons={}
+local activeIndex=1
+local langUpdateCallbacks={}
+local rainbowConnection=nil
+local langButtonData={}
 
 local function SetupAntiCheatBypass()
 pcall(function()
@@ -47,7 +44,7 @@ end
 return packet
 end
 end)
-  
+end
 SetupAntiCheatBypass()
 
 local AntiBanEnabled=true
@@ -1549,7 +1546,6 @@ end
 end)
 UpdatePartButtons(false)
 end
-
 SetupAimbot()
 end
 
@@ -1848,7 +1844,6 @@ particleLabel.Text=lang.Toggles.ParticleEffectGui[1]
 particleDesc.Text=lang.Toggles.ParticleEffectGui[2]
 end)
 end
-
 SetupVisuals()
 end
 
@@ -1858,7 +1853,6 @@ if miscPage then
 local function SetupMisc()
 miscPage.CanvasSize=UDim2.new(0,0,0,600)
 miscPage.ScrollBarThickness=3
-
 local function CreateToggle(name,descText,yPos,toggleFunc,frameName)
 local frame=Instance.new("Frame")
 frame.Name=frameName or name
@@ -1921,7 +1915,6 @@ end
 clickArea.MouseButton1Click:Connect(function() PlayClickSound() SetState(not state) end)
 return SetState,label,desc,frame
 end
-
 CreateToggle("No Recoil","Антиотдача",10,function(v)
 _G.NoRecoilEnabled=v
 if v then
@@ -1932,7 +1925,6 @@ CameraController.setWeaponRecoil=function() end
 end)
 end
 end,"NoRecoilFrame")
-
 CreateToggle("No Spread","Анти разброс пуль",65,function(v)
 _G.NoSpreadEnabled=v
 if v then
@@ -1952,7 +1944,6 @@ end
 end)
 end
 end,"NoSpreadFrame")
-
 CreateToggle("Slow Weapon","Замедляет анимации рук и оружия",120,function(v)
 _G.SlowWeaponEnabled=v
 if v then
@@ -1977,7 +1968,6 @@ end
 end)
 end
 end,"SlowWeaponFrame")
-
 local ArmsHidden={}
 local function IsArmPart(part)
 local n=part.Name:lower()
@@ -1991,7 +1981,6 @@ if n:find("finger") then return true end
 if n:find("shoulder") then return true end
 return false
 end
-
 CreateToggle("No Arms","Скрывает руки, оружие видно",175,function(v)
 _G.InvisibleArmsEnabled=v
 if not v then
@@ -2001,7 +1990,6 @@ end
 ArmsHidden={}
 end
 end,"NoArmsFrame")
-
 RunService.RenderStepped:Connect(function()
 if not _G.InvisibleArmsEnabled then return end
 local cam=workspace.CurrentCamera
@@ -2018,7 +2006,6 @@ end
 end
 end)
 end
-
 SetupMisc()
 end
 
@@ -3452,7 +3439,6 @@ TweenService:Create(MainScale,TweenInfo.new(0.6,Enum.EasingStyle.Back,Enum.Easin
 TweenService:Create(MainFrame,TweenInfo.new(0.6,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{Rotation=0,BackgroundTransparency=_G.MenuOpacity/100}):Play()
 task.wait(0.6)
 if MainBorderFrame then MainBorderFrame.BackgroundTransparency=_G.MenuOpacity/100 end
-
 UpdateAllTexts()
 if TabButtons[1] then
 TabButtons[1].BackgroundColor3=Color3.fromRGB(35,40,50)
