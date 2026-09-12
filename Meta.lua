@@ -1,6 +1,7 @@
 -- ====================================================================
 -- VOLLEYBALL LEGENDS - AGGRESSIVE SPORT EDITION (PREMIUM LOADING)
 -- + COLOR PICKER + CORNER RADIUS + MEGA HITBOX + BALL ESP + PREDICTOR
+-- + VISUAL HITBOX SPHERE
 -- ====================================================================
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -1349,7 +1350,8 @@ end)
 UserInputService.InputChanged:Connect(function(input)
     if not isDraggingMenu then return end
     if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-        local deltaX = input.Position.X - dragStartMouse.X        local deltaY = input.Position.Y - dragStartMouse.Y
+        local deltaX = input.Position.X - dragStartMouse.X
+        local deltaY = input.Position.Y - dragStartMouse.Y
         MainFrame.Position = UDim2.new(
             dragStartFrame.X.Scale, dragStartFrame.X.Offset + deltaX,
             dragStartFrame.Y.Scale, dragStartFrame.Y.Offset + deltaY
@@ -2119,12 +2121,11 @@ task.spawn(function()
 end)
 
 -- ====================================================================
--- MEGA HITBOX (новый, из твоего скрипта)
+-- MEGA HITBOX
 -- ====================================================================
 local MegaHitbox = {
     Enabled = false,
     SizeMultiplier = 3,
-    UpdateInterval = 0.05,
     ExpandedCount = 0,
 }
 
@@ -2198,7 +2199,135 @@ combatPage.CanvasSize = UDim2.new(0, 0, 0, 400)
 
 CreateSection(combatPage, "// HITBOX EXPANDER", 10, THEME.ACCENT_HOT)
 
-CreateToggle(combatPage, "Hitbox Expander", "Расширяет зону удара (невидимо)", 40, MegaHitbox.Enabled, function(v)
+-- ====================================================================
+-- VISUAL HITBOX SPHERE (встроена в Hitbox Expander)
+-- ====================================================================
+local HitboxVisual = {
+    Sphere = nil,
+    Ring = nil,
+    Particles = nil,
+    BallModel = nil,
+    Radius = 6,
+    Transparency = 0.6,
+    PulseTime = 0,
+    RotateAngle = 0,
+}
+
+local function DestroyHitboxVisual()
+    if HitboxVisual.Sphere then pcall(function() HitboxVisual.Sphere:Destroy() end) HitboxVisual.Sphere = nil end
+    if HitboxVisual.Ring then pcall(function() HitboxVisual.Ring:Destroy() end) HitboxVisual.Ring = nil end
+    if HitboxVisual.Particles then pcall(function() HitboxVisual.Particles:Destroy() end) HitboxVisual.Particles = nil end
+    HitboxVisual.BallModel = nil
+end
+
+local function CreateHitboxVisual(ball)
+    DestroyHitboxVisual()
+    if not ball or not ball.PrimaryPart then return end
+
+    HitboxVisual.Sphere = Instance.new("Part")
+    HitboxVisual.Sphere.Name = "VL_HitboxSphere"
+    HitboxVisual.Sphere.Shape = Enum.PartType.Ball
+    HitboxVisual.Sphere.Size = Vector3.new(HitboxVisual.Radius * 2, HitboxVisual.Radius * 2, HitboxVisual.Radius * 2)
+    HitboxVisual.Sphere.Anchored = true
+    HitboxVisual.Sphere.CanCollide = false
+    HitboxVisual.Sphere.CanQuery = false
+    HitboxVisual.Sphere.CanTouch = false
+    HitboxVisual.Sphere.CastShadow = false
+    HitboxVisual.Sphere.Material = Enum.Material.ForceField
+    HitboxVisual.Sphere.Color = THEME.ACCENT
+    HitboxVisual.Sphere.Transparency = HitboxVisual.Transparency
+    HitboxVisual.Sphere.Parent = workspace
+
+    HitboxVisual.Ring = Instance.new("Part")
+    HitboxVisual.Ring.Name = "VL_HitboxRing"
+    HitboxVisual.Ring.Shape = Enum.PartType.Cylinder
+    HitboxVisual.Ring.Size = Vector3.new(0.1, HitboxVisual.Radius * 2, HitboxVisual.Radius * 2)
+    HitboxVisual.Ring.Anchored = true
+    HitboxVisual.Ring.CanCollide = false
+    HitboxVisual.Ring.CanQuery = false
+    HitboxVisual.Ring.CanTouch = false
+    HitboxVisual.Ring.CastShadow = false
+    HitboxVisual.Ring.Material = Enum.Material.Neon
+    HitboxVisual.Ring.Color = THEME.ACCENT_HOT
+    HitboxVisual.Ring.Transparency = HitboxVisual.Transparency - 0.15
+    HitboxVisual.Ring.Parent = workspace
+
+    HitboxVisual.Particles = Instance.new("ParticleEmitter")
+    HitboxVisual.Particles.Name = "VL_HitboxSparks"
+    HitboxVisual.Particles.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+    HitboxVisual.Particles.LightEmission = 1
+    HitboxVisual.Particles.LightInfluence = 0
+    HitboxVisual.Particles.Size = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0),
+        NumberSequenceKeypoint.new(0.5, 0.4),
+        NumberSequenceKeypoint.new(1, 0),
+    })
+    HitboxVisual.Particles.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 1),
+        NumberSequenceKeypoint.new(0.3, 0.2),
+        NumberSequenceKeypoint.new(1, 1),
+    })
+    HitboxVisual.Particles.Lifetime = NumberRange.new(0.8, 1.4)
+    HitboxVisual.Particles.Rate = 15
+    HitboxVisual.Particles.Speed = NumberRange.new(1.5, 3)
+    HitboxVisual.Particles.SpreadAngle = Vector2.new(360, 360)
+    HitboxVisual.Particles.Rotation = NumberRange.new(0, 360)
+    HitboxVisual.Particles.RotSpeed = NumberRange.new(-60, 60)
+    HitboxVisual.Particles.VelocityInheritance = 0
+    HitboxVisual.Particles.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, THEME.ACCENT),
+        ColorSequenceKeypoint.new(1, THEME.ACCENT_HOT),
+    })
+    HitboxVisual.Particles.Parent = ball.PrimaryPart
+
+    HitboxVisual.BallModel = ball
+end
+
+-- Цикл обновления сферы
+task.spawn(function()
+    while ScreenGui.Parent do
+        if Config.HitboxEnabled then
+            if not HitboxVisual.BallModel or not HitboxVisual.BallModel.Parent or not HitboxVisual.BallModel.PrimaryPart then
+                local ball = _FindBall()
+                if ball then CreateHitboxVisual(ball) end
+            end
+
+            local ball = HitboxVisual.BallModel
+            if ball and ball.PrimaryPart and HitboxVisual.Sphere and HitboxVisual.Sphere.Parent then
+                local ballPos = ball.PrimaryPart.Position
+                HitboxVisual.PulseTime = HitboxVisual.PulseTime + 0.05 * 2.5
+                local pulse = 1 + math.sin(HitboxVisual.PulseTime) * 0.08
+                local radius = HitboxVisual.Radius * pulse
+
+                HitboxVisual.Sphere.Size = Vector3.new(radius * 2, radius * 2, radius * 2)
+                HitboxVisual.Sphere.CFrame = CFrame.new(ballPos)
+                HitboxVisual.Sphere.Color = THEME.ACCENT
+
+                if HitboxVisual.Ring then
+                    HitboxVisual.RotateAngle = HitboxVisual.RotateAngle + 0.05 * 90
+                    HitboxVisual.Ring.Size = Vector3.new(0.1, radius * 2, radius * 2)
+                    HitboxVisual.Ring.CFrame = CFrame.new(ballPos) * CFrame.Angles(math.rad(HitboxVisual.RotateAngle), math.rad(HitboxVisual.RotateAngle * 0.6), 0)
+                    HitboxVisual.Ring.Color = THEME.ACCENT_HOT
+                end
+
+                if HitboxVisual.Particles then
+                    HitboxVisual.Particles.Color = ColorSequence.new({
+                        ColorSequenceKeypoint.new(0, THEME.ACCENT),
+                        ColorSequenceKeypoint.new(1, THEME.ACCENT_HOT),
+                    })
+                end
+            else
+                if HitboxVisual.Sphere then DestroyHitboxVisual() end
+            end
+        else
+            if HitboxVisual.Sphere then DestroyHitboxVisual() end
+        end
+        task.wait(0.05)
+    end
+end)
+
+-- Тумблер Hitbox Expander — теперь с визуалом
+CreateToggle(combatPage, "Hitbox Expander", "Расширяет зону удара + сфера вокруг мяча", 40, MegaHitbox.Enabled, function(v)
     MegaHitbox.Enabled = v
     Config.HitboxEnabled = v
     if v then
@@ -2206,6 +2335,7 @@ CreateToggle(combatPage, "Hitbox Expander", "Расширяет зону уда�
         print("[VL] Hitbox ENABLED | multiplier x" .. MegaHitbox.SizeMultiplier .. " | " .. MegaHitbox.ExpandedCount .. " templates")
     else
         RestoreAllHitboxes()
+        DestroyHitboxVisual()
         print("[VL] Hitbox DISABLED | restored")
     end
 end)
@@ -2528,6 +2658,9 @@ local function ApplyAccentColor(color)
     if Pred.ring then Pred.ring.Color = newHot end
     if Pred.center then Pred.center.Color = newAccent end
 
+    if HitboxVisual.Sphere then HitboxVisual.Sphere.Color = newAccent end
+    if HitboxVisual.Ring then HitboxVisual.Ring.Color = newHot end
+
     for _, el in ipairs(ColorSyncedElements) do
         if el.Kind == "Toggle" then
             local on = el.GetState and el.GetState() or false
@@ -2677,6 +2810,7 @@ MakeActionButton("Reset Settings", 730, Color3.fromRGB(255, 180, 100), function(
     MegaHitbox.SizeMultiplier = 3
     RestoreAllHitboxes()
     _DestroyBallESP()
+    DestroyHitboxVisual()
     FpsFrame.Visible = false
     TweenService:Create(MainScale, TweenInfo.new(0.2), {Scale = 1}):Play()
     RebuildDots()
@@ -2688,6 +2822,7 @@ end)
 
 MakeActionButton("Unload Script", 775, Color3.fromRGB(255, 80, 100), function()
     _DestroyBallESP()
+    DestroyHitboxVisual()
     if Pred.ring then Pred.ring:Destroy() end
     if Pred.center then Pred.center:Destroy() end
     if Pred.tracer then Pred.tracer:Destroy() end
@@ -2744,4 +2879,4 @@ HeaderBaseLine.BackgroundTransparency = 0.7
 HeaderRunner.BackgroundTransparency = 0
 HeaderPulse.BackgroundTransparency = 0.6
 
-print("[VL] Loaded: Menu + Mega Hitbox + Ball ESP + Predictor")
+print("[VL] Loaded: Menu + Mega Hitbox + Visual Sphere + Ball ESP + Predictor")
